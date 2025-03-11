@@ -1,15 +1,10 @@
 import { useGoogleLogin } from "@react-oauth/google";
-import { useState } from "react";
-import axios from "axios";
 
-export default function GoogleLoginButton() {
-  const [user, setUser] = useState<string | null>(null);
-
+export default function GoogleLoginButton({ onSuccess }: { onSuccess: (token: string) => void }) {
   const login = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      console.log("Access Token:", tokenResponse.access_token);
-      setUser(tokenResponse.access_token);
-      // In the next step, we'll fetch Gmail metadata using this token
+    onSuccess: (tokenResponse) => {
+      console.log("✅ Access Token:", tokenResponse.access_token);
+      onSuccess(tokenResponse.access_token); // Send token to App.tsx
     },
     scope: "https://www.googleapis.com/auth/gmail.metadata",
   });
@@ -17,7 +12,6 @@ export default function GoogleLoginButton() {
   return (
     <div>
       <button onClick={() => login()}>Sign in with Google</button>
-      {user && <p>Logged in! Token in Console.</p>}
     </div>
   );
 }
