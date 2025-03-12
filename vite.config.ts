@@ -4,23 +4,29 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react({
-      fastRefresh: false
-    })
-  ],
+  plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
-    }
+      '@': path.resolve(__dirname, './src'),
+      'react': path.resolve(__dirname, './node_modules/react'),
+      'react-dom': path.resolve(__dirname, './node_modules/react-dom')
+    },
+    dedupe: ['react', 'react-dom']
   },
   build: {
     target: 'es2015',
     outDir: 'dist',
     assetsDir: 'assets',
-    commonjsOptions: {
-      include: [/node_modules/],
-      transformMixedEsModules: true
+    rollupOptions: {
+      external: [],
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+        }
+      }
     }
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom']
   }
 })
