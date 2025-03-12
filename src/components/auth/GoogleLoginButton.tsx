@@ -1,5 +1,6 @@
 import { useGoogleLogin } from "@react-oauth/google";
 import { Button } from "../ui/button";
+import { config } from "../../config";  
 
 interface GoogleLoginButtonProps {
   onSuccess: (token: string) => void;
@@ -8,8 +9,27 @@ interface GoogleLoginButtonProps {
 export function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps) {
   const login = useGoogleLogin({
     onSuccess: (tokenResponse) => {
-      console.log("✅ Access Token:", tokenResponse.access_token); // Debug log
-      onSuccess(tokenResponse.access_token);
+      console.log("✅ Access Token received:", tokenResponse.access_token.substring(0, 10) + "...");
+      
+      // Add more detailed logging
+      try {
+        console.log("Calling onSuccess with token");
+        onSuccess(tokenResponse.access_token);
+        console.log("onSuccess handler completed");
+        
+        // Force a page reload after a short delay if navigation isn't working
+        setTimeout(() => {
+          if (window.location.pathname !== '/dashboard') {
+            console.log("Still on landing page, forcing navigation to /dashboard");
+            window.location.href = '/dashboard';
+          }
+        }, 1000);
+      } catch (error) {
+        console.error("Error in onSuccess handler:", error);
+      }
+    },
+    onError: (errorResponse) => {
+      console.error("Google login error:", errorResponse);
     },
     scope: "https://www.googleapis.com/auth/gmail.readonly",
     prompt: "consent",
@@ -18,7 +38,10 @@ export function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps) {
 
   return (
     <Button 
-      onClick={() => login()} 
+      onClick={() => {
+        console.log("Login button clicked");
+        login();
+      }} 
       className="w-full max-w-xs h-12 flex items-center justify-center gap-3 bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 shadow-sm transition-all duration-200 hover:shadow-md"
     >
       <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
