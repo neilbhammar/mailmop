@@ -4,11 +4,13 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react({
+    // Use classic JSX runtime to avoid issues
+    jsxRuntime: 'classic'
+  })],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      'react/jsx-runtime': require.resolve('react/jsx-runtime')
+      '@': path.resolve(__dirname, './src')
     },
   },
   optimizeDeps: {
