@@ -11,7 +11,6 @@ export function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps) {
   const handleGoogleLogin = () => {
     setIsLoading(true);
     
-    // Load Google's OAuth client directly
     if (!window.google || !window.google.accounts) {
       console.error("Google API not loaded yet");
       setIsLoading(false);
@@ -19,43 +18,22 @@ export function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps) {
     }
     
     try {
-      // Use pure Google Identity Services API
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 
-                     '179016010492-a1mand26uvfmfcbs8vbngec2n4ckecku.apps.googleusercontent.com';
+                      '179016010492-a1mand26uvfmfcbs8vbngec2n4ckecku.apps.googleusercontent.com';
       
-      console.log("Initializing Google OAuth with client ID:", clientId);
+      console.log("Starting Google OAuth redirect flow");
       
-      // Create token client
-      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      // Use redirect flow instead of popup
+      const client = window.google.accounts.oauth2.initCodeClient({
         client_id: clientId,
         scope: 'https://www.googleapis.com/auth/gmail.readonly',
-        callback: (response: any) => {
-          console.log("Got auth response", response ? "with data" : "empty");
-          if (response && response.access_token) {
-            console.log("OAuth successful, got token");
-            
-            // Store token immediately
-            localStorage.setItem("googleToken", response.access_token);
-            
-            // Force navigation even before calling onSuccess
-            console.log("Force navigating to dashboard");
-            window.location.href = '/dashboard';
-            
-            // Also call the success handler
-            onSuccess(response.access_token);
-          } else {
-            console.error("OAuth response missing token:", response);
-            setIsLoading(false);
-          }
-        },
-        error_callback: (error: any) => {
-          console.error("Google OAuth error:", error);
-          setIsLoading(false);
-        }
+        ux_mode: 'redirect',
+        redirect_uri: window.location.origin + '/dashboard',
+        state: 'google-oauth-redirect',
       });
-      
-      // Request token with consent prompt
-      tokenClient.requestAccessToken({prompt: 'consent'});
+
+      // Start the redirect flow
+      client.requestCode();
       
     } catch (error) {
       console.error("Error initializing Google OAuth:", error);
@@ -75,19 +53,25 @@ export function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps) {
         <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
         <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
       </svg>
-      <span className="font-medium">{isLoading ? "Signing in..." : "Sign in with Google"}</span>
+      <span className="font-medium">{isLoading ? "Redirecting to Google..." : "Sign in with Google"}</span>
     </Button>
   );
 }
 
-// Add type declaration for Google API
+// Update type declaration for Google API
 declare global {
   interface Window {
     google?: {
       accounts: {
         oauth2: {
-          initTokenClient: (config: any) => {
-            requestAccessToken: (options: any) => void;
+          initCodeClient: (config: {
+            client_id: string;
+            scope: string;
+            ux_mode: 'redirect';
+            redirect_uri: string;
+            state?: string;
+          }) => {
+            requestCode: () => void;
           };
         };
       };
