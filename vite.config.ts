@@ -1,13 +1,20 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import { viteCommonjs } from '@originjs/vite-plugin-commonjs'
 import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    viteCommonjs(),
+    nodePolyfills()
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
     }
+  },
+  esbuild: {
+    jsx: 'automatic'
   }
 })
