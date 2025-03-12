@@ -25,7 +25,7 @@ export function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps) {
         client_id: clientId,
         scope: 'https://www.googleapis.com/auth/gmail.readonly',
         ux_mode: 'redirect',
-        redirect_uri: window.location.origin + '/auth/callback',
+        redirect_uri: 'https://mailmop.neilbhammar.com/auth/callback',
         state: 'google-oauth-redirect',
       });
 

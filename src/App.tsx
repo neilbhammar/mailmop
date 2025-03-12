@@ -119,7 +119,7 @@ function App() {
             return;
           }
 
-          // Include client secret in token exchange
+          // Use exact values from Google Cloud Console
           const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
             method: 'POST',
             headers: {
@@ -127,8 +127,8 @@ function App() {
             },
             body: new URLSearchParams({
               code,
-              client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-              client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
+              client_id: 'a1mand26uvfmfcbs8vbngec2n4ckecku.apps.googleusercontent.com',
+              client_secret: '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',
               redirect_uri: 'https://mailmop.neilbhammar.com/auth/callback',
               grant_type: 'authorization_code',
             }),
