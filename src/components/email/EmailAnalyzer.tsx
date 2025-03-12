@@ -587,7 +587,6 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
       <div className="flex flex-col items-center justify-center h-[80vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
         <p className="text-muted-foreground">Loading your email data...</p>
-        <p className="text-xs text-muted-foreground mt-2">Debug: {debugInfo.stage}</p>
       </div>
     );
   }
@@ -608,7 +607,6 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
           <Button onClick={() => window.location.reload()}>Refresh Page</Button>
           <Button variant="outline" onClick={onResetPermissions}>Reset Permissions</Button>
         </div>
-        <p className="text-xs text-muted-foreground mt-6">Debug: {debugInfo.stage}</p>
       </div>
     );
   }
@@ -616,13 +614,13 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
   return (
     <div className="container mx-auto py-6 px-4 sm:px-6 space-y-6">
       {/* Debug info */}
-      <div className="text-xs text-muted-foreground mb-2">
+      {/* <div className="text-xs text-muted-foreground mb-2">
         Debug: {debugInfo.stage} | Token: {accessToken ? "present" : "missing"}
-      </div>
+      </div> */}
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
         <div className="flex flex-col items-start gap-0">
-          <div className="w-40 h-22">
+          <div className="w-40 h-22 cursor-pointer" onClick={onSignOut}>
             <img src="/images/logo.png" alt="MailMop Logo" className="w-full h-full object-contain" />
           </div>
         </div>
@@ -779,7 +777,17 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
 
         <Card className="border-blue-100 hover:border-blue-200 transition-all">
           <CardHeader className="pb-2">
-            <CardTitle className="text-blue-900">How It Works</CardTitle>
+            <div className="flex items-center mb-4">
+              <h2 className="text-2xl font-semibold">How it Works</h2>
+              <a 
+                href="https://www.youtube.com/watch?v=IfTeb3zfTL4" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="ml-2 text-sm text-blue-500 hover:text-blue-700"
+              >
+                (watch video)
+              </a>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="relative overflow-hidden flex flex-col min-h-[400px]">
