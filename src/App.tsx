@@ -1,123 +1,124 @@
-import { useState, useEffect } from "react";
-import { AppLayout } from "./components/layout/AppLayout";
-import { LoginPage } from "./components/auth/LoginPage";
-import EmailAnalyzer from "./components/email/EmailAnalyzer";
-import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import { useState } from 'react';
+
+// Import components with correct import style
+import LoginPage from './components/auth/LoginPage';
+import EmailAnalyzer from './components/email/EmailAnalyzer';
+import { AppLayout } from './components/layout/AppLayout';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import ErrorBoundary from './components/common/ErrorBoundary';
+
+// Rename the local ErrorBoundary component to avoid conflict
+function AppErrorBoundary({ children }: { children: React.ReactNode }) {
+  const [hasError, setHasError] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  React.useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('Caught in error boundary:', event.error);
+      setHasError(true);
+      setError(event.error);
+      event.preventDefault();
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
+  if (hasError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md w-full">
+          <h2 className="text-xl font-semibold text-red-700 mb-2">Something went wrong</h2>
+          <p className="text-sm text-red-600 mb-4">
+            {error?.message || 'An unexpected error occurred'}
+          </p>
+          <pre className="bg-red-100 p-3 rounded text-xs overflow-auto max-h-40 mb-4">
+            {error?.stack || 'No stack trace available'}
+          </pre>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Reload Application
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+// Create a simple redirect component
+function RedirectComponent({ to }: { to: string }) {
+  React.useEffect(() => {
+    window.location.href = to;
+  }, [to]);
+  
+  return <div className="text-center p-4">Redirecting...</div>;
+}
 
 function App() {
-  const [accessToken, setAccessToken] = useState<string | null>(() => {
-    // Check localStorage on initial load
-    return localStorage.getItem("googleToken");
-  });
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // Check for cached token on component mount
-  useEffect(() => {
-    const cachedToken = localStorage.getItem("googleToken");
-    if (cachedToken) {
-      setAccessToken(cachedToken);
-      if (location.pathname === "/") {
-        navigate("/dashboard");
-      }
-    }
-  }, [navigate, location.pathname]);
-
-  // At the beginning of your App component, add:
-  useEffect(() => {
-    // Check if we need to perform a token check at app start
-    if (location.pathname === '/dashboard') {
-      const cachedToken = localStorage.getItem("googleToken");
-      if (cachedToken) {
-        console.log("Found token for dashboard route, setting access token");
-        setAccessToken(cachedToken);
-      } else {
-        console.log("No token found but on dashboard route, redirecting to login");
-        navigate('/');
-      }
-    }
-  }, [location.pathname]);
+  const [accessToken, setAccessToken] = useState<string | null>(
+    localStorage.getItem('gmail_access_token')
+  );
 
   const handleSignIn = (token: string) => {
-    console.log("Handling sign in with token:", token.substring(0, 10) + "...");
+    console.log('Handling sign in with token:', token.substring(0, 10) + '...');
+    localStorage.setItem('gmail_access_token', token);
     setAccessToken(token);
-    localStorage.setItem("googleToken", token);
-    navigate("/dashboard");
   };
 
   const handleSignOut = () => {
+    localStorage.removeItem('gmail_access_token');
     setAccessToken(null);
-    localStorage.removeItem("googleToken");
-    localStorage.removeItem("mailmop_summary");
-    localStorage.removeItem("mailmop_email_counts");
-    console.log("User signed out");
-    navigate("/");
   };
 
-  // Directly revoke the token using Google's revocation endpoint
-  const revokeToken = async (token: string) => {
-    try {
-      const response = await fetch(`https://oauth2.googleapis.com/revoke?token=${token}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      });
-      
-      if (response.ok) {
-        console.log("Token successfully revoked");
-        return true;
-      } else {
-        console.error("Failed to revoke token:", await response.text());
-        return false;
-      }
-    } catch (error) {
-      console.error("Error revoking token:", error);
-      return false;
-    }
+  const handleResetPermissions = () => {
+    localStorage.removeItem('gmail_access_token');
+    setAccessToken(null);
+    // Clear any other stored permissions or tokens
+    window.location.href = '/';
   };
 
-  // Force a complete re-authentication by revoking access and redirecting to Google's permissions page
-  const handleForceReauth = async () => {
-    // First try to revoke the current token if we have one
-    if (accessToken) {
-      await revokeToken(accessToken);
-    }
-    
-    // Sign out
-    handleSignOut();
-    
-    // Clear any session cookies that might be storing the authorization
-    document.cookie.split(";").forEach(function(c) {
-      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-    });
-    
-    // Redirect to Google's account permissions page where the user can revoke access
-    window.open('https://myaccount.google.com/permissions', '_blank');
-  };
+  // Get client ID from environment variable
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   return (
-    <AppLayout>
-      <Routes>
-        <Route path="/" element={
-          accessToken ? <Navigate to="/dashboard" replace /> : <LoginPage onSuccess={handleSignIn} />
-        } />
-        
-        <Route path="/dashboard" element={
-          <ProtectedRoute accessToken={accessToken}>
-            <EmailAnalyzer 
-              accessToken={accessToken!} 
-              onSignOut={handleSignOut} 
-              onResetPermissions={handleForceReauth} 
+    <AppErrorBoundary>
+      <GoogleOAuthProvider clientId={clientId}>
+        <AppLayout>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                accessToken ? (
+                  <RedirectComponent to="/dashboard" />
+                ) : (
+                  <LoginPage onSignIn={handleSignIn} />
+                )
+              }
             />
-          </ProtectedRoute>
-        } />
-        
-        {/* Catch-all route redirects to home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AppLayout>
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute accessToken={accessToken}>
+                  <EmailAnalyzer
+                    accessToken={accessToken!}
+                    onResetPermissions={handleResetPermissions}
+                    onSignOut={handleSignOut}
+                  />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<RedirectComponent to="/" />} />
+          </Routes>
+        </AppLayout>
+      </GoogleOAuthProvider>
+    </AppErrorBoundary>
   );
 }
 

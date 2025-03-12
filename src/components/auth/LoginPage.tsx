@@ -1,5 +1,6 @@
+import React from 'react';
 import { useState } from 'react';
-import { GoogleLoginButton } from './GoogleLoginButton';
+import GoogleLoginButton from './GoogleLoginButton';
 import { Button } from '../ui/button';
 import { useToast } from '../../lib/use-toast';
 import { ArrowRight, Check, Shield, Mail, BarChart3, Zap, Github, Code, Download, LineChart, Sparkles, Play, BarChart2, Code2, Copy, Lock } from 'lucide-react';
@@ -8,11 +9,12 @@ import {
   DialogContent,
 } from "../ui/dialog";
 
-interface LoginPageProps {
-  onSuccess: (token: string) => void;
+// Define the props interface
+export interface LoginPageProps {
+  onSignIn: (token: string) => void;
 }
 
-export function LoginPage({ onSuccess }: LoginPageProps) {
+export function LoginPage({ onSignIn }: LoginPageProps) {
   const [isResettingAuth, setIsResettingAuth] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
   const { toast } = useToast();
@@ -54,7 +56,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
             <Github className="h-5 w-5 mr-2" />
             GitHub
           </a>
-          <GoogleLoginButton onSuccess={onSuccess} />
+          <GoogleLoginButton onSuccess={onSignIn} />
         </div>
       </nav>
 
@@ -183,7 +185,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
       <Dialog open={showVideo} onOpenChange={setShowVideo}>
         <DialogContent className="p-0 border-none bg-transparent max-w-[80vw]">
           <iframe 
-            src="https://www.youtube.com/embed/IfTeb3zfTL4?si=hND8Y9IHwdbf0Czu&autoplay=1&controls=0" 
+            src="https://www.youtube.com/embed/IfTeb3zfTL4?si=hND8Y9IHwdbf0Czu&autoplay=0&controls=0" 
             title="YouTube video player" 
             className="w-full h-[500px]" 
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
@@ -402,3 +404,5 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
     </div>
   );
 }
+
+export default LoginPage;

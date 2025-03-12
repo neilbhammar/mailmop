@@ -122,6 +122,9 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 200;
   
+  // Add debug state to track component lifecycle
+  const [debugInfo, setDebugInfo] = useState<{stage: string, data?: any}>({stage: 'initializing'});
+  
   // Processing state
   const [processingOptions, setProcessingOptions] = useState<EmailProcessingOptions>({
     excludeSentByMe: true,
@@ -170,32 +173,47 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
     transform: `translateX(-${currentStep * 100}%)`
   });
 
-  // Load cached data on component mount
+  // Add console logging for debugging
   useEffect(() => {
-    // Load cached summary data
-    const cachedSummary = localStorage.getItem(CACHE_SUMMARY_KEY);
-    if (cachedSummary) {
-      try {
-        const parsedSummary = JSON.parse(cachedSummary);
-        setSenderSummary(parsedSummary);
-        currentSummaryRef.current = parsedSummary;
-      } catch (err) {
-        console.error('Failed to parse cached summary:', err);
+    console.log("EmailAnalyzer mounted with accessToken:", accessToken ? "present" : "missing");
+    setDebugInfo({stage: 'component_mounted'});
+    
+    // Load cached data on component mount
+    try {
+      // Load cached summary data
+      const cachedSummary = localStorage.getItem(CACHE_SUMMARY_KEY);
+      if (cachedSummary) {
+        try {
+          const parsedSummary = JSON.parse(cachedSummary);
+          setSenderSummary(parsedSummary);
+          currentSummaryRef.current = parsedSummary;
+          console.log("Loaded cached summary data");
+        } catch (err) {
+          console.error('Failed to parse cached summary:', err);
+        }
       }
-    }
 
-    // Load cached email counts
-    const cachedCounts = localStorage.getItem(CACHE_EMAIL_COUNTS_KEY);
-    if (cachedCounts) {
-      try {
-        setEmailCounts(JSON.parse(cachedCounts));
-        setLoading(false);
-      } catch (err) {
-        console.error('Failed to parse cached email counts:', err);
-        fetchEmailCounts(); // Fetch fresh data if cache parsing fails
+      // Load cached email counts
+      const cachedCounts = localStorage.getItem(CACHE_EMAIL_COUNTS_KEY);
+      if (cachedCounts) {
+        try {
+          setEmailCounts(JSON.parse(cachedCounts));
+          setLoading(false);
+          console.log("Loaded cached email counts");
+          setDebugInfo({stage: 'loaded_from_cache'});
+        } catch (err) {
+          console.error('Failed to parse cached email counts:', err);
+          fetchEmailCounts(); // Fetch fresh data if cache parsing fails
+        }
+      } else {
+        console.log("No cached data, fetching email counts");
+        fetchEmailCounts(); // Fetch fresh data if no cache exists
       }
-    } else {
-      fetchEmailCounts(); // Fetch fresh data if no cache exists
+    } catch (error) {
+      console.error("Error in initialization:", error);
+      setError("Failed to initialize component: " + (error instanceof Error ? error.message : String(error)));
+      setLoading(false);
+      setDebugInfo({stage: 'initialization_error', data: error});
     }
   }, [accessToken]);
 
@@ -212,14 +230,21 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
   async function fetchEmailCounts() {
     try {
       setLoading(true);
+      setDebugInfo({stage: 'fetching_email_counts'});
+      console.log("Fetching email counts with token:", accessToken ? "present" : "missing");
+      
       const counts = await getEmailCounts(accessToken);
+      console.log("Email counts fetched:", counts);
+      
       setEmailCounts(counts);
+      setDebugInfo({stage: 'email_counts_fetched', data: counts});
       
       // Cache the email counts
       localStorage.setItem(CACHE_EMAIL_COUNTS_KEY, JSON.stringify(counts));
     } catch (err) {
       console.error('Failed to fetch email counts:', err);
       setError('Failed to load email information. Please try again.');
+      setDebugInfo({stage: 'email_counts_error', data: err});
     } finally {
       setLoading(false);
     }
@@ -562,12 +587,39 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
       <div className="flex flex-col items-center justify-center h-[80vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
         <p className="text-muted-foreground">Loading your email data...</p>
+        <p className="text-xs text-muted-foreground mt-2">Debug: {debugInfo.stage}</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[80vh] max-w-md mx-auto text-center">
+        <div className="text-red-500 mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        </div>
+        <h3 className="text-xl font-semibold mb-2">Something went wrong</h3>
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <div className="flex gap-4">
+          <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+          <Button variant="outline" onClick={onResetPermissions}>Reset Permissions</Button>
+        </div>
+        <p className="text-xs text-muted-foreground mt-6">Debug: {debugInfo.stage}</p>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto py-6 px-4 sm:px-6 space-y-6">
+      {/* Debug info */}
+      <div className="text-xs text-muted-foreground mb-2">
+        Debug: {debugInfo.stage} | Token: {accessToken ? "present" : "missing"}
+      </div>
+      
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
         <div className="flex flex-col items-start gap-0">
           <div className="w-40 h-22">
