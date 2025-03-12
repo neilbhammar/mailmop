@@ -7,7 +7,17 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
+      'react/jsx-runtime': require.resolve('react/jsx-runtime')
     },
+  },
+  optimizeDeps: {
+    include: ['react/jsx-runtime']
+  },
+  build: {
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true
+    }
   }
 })
