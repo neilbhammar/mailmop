@@ -12,6 +12,7 @@ export function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps) {
   const login = useGoogleLogin({
     onSuccess: (tokenResponse) => {
       console.log("✅ Access Token received:", tokenResponse.access_token.substring(0, 10) + "...");
+      setIsLoading(false);
       onSuccess(tokenResponse.access_token);
     },
     onError: (error) => {
@@ -22,12 +23,14 @@ export function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps) {
     flow: 'implicit'
   });
 
+  const handleClick = () => {
+    setIsLoading(true);
+    login();
+  };
+
   return (
     <Button 
-      onClick={() => {
-        setIsLoading(true);
-        login();
-      }}
+      onClick={handleClick}
       disabled={isLoading}
       className="w-full max-w-xs h-12 flex items-center justify-center gap-3 bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 shadow-sm transition-all duration-200 hover:shadow-md"
     >

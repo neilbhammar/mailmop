@@ -5,7 +5,10 @@ import EmailAnalyzer from "./components/email/EmailAnalyzer";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 
 function App() {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(() => {
+    // Check localStorage on initial load
+    return localStorage.getItem("googleToken");
+  });
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -36,7 +39,7 @@ function App() {
   }, [location.pathname]);
 
   const handleSignIn = (token: string) => {
-    console.log("SignIn Token:", token);
+    console.log("Handling sign in with token:", token.substring(0, 10) + "...");
     setAccessToken(token);
     localStorage.setItem("googleToken", token);
     navigate("/dashboard");
