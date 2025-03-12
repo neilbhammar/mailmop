@@ -54,11 +54,19 @@ function AppErrorBoundary({ children }: { children: React.ReactNode }) {
 
 // Create a simple redirect component
 function RedirectComponent({ to }: { to: string }) {
+  console.log(`RedirectComponent: Redirecting to ${to}`);
+  
   React.useEffect(() => {
-    window.location.href = to;
+    console.log(`RedirectComponent useEffect: Redirecting to ${to}`);
+    // Add a small delay to ensure the component is fully mounted
+    const timer = setTimeout(() => {
+      window.location.href = to;
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [to]);
   
-  return <div className="text-center p-4">Redirecting...</div>;
+  return <div className="text-center p-4">Redirecting to {to}...</div>;
 }
 
 function App() {
@@ -69,7 +77,17 @@ function App() {
   const handleSignIn = (token: string) => {
     console.log('Handling sign in with token:', token.substring(0, 10) + '...');
     localStorage.setItem('gmail_access_token', token);
+    console.log('Token saved to localStorage');
     setAccessToken(token);
+    console.log('Access token state updated, should redirect soon...');
+    
+    // Force a redirect after a short delay as a fallback
+    setTimeout(() => {
+      if (window.location.pathname !== '/dashboard') {
+        console.log('Forcing redirect to dashboard');
+        window.location.href = '/dashboard';
+      }
+    }, 1000);
   };
 
   const handleSignOut = () => {

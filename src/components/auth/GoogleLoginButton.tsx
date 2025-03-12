@@ -14,12 +14,22 @@ export default function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps)
 
   const login = useGoogleLogin({
     onSuccess: tokenResponse => {
-      console.log('✅ Access Token received:', tokenResponse.access_token);
+      console.log('✅ Access Token received:', tokenResponse.access_token.substring(0, 10) + '...');
+      setIsLoading(false);
       onSuccess(tokenResponse.access_token);
     },
-    onError: error => console.error('❌ Login Failed:', error),
+    onError: error => {
+      console.error('❌ Login Failed:', error);
+      setIsLoading(false);
+      setError("Login failed. Please try again.");
+    },
     scope: 'https://www.googleapis.com/auth/gmail.readonly',
-    flow: 'implicit'
+    flow: 'implicit',
+    onNonOAuthError: (err) => {
+      console.error('Non-OAuth Error:', err);
+      setIsLoading(false);
+      setError(`Authentication error: ${err.type}`);
+    }
   });
 
   const handleClick = () => {
