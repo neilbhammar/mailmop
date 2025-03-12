@@ -101,6 +101,73 @@ function App() {
     return <>{children}</>;
   };
 
+  // Add this new component to handle the OAuth callback
+  function OAuthCallback() {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+      async function handleCallback() {
+        try {
+          // Get the code from URL
+          const urlParams = new URLSearchParams(location.search);
+          const code = urlParams.get('code');
+          
+          if (!code) {
+            console.error("No code received from Google");
+            setError("Authentication failed - no code received");
+            return;
+          }
+
+          // Exchange code for token using Google's token endpoint
+          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              code,
+              client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '179016010492-a1mand26uvfmfcbs8vbngec2n4ckecku.apps.googleusercontent.com',
+              redirect_uri: 'https://mailmop.neilbhammar.com/auth/callback',
+              grant_type: 'authorization_code',
+            }),
+          });
+
+          const data = await tokenResponse.json();
+          
+          if (data.access_token) {
+            localStorage.setItem('googleToken', data.access_token);
+            navigate('/dashboard', { replace: true });
+          } else {
+            setError("Failed to get access token");
+          }
+        } catch (error) {
+          console.error('Error in OAuth callback:', error);
+          setError("Authentication failed");
+        }
+      }
+
+      handleCallback();
+    }, [location, navigate]);
+
+    if (error) {
+      return (
+        <div className="p-4 text-center">
+          <h2 className="text-red-600">Error: {error}</h2>
+          <button 
+            onClick={() => navigate('/')} 
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+          >
+            Return to Login
+          </button>
+        </div>
+      );
+    }
+
+    return <div className="p-4 text-center">Completing sign in...</div>;
+  }
+
   return (
     <AppLayout>
       <Routes>
@@ -118,9 +185,7 @@ function App() {
           </ProtectedRoute>
         } />
         
-        <Route path="/auth/callback" element={
-          <Navigate to="/dashboard" replace />
-        } />
+        <Route path="/auth/callback" element={<OAuthCallback />} />
         
         {/* Catch-all route redirects to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
