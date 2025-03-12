@@ -118,6 +118,10 @@ function App() {
           </ProtectedRoute>
         } />
         
+        <Route path="/auth/callback" element={
+          <Navigate to="/dashboard" replace />
+        } />
+        
         {/* Catch-all route redirects to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
