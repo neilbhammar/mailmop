@@ -12,7 +12,7 @@ declare global {
 
 // Use the window config if it exists, otherwise use default
 const defaultConfig: AppConfig = {
-  googleClientId: '179016010492-a1mand26uvfmfcbs8vbngec2n4ckecku.apps.googleusercontent.com'
+  googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID
 };
 
 // Export the config for use in app

@@ -5,6 +5,10 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    port: 5173,
+    host: true
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -30,6 +34,6 @@ export default defineConfig({
     include: ['react', 'react-dom']
   },
   define: {
-    'process.env.REACT_APP_GOOGLE_CLIENT_ID': JSON.stringify(process.env.VITE_GOOGLE_CLIENT_ID)
+    'process.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(process.env.VITE_GOOGLE_CLIENT_ID)
   }
 })

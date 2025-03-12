@@ -2,10 +2,10 @@ import React from "react";
 import ReactDOM from "react-dom";
 import App from "./App";
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import { config } from "./config";
+import { BrowserRouter } from "react-router-dom";
 import "./index.css";
 
-// Get client ID from runtime config
+// Get client ID from environment variable
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 console.log("Loaded Google Client ID:", clientId);
 
@@ -13,9 +13,11 @@ console.log("Loaded Google Client ID:", clientId);
 try {
   ReactDOM.render(
     <React.StrictMode>
-      <GoogleOAuthProvider clientId={clientId}>
-        <App />
-      </GoogleOAuthProvider>
+      <BrowserRouter>
+        <GoogleOAuthProvider clientId={clientId || ''}>
+          <App />
+        </GoogleOAuthProvider>
+      </BrowserRouter>
     </React.StrictMode>,
     document.getElementById("root")
   );

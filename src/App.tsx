@@ -2,23 +2,26 @@ import { useState, useEffect } from "react";
 import { AppLayout } from "./components/layout/AppLayout";
 import { LoginPage } from "./components/auth/LoginPage";
 import EmailAnalyzer from "./components/email/EmailAnalyzer";
+import { useNavigate } from "react-router-dom";
 
 function App() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Check for cached token on component mount
   useEffect(() => {
     const cachedToken = localStorage.getItem("googleToken");
     if (cachedToken) {
       setAccessToken(cachedToken);
+      navigate("/dashboard");
     }
-  }, []);
+  }, [navigate]);
 
   const handleSignIn = (token: string) => {
     setAccessToken(token);
-    // Cache the token
     localStorage.setItem("googleToken", token);
     console.log("User signed in");
+    navigate("/dashboard");
   };
 
   const handleSignOut = () => {
