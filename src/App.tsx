@@ -120,10 +120,11 @@ function App() {
           }
 
           // Use exact values from Google Cloud Console
-          const tokenResponse = await fetch('/oauth2/token', {  // Use our proxied endpoint
+          const tokenResponse = await fetch('/oauth2/token', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/json'
             },
             body: new URLSearchParams({
               code,
@@ -135,9 +136,14 @@ function App() {
           });
 
           if (!tokenResponse.ok) {
-            const errorData = await tokenResponse.text();
-            console.error('Token exchange failed:', errorData);
-            setError(`Failed to get access token: ${errorData}`);
+            const errorText = await tokenResponse.text();
+            console.error('Token exchange failed:', {
+              status: tokenResponse.status,
+              statusText: tokenResponse.statusText,
+              headers: Object.fromEntries(tokenResponse.headers.entries()),
+              body: errorText
+            });
+            setError(`Failed to get access token: ${tokenResponse.status} ${tokenResponse.statusText}`);
             return;
           }
 
