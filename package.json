@@ -33,6 +33,7 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@babel/plugin-transform-react-jsx": "^7.23.4",
     "@eslint/js": "^9.21.0",
     "@shadcn/ui": "^0.0.4",
     "@types/node": "^20.11.5",
