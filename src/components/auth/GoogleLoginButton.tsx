@@ -1,47 +1,72 @@
-import { useGoogleLogin } from "@react-oauth/google";
 import { Button } from "../ui/button";
-import { config } from "../../config";  
+import { useState } from "react";
 
 interface GoogleLoginButtonProps {
   onSuccess: (token: string) => void;
 }
 
 export function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps) {
-  const login = useGoogleLogin({
-    onSuccess: (tokenResponse) => {
-      console.log("✅ Access Token received:", tokenResponse.access_token.substring(0, 10) + "...");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleGoogleLogin = () => {
+    setIsLoading(true);
+    
+    // Load Google's OAuth client directly
+    if (!window.google || !window.google.accounts) {
+      console.error("Google API not loaded yet");
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      // Use pure Google Identity Services API
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 
+                     '179016010492-a1mand26uvfmfcbs8vbngec2n4ckecku.apps.googleusercontent.com';
       
-      // Add more detailed logging
-      try {
-        console.log("Calling onSuccess with token");
-        onSuccess(tokenResponse.access_token);
-        console.log("onSuccess handler completed");
-        
-        // Force a page reload after a short delay if navigation isn't working
-        setTimeout(() => {
-          if (window.location.pathname !== '/dashboard') {
-            console.log("Still on landing page, forcing navigation to /dashboard");
+      console.log("Initializing Google OAuth with client ID:", clientId);
+      
+      // Create token client
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: 'https://www.googleapis.com/auth/gmail.readonly',
+        callback: (response: any) => {
+          console.log("Got auth response", response ? "with data" : "empty");
+          if (response && response.access_token) {
+            console.log("OAuth successful, got token");
+            
+            // Store token immediately
+            localStorage.setItem("googleToken", response.access_token);
+            
+            // Force navigation even before calling onSuccess
+            console.log("Force navigating to dashboard");
             window.location.href = '/dashboard';
+            
+            // Also call the success handler
+            onSuccess(response.access_token);
+          } else {
+            console.error("OAuth response missing token:", response);
+            setIsLoading(false);
           }
-        }, 1000);
-      } catch (error) {
-        console.error("Error in onSuccess handler:", error);
-      }
-    },
-    onError: (errorResponse) => {
-      console.error("Google login error:", errorResponse);
-    },
-    scope: "https://www.googleapis.com/auth/gmail.readonly",
-    prompt: "consent",
-    flow: "implicit"
-  });
+        },
+        error_callback: (error: any) => {
+          console.error("Google OAuth error:", error);
+          setIsLoading(false);
+        }
+      });
+      
+      // Request token with consent prompt
+      tokenClient.requestAccessToken({prompt: 'consent'});
+      
+    } catch (error) {
+      console.error("Error initializing Google OAuth:", error);
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Button 
-      onClick={() => {
-        console.log("Login button clicked");
-        login();
-      }} 
+      onClick={handleGoogleLogin}
+      disabled={isLoading}
       className="w-full max-w-xs h-12 flex items-center justify-center gap-3 bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 shadow-sm transition-all duration-200 hover:shadow-md"
     >
       <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
@@ -50,7 +75,22 @@ export function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps) {
         <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
         <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
       </svg>
-      <span className="font-medium">Sign in with Google</span>
+      <span className="font-medium">{isLoading ? "Signing in..." : "Sign in with Google"}</span>
     </Button>
   );
+}
+
+// Add type declaration for Google API
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        oauth2: {
+          initTokenClient: (config: any) => {
+            requestAccessToken: (options: any) => void;
+          };
+        };
+      };
+    };
+  }
 } 

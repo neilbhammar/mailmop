@@ -20,6 +20,21 @@ function App() {
     }
   }, [navigate, location.pathname]);
 
+  // At the beginning of your App component, add:
+  useEffect(() => {
+    // Check if we need to perform a token check at app start
+    if (location.pathname === '/dashboard') {
+      const cachedToken = localStorage.getItem("googleToken");
+      if (cachedToken) {
+        console.log("Found token for dashboard route, setting access token");
+        setAccessToken(cachedToken);
+      } else {
+        console.log("No token found but on dashboard route, redirecting to login");
+        navigate('/');
+      }
+    }
+  }, [location.pathname]);
+
   const handleSignIn = (token: string) => {
     console.log("SignIn Token:", token);
     setAccessToken(token);
