@@ -18,15 +18,21 @@ export default async function handler(
       },
       body: new URLSearchParams({
         code,
-        client_id: process.env.VITE_GOOGLE_CLIENT_ID!,
-        client_secret: process.env.VITE_GOOGLE_CLIENT_SECRET!,
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
         redirect_uri,
         grant_type: 'authorization_code',
-      }),
+      }).toString()
     });
 
+    if (!tokenResponse.ok) {
+      const errorData = await tokenResponse.json();
+      console.error('Token exchange error:', errorData);
+      return response.status(tokenResponse.status).json(errorData);
+    }
+
     const data = await tokenResponse.json();
-    return response.status(tokenResponse.status).json(data);
+    return response.status(200).json(data);
   } catch (error) {
     console.error('Token exchange error:', error);
     return response.status(500).json({ error: 'Internal server error' });

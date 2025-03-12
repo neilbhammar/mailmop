@@ -3,6 +3,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { LoginPage } from "./components/auth/LoginPage";
 import EmailAnalyzer from "./components/email/EmailAnalyzer";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
 function App() {
   const [accessToken, setAccessToken] = useState<string | null>(() => {
@@ -96,14 +97,6 @@ function App() {
     window.open('https://myaccount.google.com/permissions', '_blank');
   };
 
-  // Protected route component
-  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-    if (!accessToken) {
-      return <Navigate to="/" replace />;
-    }
-    return <>{children}</>;
-  };
-
   return (
     <AppLayout>
       <Routes>
@@ -112,7 +105,7 @@ function App() {
         } />
         
         <Route path="/dashboard" element={
-          <ProtectedRoute>
+          <ProtectedRoute accessToken={accessToken}>
             <EmailAnalyzer 
               accessToken={accessToken!} 
               onSignOut={handleSignOut} 
