@@ -2,35 +2,38 @@ import { useState, useEffect } from "react";
 import { AppLayout } from "./components/layout/AppLayout";
 import { LoginPage } from "./components/auth/LoginPage";
 import EmailAnalyzer from "./components/email/EmailAnalyzer";
-import { useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 
 function App() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Check for cached token on component mount
   useEffect(() => {
     const cachedToken = localStorage.getItem("googleToken");
     if (cachedToken) {
       setAccessToken(cachedToken);
-      navigate("/dashboard");
+      if (location.pathname === "/") {
+        navigate("/dashboard");
+      }
     }
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   const handleSignIn = (token: string) => {
+    console.log("SignIn Token:", token);
     setAccessToken(token);
     localStorage.setItem("googleToken", token);
-    console.log("User signed in");
     navigate("/dashboard");
   };
 
   const handleSignOut = () => {
     setAccessToken(null);
-    // Clear cached token and data
     localStorage.removeItem("googleToken");
     localStorage.removeItem("mailmop_summary");
     localStorage.removeItem("mailmop_email_counts");
     console.log("User signed out");
+    navigate("/");
   };
 
   // Directly revoke the token using Google's revocation endpoint
@@ -75,17 +78,34 @@ function App() {
     window.open('https://myaccount.google.com/permissions', '_blank');
   };
 
+  // Protected route component
+  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+    if (!accessToken) {
+      return <Navigate to="/" replace />;
+    }
+    return <>{children}</>;
+  };
+
   return (
     <AppLayout>
-      {!accessToken ? (
-        <LoginPage onSuccess={handleSignIn} />
-      ) : (
-        <EmailAnalyzer 
-          accessToken={accessToken} 
-          onSignOut={handleSignOut} 
-          onResetPermissions={handleForceReauth} 
-        />
-      )}
+      <Routes>
+        <Route path="/" element={
+          accessToken ? <Navigate to="/dashboard" replace /> : <LoginPage onSuccess={handleSignIn} />
+        } />
+        
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <EmailAnalyzer 
+              accessToken={accessToken!} 
+              onSignOut={handleSignOut} 
+              onResetPermissions={handleForceReauth} 
+            />
+          </ProtectedRoute>
+        } />
+        
+        {/* Catch-all route redirects to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </AppLayout>
   );
 }

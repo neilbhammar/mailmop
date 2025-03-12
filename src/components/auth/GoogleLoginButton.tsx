@@ -8,7 +8,7 @@ interface GoogleLoginButtonProps {
 export function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps) {
   const login = useGoogleLogin({
     onSuccess: (tokenResponse) => {
-      console.log("✅ Access Token:", tokenResponse.access_token);
+      console.log("✅ Access Token:", tokenResponse.access_token); // Debug log
       onSuccess(tokenResponse.access_token);
     },
     scope: "https://www.googleapis.com/auth/gmail.readonly",
