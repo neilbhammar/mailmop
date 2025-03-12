@@ -101,89 +101,6 @@ function App() {
     return <>{children}</>;
   };
 
-  // Add this new component to handle the OAuth callback
-  function OAuthCallback() {
-    const navigate = useNavigate();
-    const location = useLocation();
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-      async function handleCallback() {
-        try {
-          const urlParams = new URLSearchParams(location.search);
-          const code = urlParams.get('code');
-          
-          if (!code) {
-            console.error("No code received from Google");
-            setError("Authentication failed - no code received");
-            return;
-          }
-
-          // Use exact values from Google Cloud Console
-          const tokenResponse = await fetch('/oauth2/token', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'Accept': 'application/json'
-            },
-            body: new URLSearchParams({
-              code,
-              client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-              client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
-              redirect_uri: 'https://mailmop.neilbhammar.com/auth/callback',
-              grant_type: 'authorization_code',
-            }),
-          });
-
-          if (!tokenResponse.ok) {
-            const errorText = await tokenResponse.text();
-            console.error('Token exchange failed:', {
-              status: tokenResponse.status,
-              statusText: tokenResponse.statusText,
-              headers: Object.fromEntries(tokenResponse.headers.entries()),
-              body: errorText
-            });
-            setError(`Failed to get access token: ${tokenResponse.status} ${tokenResponse.statusText}`);
-            return;
-          }
-
-          const data = await tokenResponse.json();
-          
-          if (data.access_token) {
-            console.log("Successfully received access token");
-            localStorage.setItem('googleToken', data.access_token);
-            setAccessToken(data.access_token); // Set the token in App state
-            navigate('/dashboard', { replace: true });
-          } else {
-            console.error("No access token in response:", data);
-            setError("Failed to get access token");
-          }
-        } catch (error) {
-          console.error('Error in OAuth callback:', error);
-          setError("Authentication failed");
-        }
-      }
-
-      handleCallback();
-    }, [location, navigate]);
-
-    if (error) {
-      return (
-        <div className="p-4 text-center">
-          <h2 className="text-red-600">Error: {error}</h2>
-          <button 
-            onClick={() => navigate('/')} 
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-          >
-            Return to Login
-          </button>
-        </div>
-      );
-    }
-
-    return <div className="p-4 text-center">Completing sign in...</div>;
-  }
-
   return (
     <AppLayout>
       <Routes>
@@ -200,8 +117,6 @@ function App() {
             />
           </ProtectedRoute>
         } />
-        
-        <Route path="/auth/callback" element={<OAuthCallback />} />
         
         {/* Catch-all route redirects to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
