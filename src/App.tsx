@@ -120,15 +120,15 @@ function App() {
           }
 
           // Use exact values from Google Cloud Console
-          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          const tokenResponse = await fetch('/oauth2/token', {  // Use our proxied endpoint
             method: 'POST',
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: new URLSearchParams({
               code,
-              client_id: 'a1mand26uvfmfcbs8vbngec2n4ckecku.apps.googleusercontent.com',
-              client_secret: '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',
+              client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+              client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
               redirect_uri: 'https://mailmop.neilbhammar.com/auth/callback',
               grant_type: 'authorization_code',
             }),

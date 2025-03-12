@@ -7,7 +7,14 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    host: true
+    host: true,
+    proxy: {
+      '/oauth2': {
+        target: 'https://oauth2.googleapis.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/oauth2/, '')
+      }
+    }
   },
   resolve: {
     alias: {
