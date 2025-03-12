@@ -110,7 +110,6 @@ function App() {
     useEffect(() => {
       async function handleCallback() {
         try {
-          // Get the code from URL
           const urlParams = new URLSearchParams(location.search);
           const code = urlParams.get('code');
           
@@ -120,7 +119,7 @@ function App() {
             return;
           }
 
-          // Exchange code for token using Google's token endpoint
+          // Include client secret in token exchange
           const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
             method: 'POST',
             headers: {
@@ -128,18 +127,29 @@ function App() {
             },
             body: new URLSearchParams({
               code,
-              client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '179016010492-a1mand26uvfmfcbs8vbngec2n4ckecku.apps.googleusercontent.com',
+              client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+              client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
               redirect_uri: 'https://mailmop.neilbhammar.com/auth/callback',
               grant_type: 'authorization_code',
             }),
           });
 
+          if (!tokenResponse.ok) {
+            const errorData = await tokenResponse.text();
+            console.error('Token exchange failed:', errorData);
+            setError(`Failed to get access token: ${errorData}`);
+            return;
+          }
+
           const data = await tokenResponse.json();
           
           if (data.access_token) {
+            console.log("Successfully received access token");
             localStorage.setItem('googleToken', data.access_token);
+            setAccessToken(data.access_token); // Set the token in App state
             navigate('/dashboard', { replace: true });
           } else {
+            console.error("No access token in response:", data);
             setError("Failed to get access token");
           }
         } catch (error) {
