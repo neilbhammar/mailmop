@@ -1,5 +1,4 @@
 import React from 'react';
-import { useGoogleLogin } from '@react-oauth/google';
 import { Button } from '../ui/button';
 import { useState } from "react";
 import { config } from "../../config";
@@ -12,36 +11,40 @@ export default function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps)
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const login = useGoogleLogin({
-    onSuccess: tokenResponse => {
-      console.log('✅ Access Token received:', tokenResponse.access_token.substring(0, 10) + '...');
-      setIsLoading(false);
-      onSuccess(tokenResponse.access_token);
-    },
-    onError: error => {
-      console.error('❌ Login Failed:', error);
-      setIsLoading(false);
-      setError("Login failed. Please try again.");
-    },
-    scope: 'https://www.googleapis.com/auth/gmail.readonly',
-    flow: 'implicit',
-    onNonOAuthError: (err) => {
-      console.error('Non-OAuth Error:', err);
-      setIsLoading(false);
-      setError(`Authentication error: ${err.type}`);
-    }
-  });
-
-  const handleClick = () => {
+  // Get Google client ID from environment
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  
+  const handleLogin = () => {
     setError(null);
     setIsLoading(true);
-    login();
+    
+    try {
+      // Store current path in sessionStorage to redirect back after auth
+      sessionStorage.setItem('auth_redirect', window.location.pathname);
+      
+      // Build Google OAuth URL manually with redirect
+      const protocol = window.location.protocol;
+      const redirectUri = `${protocol}//${window.location.host}/auth-callback`;
+      const scope = 'https://www.googleapis.com/auth/gmail.readonly';
+      const responseType = 'token';
+      const state = Math.random().toString(36).substring(2, 15);
+      
+      // Construct authorization URL
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=${responseType}&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${state}&prompt=consent`;
+      
+      // Redirect to Google auth
+      window.location.href = authUrl;
+    } catch (e) {
+      console.error('Login execution error:', e);
+      setIsLoading(false);
+      setError("Failed to start login process. Please try again.");
+    }
   };
 
   return (
     <div className="flex flex-col items-center">
       <Button 
-        onClick={handleClick}
+        onClick={handleLogin}
         disabled={isLoading}
         className="w-full max-w-xs h-12 flex items-center justify-center gap-3 bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 shadow-sm transition-all duration-200 hover:shadow-md"
       >

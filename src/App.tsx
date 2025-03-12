@@ -9,6 +9,7 @@ import EmailAnalyzer from './components/email/EmailAnalyzer';
 import { AppLayout } from './components/layout/AppLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import AuthCallback from './components/auth/AuthCallback';
 
 // Rename the local ErrorBoundary component to avoid conflict
 function AppErrorBoundary({ children }: { children: React.ReactNode }) {
@@ -132,6 +133,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/auth-callback" element={<AuthCallback />} />
             <Route path="*" element={<RedirectComponent to="/" />} />
           </Routes>
         </AppLayout>
