@@ -1,3 +1,56 @@
+# MailMop
+
+This project, MailMop, was built for personal use to manage and organize emails efficiently. I'm not a professional engineer, but I created this tool to suit my needs and decided to share it for others who might find it useful.
+
+## Overview
+
+MailMop is designed to help users efficiently manage and organize their emails. It leverages modern web technologies such as React, TypeScript, and Vite to provide a fast and responsive user experience.
+
+## Prerequisites
+
+Before setting up the project, ensure you have the following installed:
+- Node.js (version 14 or higher)
+- npm (version 6 or higher)
+
+## Setup Instructions
+
+To set up the project locally, follow these steps:
+
+1. **Clone the Repository**: Clone this repository to your local machine using `git clone <repository-url>`.
+
+2. **Install Dependencies**: Navigate to the project directory and run `npm install` to install all necessary dependencies.
+
+3. **API Key Setup**: If the project requires a Google API key or any other API keys, create a `.env.local` file in the root directory and add your keys there. For example:
+   ```
+   GOOGLE_API_KEY=your_google_api_key_here
+   ```
+
+4. **Run the Project**: Use `npm run dev` to start the development server. Access the application at `http://localhost:3000`.
+
+## Authentication and Whitelisting
+
+For users who do not wish to set up authentication themselves, I need to add them to a whitelist. This is due to the cost associated with maintaining authentication services. If you prefer not to handle authentication, please contact me to be added to the whitelist.
+
+## Client-Side Information
+
+The application is built using React and TypeScript, with a focus on a clean and responsive user interface. Ensure your browser supports modern JavaScript features for the best experience.
+
+## Usage
+
+Once set up, you can use MailMop to organize your emails by following the on-screen instructions. The interface is designed to be intuitive and user-friendly.
+
+## Contributing
+
+Contributions are welcome! Please follow the code style guidelines and submit a pull request for any changes.
+
+## License
+
+This project is licensed under the MIT License.
+
+## Contact Information
+
+For support or inquiries, please contact me at [your-email@example.com].
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
