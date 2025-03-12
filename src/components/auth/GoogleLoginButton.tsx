@@ -18,21 +18,17 @@ export function GoogleLoginButton({ onSuccess }: GoogleLoginButtonProps) {
     }
     
     try {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 
-                      '179016010492-a1mand26uvfmfcbs8vbngec2n4ckecku.apps.googleusercontent.com';
-      
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
       console.log("Starting Google OAuth redirect flow");
       
-      // Use redirect flow instead of popup
       const client = window.google.accounts.oauth2.initCodeClient({
         client_id: clientId,
         scope: 'https://www.googleapis.com/auth/gmail.readonly',
         ux_mode: 'redirect',
-        redirect_uri: 'https://mailmop.neilbhammar.com/auth/callback',
+        redirect_uri: window.location.origin + '/auth/callback',
         state: 'google-oauth-redirect',
       });
 
-      // Start the redirect flow
       client.requestCode();
       
     } catch (error) {
