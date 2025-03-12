@@ -1,15 +1,32 @@
-import { useState } from "react";
-import GoogleLoginButton from "./components/GoogleLoginButton";
-import EmailFetcher from "./components/EmailFetcher";
-import "./App.css";
+import { useState, useEffect } from "react";
+import { AppLayout } from "./components/layout/AppLayout";
+import { LoginPage } from "./components/auth/LoginPage";
+import EmailAnalyzer from "./components/email/EmailAnalyzer";
 
 function App() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
+  // Check for cached token on component mount
+  useEffect(() => {
+    const cachedToken = localStorage.getItem("googleToken");
+    if (cachedToken) {
+      setAccessToken(cachedToken);
+    }
+  }, []);
+
+  const handleSignIn = (token: string) => {
+    setAccessToken(token);
+    // Cache the token
+    localStorage.setItem("googleToken", token);
+    console.log("User signed in");
+  };
+
   const handleSignOut = () => {
     setAccessToken(null);
-    // Clear any cached tokens or state
+    // Clear cached token and data
     localStorage.removeItem("googleToken");
+    localStorage.removeItem("mailmop_summary");
+    localStorage.removeItem("mailmop_email_counts");
     console.log("User signed out");
   };
 
@@ -44,8 +61,7 @@ function App() {
     }
     
     // Sign out
-    setAccessToken(null);
-    localStorage.removeItem("googleToken");
+    handleSignOut();
     
     // Clear any session cookies that might be storing the authorization
     document.cookie.split(";").forEach(function(c) {
@@ -54,47 +70,20 @@ function App() {
     
     // Redirect to Google's account permissions page where the user can revoke access
     window.open('https://myaccount.google.com/permissions', '_blank');
-    
-    // Show instructions to the user
-    alert('Please follow these steps in the new tab:\n\n1. Find "MailMop" in the list of apps\n2. Click on it and select "Remove Access"\n3. Return to this page and sign in again');
-    
-    console.log("Redirecting to Google permissions page for manual revocation");
   };
 
   return (
-    <div className="app-container">
-      <h1>MailMop</h1>
-      
+    <AppLayout>
       {!accessToken ? (
-        <div className="login-container">
-          <p className="app-description">
-            Analyze your Gmail inbox to discover who sends you the most emails.
-          </p>
-          <GoogleLoginButton onSuccess={(token) => setAccessToken(token)} />
-          <button 
-            onClick={handleForceReauth} 
-            className="force-reauth-button"
-          >
-            Force New Authorization
-          </button>
-          <p className="reauth-note">
-            Use this if you're experiencing permission issues with filters.
-          </p>
-        </div>
+        <LoginPage onSuccess={handleSignIn} />
       ) : (
-        <div className="main-content">
-          <div className="header-actions">
-            <button onClick={handleForceReauth} className="force-reauth-button">
-              Reset Permissions
-            </button>
-            <button onClick={handleSignOut} className="sign-out-button">
-              Sign Out
-            </button>
-          </div>
-          <EmailFetcher accessToken={accessToken} />
-        </div>
+        <EmailAnalyzer 
+          accessToken={accessToken} 
+          onSignOut={handleSignOut} 
+          onResetPermissions={handleForceReauth} 
+        />
       )}
-    </div>
+    </AppLayout>
   );
 }
 

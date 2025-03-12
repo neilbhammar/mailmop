@@ -36,7 +36,7 @@ export interface EmailProcessingOptions {
 export interface ProcessingProgress {
   processed: number;
   total: number | null;
-  status: 'idle' | 'processing' | 'completed' | 'error';
+  status: 'idle' | 'processing' | 'completed' | 'error' | 'stopping';
   error?: string;
 }
 
@@ -352,84 +352,142 @@ export async function fetchWithRetry(
 export async function processEmails(
   accessToken: string,
   options: EmailProcessingOptions,
-  onProgress: (progress: ProcessingProgress) => void
+  onProgress: (progress: ProcessingProgress) => void,
+  processingOptions?: {
+    batchSize?: number;
+    delayBetweenBatches?: number;
+    onBatchProcessed?: (batchSummary: SenderSummary) => void;
+  }
 ): Promise<SenderSummary> {
   const senderSummary: SenderSummary = {};
-  let processedCount = 0;
-  let pageToken: string | undefined = undefined;
+  let nextPageToken: string | undefined;
+  let totalProcessed = 0;
   let totalMessages: number | null = null;
   
+  // Set default processing options
+  const batchSize = processingOptions?.batchSize || 100; // Default to 100 messages per batch
+  const delayBetweenBatches = processingOptions?.delayBetweenBatches || 0; // Default to no delay
+  const onBatchProcessed = processingOptions?.onBatchProcessed;
+  
+  // Helper function to add delay between batches
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  
   try {
-    onProgress({ processed: 0, total: null, status: 'processing' });
+    onProgress({
+      processed: 0,
+      total: null,
+      status: 'processing'
+    });
     
-    // Keep fetching batches until we've processed all messages
+    // First, get the total count of messages to process
+    try {
+      const counts = await getEmailCounts(accessToken);
+      totalMessages = counts.messages;
+    } catch (error) {
+      console.warn("Could not get total message count:", error);
+    }
+    
+    // Process messages in batches
     do {
       // Fetch a batch of message IDs
-      const { messages, nextPageToken } = await fetchMessageIds(accessToken, options, pageToken);
-      pageToken = nextPageToken;
+      const { messages, nextPageToken: newPageToken } = await fetchMessageIds(
+        accessToken,
+        options,
+        nextPageToken
+      );
       
-      // If no messages found, break out of the loop
+      nextPageToken = newPageToken;
+      
       if (!messages || messages.length === 0) {
         break;
       }
       
-      // Extract just the IDs
-      const messageIds = messages.map(msg => msg.id);
-      
-      // Fetch metadata for this batch
-      const messagesMetadata = await fetchEmailMetadata(accessToken, messageIds);
-      
-      // Process each message
-      for (const message of messagesMetadata) {
-        const { email, name } = extractSenderInfo(message.payload.headers);
+      // Process messages in smaller batches to avoid rate limiting
+      for (let i = 0; i < messages.length; i += batchSize) {
+        const batchMessages = messages.slice(i, i + batchSize);
+        const batchIds = batchMessages.map(msg => msg.id);
         
-        // Update sender summary
-        if (senderSummary[email]) {
-          senderSummary[email].count++;
-        } else {
-          senderSummary[email] = {
-            count: 1,
-            name: name
-          };
+        // Fetch metadata for this batch
+        const emailsMetadata = await fetchEmailMetadata(accessToken, batchIds);
+        
+        // Create a batch summary to track just this batch's results
+        const batchSummary: SenderSummary = {};
+        
+        // Process each email in the batch
+        for (const metadata of emailsMetadata) {
+          if (!metadata || !metadata.payload || !metadata.payload.headers) {
+            continue;
+          }
+          
+          const { email, name } = extractSenderInfo(metadata.payload.headers);
+          
+          if (email) {
+            // Update the overall summary
+            if (!senderSummary[email]) {
+              senderSummary[email] = {
+                count: 0,
+                name: name || email
+              };
+            }
+            senderSummary[email].count++;
+            
+            // Update the batch summary
+            if (!batchSummary[email]) {
+              batchSummary[email] = {
+                count: 0,
+                name: name || email
+              };
+            }
+            batchSummary[email].count++;
+          }
+          
+          totalProcessed++;
         }
         
-        processedCount++;
+        // Update progress
+        onProgress({
+          processed: totalProcessed,
+          total: totalMessages,
+          status: 'processing'
+        });
         
-        // Update progress every 10 messages
-        if (processedCount % 10 === 0) {
-          onProgress({ 
-            processed: processedCount, 
-            total: totalMessages, 
-            status: 'processing' 
-          });
+        // Call the batch processed callback if provided
+        if (onBatchProcessed && Object.keys(batchSummary).length > 0) {
+          onBatchProcessed(batchSummary);
+        }
+        
+        // Add delay between batches if specified
+        if (delayBetweenBatches > 0 && i + batchSize < messages.length) {
+          await delay(delayBetweenBatches);
         }
       }
       
-      // Update progress after each batch
-      onProgress({ 
-        processed: processedCount, 
-        total: totalMessages, 
-        status: pageToken ? 'processing' : 'completed' 
-      });
+      // Add delay between page fetches if specified
+      if (delayBetweenBatches > 0 && nextPageToken) {
+        await delay(delayBetweenBatches);
+      }
       
-    } while (pageToken);
+    } while (nextPageToken);
     
-    // Final progress update
-    onProgress({ 
-      processed: processedCount, 
-      total: processedCount, 
-      status: 'completed' 
+    // Mark as completed
+    onProgress({
+      processed: totalProcessed,
+      total: totalMessages,
+      status: 'completed'
     });
     
     return senderSummary;
+    
   } catch (error) {
-    console.error('Error processing emails:', error);
-    onProgress({ 
-      processed: processedCount, 
-      total: totalMessages, 
-      status: 'error', 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    console.error("Error processing emails:", error);
+    
+    onProgress({
+      processed: totalProcessed,
+      total: totalMessages,
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
+    
     throw error;
   }
 }
