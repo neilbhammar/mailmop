@@ -4,24 +4,10 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react({
-      jsxRuntime: 'automatic',
-      jsxImportSource: 'react',
-      babel: {
-        plugins: [
-          ['@babel/plugin-transform-react-jsx', { runtime: 'automatic' }]
-        ]
-      }
-    })
-  ],
+  plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      'react/jsx-runtime': 'react/jsx-runtime.js'
+      '@': path.resolve(__dirname, './src')
     },
-  },
-  optimizeDeps: {
-    include: ['react/jsx-runtime']
   }
 })
