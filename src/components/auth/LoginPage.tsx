@@ -44,7 +44,13 @@ export function LoginPage({ onSignIn }: LoginPageProps) {
       {/* Navbar */}
       <nav className="container mx-auto px-4 py-6 flex items-center justify-between">
         <div className="flex items-center">
-          <img src="/images/logo.png" alt="MailMop Logo" className="h-24 w-auto" />
+          <div className="w-32 h-auto">
+            <img 
+              src="/images/logo.png" 
+              alt="MailMop Logo" 
+              className="w-full object-contain"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <a 
@@ -105,63 +111,13 @@ export function LoginPage({ onSignIn }: LoginPageProps) {
               </div>
             </div>
             
-            <div className="flex-1 relative">
-              {/* Blob background */}
-              <div className="absolute -inset-4 -z-10">
-                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-                  <path fill="#0066FF10" d="M45.3,-58.8C58.3,-50.2,68.3,-35.7,73.7,-19.3C79.1,-2.9,79.9,15.3,73.1,30.7C66.3,46.1,51.8,58.6,35.9,65.2C20,71.8,2.7,72.5,-15.6,69.7C-33.9,66.9,-53.3,60.6,-65.8,47.2C-78.3,33.8,-84,13.3,-81.8,-5.9C-79.6,-25.1,-69.5,-43,-55.3,-52.1C-41.1,-61.2,-22.8,-61.5,-4.9,-55.8C13,-50.1,32.3,-67.4,45.3,-58.8Z" transform="translate(100 100)" />
-                </svg>
-              </div>
-              
-              <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700 group">
-                <div className="p-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  </div>
-                  <div className="text-xs font-medium">MailMop Dashboard</div>
-                </div>
-                <div className="p-6">
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-2">Inbox Analysis</h3>
-                    <div className="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full" style={{ width: '68%' }}></div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                      <div className="text-3xl font-bold text-primary mb-1">68%</div>
-                      <div className="text-sm text-muted-foreground">Newsletters</div>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                      <div className="text-3xl font-bold text-blue-500 mb-1">24%</div>
-                      <div className="text-sm text-muted-foreground">Promotions</div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {[
-                      { name: "Daily Newsletter", count: 156, percent: 75 },
-                      { name: "Weekly Digest", count: 89, percent: 45 },
-                      { name: "Promotional Emails", count: 64, percent: 30 }
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">{item.name}</div>
-                          <div className="text-sm text-muted-foreground">{item.count} emails</div>
-                        </div>
-                        <div className="w-24 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-primary rounded-full" 
-                            style={{ width: `${item.percent}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            <div className="md:col-span-2 order-1 md:order-2 flex justify-center items-center">
+              <div className="relative w-full max-w-[650px] aspect-[16/9] md:aspect-auto">
+                <img 
+                  src="/images/hero.png" 
+                  alt="MailMop Dashboard" 
+                  className="w-full h-full object-contain rounded-lg shadow-none"
+                />
                 
                 {/* Play button overlay */}
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -359,13 +315,13 @@ export function LoginPage({ onSignIn }: LoginPageProps) {
                 To keep MailMop free, we have to add you to a whitelisted set of users. 
                 Send an email with the subject "MailMop" to:
               </p>
-              <div className="bg-white inline-flex items-center gap-3 px-6 py-4 rounded-2xl shadow-sm border border-gray-100">
-                <Mail className="h-6 w-6 text-blue-600" />
-                <span className="font-mono text-xl font-medium">hi@neilbhammar.com</span>
+              <div className="bg-white inline-flex items-center gap-3 px-6 py-4 rounded-2xl shadow-sm border border-gray-100 max-w-full overflow-hidden">
+                <Mail className="h-6 w-6 text-blue-600 flex-shrink-0" />
+                <span className="font-mono text-lg md:text-xl font-medium truncate">hi@neilbhammar.com</span>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="ml-2"
+                  className="ml-2 flex-shrink-0"
                   onClick={() => navigator.clipboard.writeText('hi@neilbhammar.com')}
                 >
                   <Copy className="h-4 w-4" />
