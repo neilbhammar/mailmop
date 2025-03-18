@@ -3,7 +3,7 @@ import { useState } from 'react';
 import GoogleLoginButton from './GoogleLoginButton';
 import { Button } from '../ui/button';
 import { useToast } from '../../lib/use-toast';
-import { ArrowRight, Check, Shield, Mail, BarChart3, Zap, Github, Code, Download, LineChart, Sparkles, Play, BarChart2, Code2, Copy, Lock } from 'lucide-react';
+import { ArrowRight, Check, Shield, Mail, BarChart3, Zap, Github, Code, Download, LineChart, Sparkles, Play, BarChart2, Code2, Copy, Lock, Info } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -65,6 +65,20 @@ export function LoginPage({ onSignIn }: LoginPageProps) {
           <GoogleLoginButton onSuccess={onSignIn} />
         </div>
       </nav>
+
+      {/* Beta Banner */}
+      <div className="bg-gradient-to-r from-blue-50 to-violet-50 dark:from-blue-950/50 dark:to-violet-950/50 border-b border-blue-100 dark:border-blue-900">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-center text-center">
+            <div className="flex items-start gap-3 text-base text-blue-800 dark:text-blue-200">
+              <Info className="h-5 w-5 flex-shrink-0 mt-0.5" />
+              <p>
+                Hey! Thanks for checking this out :) This is a tool that I built for myself and this is just a v1 environment that I'm playing around with. You won't be able to log in just yet, but more to come soon.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Hero Section */}
       <section className="relative pt-12 pb-16">
