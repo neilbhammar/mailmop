@@ -1,5 +1,5 @@
 import React from "react";
-import ReactDOM from "react-dom";
+import * as ReactDOM from "react-dom/client";
 import App from "./App";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { BrowserRouter } from "react-router-dom";
@@ -21,15 +21,15 @@ const clientId = (() => {
 
 // Wrap the app rendering in a try/catch to prevent white screens
 try {
-  ReactDOM.render(
+  const root = ReactDOM.createRoot(document.getElementById("root")!);
+  root.render(
     <React.StrictMode>
       <BrowserRouter>
         <GoogleOAuthProvider clientId={clientId}>
           <App />
         </GoogleOAuthProvider>
       </BrowserRouter>
-    </React.StrictMode>,
-    document.getElementById("root")
+    </React.StrictMode>
   );
 } catch (error) {
   console.error("Error rendering application:", error);

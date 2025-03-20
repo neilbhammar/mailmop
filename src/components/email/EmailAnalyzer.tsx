@@ -16,17 +16,22 @@ import { Separator } from '../ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useToast } from '../../lib/use-toast';
-import { Settings, Download, RefreshCw, ChevronDown, Search, ArrowUpDown, StopCircle, Copy, Check, Group, Mail, Trash2, ArrowRight } from 'lucide-react';
+import { Settings, Download, RefreshCw, ChevronDown, Search, ArrowUpDown, StopCircle, Copy, Check, Group, Mail, Trash2, ArrowRight, ChevronLeft, Bell, X, MinusSquare, CreditCard, MoreHorizontal, FileEdit } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Badge } from '../ui/badge';
+import { Progress } from '../ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
 // Local storage keys
 const CACHE_SUMMARY_KEY = 'mailmop_summary';
 const CACHE_EMAIL_COUNTS_KEY = 'mailmop_email_counts';
+const CACHE_USER_KEY = 'mailmop_user_email';
 
 interface EmailAnalyzerProps {
   accessToken: string;
@@ -39,6 +44,7 @@ interface SenderData {
   name: string;
   count: number;
   domain: string;
+  unsubscribeLink?: string;
 }
 
 function getDomainFromEmail(email: string): string {
@@ -49,29 +55,86 @@ function createGmailSearchQuery(email: string): string {
   return `from:(${email})`;
 }
 
-// Add SenderRow component before EmailAnalyzer
+// Add queue interface types
+interface QueueItem {
+  id: string;
+  operation: 'Delete' | 'Archive' | 'Label' | 'Analyze';
+  targetName: string;
+  targetCount: number;
+  status: 'pending' | 'active' | 'completed' | 'error';
+  startTime?: Date;
+  estimatedEndTime?: Date;
+  progress: {
+    processed: number;
+    total: number;
+  };
+}
+
+interface ProcessingQueue {
+  items: QueueItem[];
+  active: number;
+  pending: number;
+}
+
+// Add new interface for journey stages
+interface JourneyStage {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  status: 'completed' | 'active' | 'upcoming';
+}
+
+// Add function to get user-specific cache keys
+const getUserCacheKey = (key: string, userEmail: string | null) => {
+  return `${key}_${userEmail}`;
+};
+
+// Add function to clear all cached data
+const clearAllCachedData = () => {
+  localStorage.removeItem(CACHE_SUMMARY_KEY);
+  localStorage.removeItem(CACHE_EMAIL_COUNTS_KEY);
+  localStorage.removeItem(CACHE_USER_KEY);
+};
+
+// Modify the SenderRow component to show actions only on hover
 const SenderRow = memo(({ 
   sender, 
   isSelected, 
   onToggleSelect, 
   copiedEmail,
-  onCopyQuery 
+  onCopyQuery,
+  onDelete,
+  index,
+  allEmails,
+  userEmail
 }: { 
   sender: SenderData;
   isSelected: boolean;
-  onToggleSelect: (email: string) => void;
+  onToggleSelect: (email: string, shiftKey: boolean, index: number) => void;
   copiedEmail: string | null;
   onCopyQuery: (email: string) => void;
+  onDelete: (operation: 'Delete' | 'Archive' | 'Label' | 'Analyze', count: number) => void;
+  index: number;
+  allEmails: SenderData[];
+  userEmail: string;
 }) => {
   return (
     <TableRow 
-      className="group hover:bg-blue-50/50"
-      onClick={() => onToggleSelect(sender.email)}
+      className="group hover:bg-blue-50/50 cursor-pointer"
+      onClick={(e) => {
+        const shiftKey = e.shiftKey;
+        onToggleSelect(sender.email, shiftKey, index);
+      }}
     >
-      <TableCell>
+      <TableCell onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           <Checkbox 
             checked={isSelected}
+            onCheckedChange={(checked) => {
+              const shiftKey = (window.event as KeyboardEvent | undefined)?.shiftKey ?? false;
+              onToggleSelect(sender.email, shiftKey, index);
+            }}
             className={`transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
           />
           <TooltipProvider>
@@ -109,6 +172,104 @@ const SenderRow = memo(({
       <TableCell className="text-right font-medium text-blue-700">
         {sender.count.toLocaleString()}
       </TableCell>
+      <TableCell></TableCell>
+      <TableCell>
+        {sender.unsubscribeLink ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 h-7"
+            asChild
+            onClick={(e) => e.stopPropagation()}
+          >
+            <a href={sender.unsubscribeLink} target="_blank" rel="noopener noreferrer">
+              Unsubscribe
+            </a>
+          </Button>
+        ) : (
+          <span className="text-sm text-slate-400">Not available</span>
+        )}
+      </TableCell>
+      <TableCell onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-center gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(`https://mail.google.com/mail/u/${userEmail}/#search/from:${encodeURIComponent(sender.email)}`, '_blank');
+                  }}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View in Gmail</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-amber-600 hover:text-amber-700"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete('Delete', sender.count);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Delete all from sender</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-slate-600 hover:text-slate-700"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem 
+                className="cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  /* TODO: Implement delete with exceptions */
+                }}
+              >
+                <FileEdit className="h-4 w-4 mr-2" />
+                Delete with Exceptions
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="cursor-pointer text-amber-600"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  /* TODO: Implement block sender */
+                }}
+              >
+                <MinusSquare className="h-4 w-4 mr-2" />
+                Block Sender
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </TableCell>
     </TableRow>
   );
 });
@@ -120,7 +281,13 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 200;
+  const ITEMS_PER_PAGE = 50;
+  
+  // Move lastCheckedEmail hook inside component
+  const [lastCheckedEmail, setLastCheckedEmail] = useState<string | null>(null);
+  
+  // Add state to control showing filter options
+  const [showFilterOptions, setShowFilterOptions] = useState(false);
   
   // Add debug state to track component lifecycle
   const [debugInfo, setDebugInfo] = useState<{stage: string, data?: any}>({stage: 'initializing'});
@@ -180,34 +347,48 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
     
     // Load cached data on component mount
     try {
-      // Load cached summary data
-      const cachedSummary = localStorage.getItem(CACHE_SUMMARY_KEY);
-      if (cachedSummary) {
+      // First, get the cached user email
+      const cachedUserEmail = localStorage.getItem(CACHE_USER_KEY);
+      
+      // Load cached summary data only if we have matching user email
+      const cachedSummary = localStorage.getItem(getUserCacheKey(CACHE_SUMMARY_KEY, cachedUserEmail));
+      if (cachedSummary && cachedUserEmail) {
         try {
-          const parsedSummary = JSON.parse(cachedSummary);
-          setSenderSummary(parsedSummary);
-          currentSummaryRef.current = parsedSummary;
-          console.log("Loaded cached summary data");
+          const parsed = JSON.parse(cachedSummary);
+          setSenderSummary(parsed.data);
+          setAnalysisTimestamp(new Date(parsed.timestamp));
+          currentSummaryRef.current = parsed.data;
+          console.log("Loaded cached summary data for user:", cachedUserEmail);
         } catch (err) {
           console.error('Failed to parse cached summary:', err);
+          clearAllCachedData();
         }
       }
 
       // Load cached email counts
-      const cachedCounts = localStorage.getItem(CACHE_EMAIL_COUNTS_KEY);
-      if (cachedCounts) {
+      const cachedCounts = localStorage.getItem(getUserCacheKey(CACHE_EMAIL_COUNTS_KEY, cachedUserEmail));
+      if (cachedCounts && cachedUserEmail) {
         try {
-          setEmailCounts(JSON.parse(cachedCounts));
-          setLoading(false);
-          console.log("Loaded cached email counts");
-          setDebugInfo({stage: 'loaded_from_cache'});
+          const counts = JSON.parse(cachedCounts);
+          // Only use cached counts if they match the current user
+          if (counts.emailAddress === cachedUserEmail) {
+            setEmailCounts(counts);
+            setLoading(false);
+            console.log("Loaded cached email counts for user:", cachedUserEmail);
+            setDebugInfo({stage: 'loaded_from_cache'});
+          } else {
+            console.log("Cached counts belong to different user, fetching fresh data");
+            clearAllCachedData();
+            fetchEmailCounts();
+          }
         } catch (err) {
           console.error('Failed to parse cached email counts:', err);
-          fetchEmailCounts(); // Fetch fresh data if cache parsing fails
+          clearAllCachedData();
+          fetchEmailCounts();
         }
       } else {
         console.log("No cached data, fetching email counts");
-        fetchEmailCounts(); // Fetch fresh data if no cache exists
+        fetchEmailCounts();
       }
     } catch (error) {
       console.error("Error in initialization:", error);
@@ -226,7 +407,7 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
     };
   }, []);
 
-  // Fetch email counts from the API
+  // Update fetchEmailCounts to handle caching with user email
   async function fetchEmailCounts() {
     try {
       setLoading(true);
@@ -239,8 +420,14 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
       setEmailCounts(counts);
       setDebugInfo({stage: 'email_counts_fetched', data: counts});
       
-      // Cache the email counts
-      localStorage.setItem(CACHE_EMAIL_COUNTS_KEY, JSON.stringify(counts));
+      // Cache the email counts with user email
+      if (counts.emailAddress) {
+        localStorage.setItem(CACHE_USER_KEY, counts.emailAddress);
+        localStorage.setItem(
+          getUserCacheKey(CACHE_EMAIL_COUNTS_KEY, counts.emailAddress),
+          JSON.stringify(counts)
+        );
+      }
     } catch (err) {
       console.error('Failed to fetch email counts:', err);
       setError('Failed to load email information. Please try again.');
@@ -305,10 +492,8 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
 
   // Update sender summary with new batch data
   const updateSenderSummary = (newBatchData: SenderSummary) => {
-    // Merge the new batch data with the current summary
     const updatedSummary = { ...currentSummaryRef.current };
     
-    // Add or update each sender from the new batch
     Object.entries(newBatchData).forEach(([email, data]) => {
       if (updatedSummary[email]) {
         updatedSummary[email].count += data.count;
@@ -317,12 +502,20 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
       }
     });
     
-    // Update the state and ref
     setSenderSummary(updatedSummary);
     currentSummaryRef.current = updatedSummary;
     
-    // Cache the updated summary
-    localStorage.setItem(CACHE_SUMMARY_KEY, JSON.stringify(updatedSummary));
+    // Cache the updated summary with user email
+    const userEmail = emailCounts.emailAddress;
+    if (userEmail) {
+      localStorage.setItem(
+        getUserCacheKey(CACHE_SUMMARY_KEY, userEmail),
+        JSON.stringify({
+          data: updatedSummary,
+          timestamp: analysisTimestamp
+        })
+      );
+    }
     
     return updatedSummary;
   };
@@ -347,6 +540,28 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
         status: 'processing'
       });
       
+      // Create a queue item for the analysis operation
+      const analysisQueueItem: QueueItem = {
+        id: Date.now().toString(),
+        operation: 'Analyze',
+        targetName: 'Inbox',
+        targetCount: emailCounts.messages || 0,
+        status: 'active',
+        startTime: new Date(),
+        progress: {
+          processed: 0,
+          total: emailCounts.messages || 0
+        }
+      };
+      
+      // Add to queue
+      const analysisItemId = analysisQueueItem.id;
+      setProcessingQueue(prev => ({
+        items: [analysisQueueItem, ...prev.items],
+        active: prev.active + 1,
+        pending: prev.pending
+      }));
+      
       // Start tracking processing rate
       startProcessingRateCalculation();
       setAnalysisTimestamp(new Date());
@@ -357,6 +572,46 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
         processingOptions,
         (progressUpdate) => {
           setProgress(progressUpdate);
+          
+          // Also update the queue item
+          setProcessingQueue(prev => {
+            const updatedItems = prev.items.map(item => {
+              if (item.id === analysisItemId) {
+                let newStatus: 'active' | 'completed' | 'error' | 'pending';
+                
+                if (progressUpdate.status === 'completed') {
+                  newStatus = 'completed';
+                } else if (progressUpdate.status === 'error') {
+                  newStatus = 'error';
+                } else if (progressUpdate.status === 'stopping') {
+                  newStatus = 'error';
+                } else {
+                  newStatus = 'active';
+                }
+                
+                return {
+                  ...item,
+                  progress: {
+                    processed: progressUpdate.processed,
+                    total: progressUpdate.total || item.targetCount
+                  },
+                  status: newStatus
+                };
+              }
+              return item;
+            });
+            
+            // Update active/pending counts based on status changes
+            const activeCount = updatedItems.filter(item => item.status === 'active').length;
+            const pendingCount = updatedItems.filter(item => item.status === 'pending').length;
+            
+            return {
+              items: updatedItems,
+              active: activeCount,
+              pending: pendingCount
+            };
+          });
+          
           if (progressUpdate.status === 'completed') {
             setTotalEmailsProcessed(progressUpdate.processed);
           }
@@ -368,8 +623,8 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
         },
         // Add batch size and delay parameters to avoid rate limiting
         {
-          batchSize: 75,  // Process 100 emails at a time
-          delayBetweenBatches: 2500,  // Wait 2 seconds between batches
+          batchSize: 45,  // Process 45 emails at a time
+          delayBetweenBatches: 1000,  // Wait 1 second between batches
           onBatchProcessed: (batchSummary) => {
             // Update the sender summary with each batch
             updateSenderSummary(batchSummary);
@@ -387,6 +642,27 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
       
     } catch (err) {
       console.error('Failed to process emails:', err);
+      
+      // Update queue item to error state
+      setProcessingQueue(prev => {
+        const updatedItems = prev.items.map(item => {
+          if (item.operation === 'Analyze' && item.status === 'active') {
+            return {
+              ...item,
+              status: 'error' as 'error' | 'active' | 'pending' | 'completed'
+            };
+          }
+          return item;
+        });
+        
+        const activeCount = updatedItems.filter(item => item.status === 'active').length;
+        
+        return {
+          items: updatedItems,
+          active: activeCount,
+          pending: prev.pending
+        };
+      });
       
       // Check if the error is related to scope limitations
       if (err instanceof Error && err.message.includes("Metadata scope does not support 'q' parameter")) {
@@ -457,31 +733,38 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
 
   // Get sorted and filtered sender data
   const getSortedSenders = () => {
-    const senders = Object.entries(senderSummary).map(([email, data]) => ({
+    // Ensure senderSummary is an object, default to empty object if null/undefined
+    const summary = senderSummary || {};
+    
+    const senders = Object.entries(summary).map(([email, data]) => ({
       email,
-      name: data.name,
-      count: data.count,
-      domain: getDomainFromEmail(email)
+      name: data.name || '',
+      count: data.count || 0,
+      domain: getDomainFromEmail(email),
+      unsubscribeLink: data.unsubscribeLink
     }));
     
     // Apply filter
     const filteredSenders = filterText
       ? senders.filter(sender => 
           sender.email.toLowerCase().includes(filterText.toLowerCase()) ||
-          sender.name.toLowerCase().includes(filterText.toLowerCase())
+          sender.name.toLowerCase().includes(filterText.toLowerCase()) ||
+          sender.domain.toLowerCase().includes(filterText.toLowerCase())
         )
       : senders;
     
     // Apply sorting
     const sortedSenders = filteredSenders.sort((a, b) => {
       const key = sortConfig.key;
+      
       if (key === 'count') {
         return sortConfig.direction === 'ascending'
           ? a.count - b.count
           : b.count - a.count;
       } else {
-        const aValue = a[key].toLowerCase();
-        const bValue = b[key].toLowerCase();
+        // For text-based columns
+        const aValue = a[key]?.toLowerCase() || '';
+        const bValue = b[key]?.toLowerCase() || '';
         
         if (aValue < bValue) {
           return sortConfig.direction === 'ascending' ? -1 : 1;
@@ -582,6 +865,111 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
     );
   };
 
+  // Add new state for active tab
+  const [activeTab, setActiveTab] = useState('analysis');
+
+  // Add processing queue state 
+  const [processingQueue, setProcessingQueue] = useState<ProcessingQueue>({
+    items: [],
+    active: 0,
+    pending: 0,
+  });
+
+  // Add queue helper functions
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-blue-500';
+      case 'pending':
+        return 'bg-amber-500';
+      case 'completed':
+        return 'bg-green-500';
+      case 'error':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
+  const getBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+      case 'active':
+        return 'default';
+      case 'pending':
+        return 'secondary';
+      case 'completed':
+        return 'outline';
+      case 'error':
+        return 'destructive';
+      default:
+        return 'outline';
+    }
+  };
+
+  const formatEstimatedTime = (item: QueueItem) => {
+    if (item.status === 'completed') {
+      return 'Completed';
+    }
+    
+    if (item.status === 'pending') {
+      return 'Waiting to start';
+    }
+    
+    if (item.status === 'active' && item.estimatedEndTime) {
+      const minutesRemaining = Math.max(0, Math.round((item.estimatedEndTime.getTime() - Date.now()) / 60000));
+      return minutesRemaining > 0 ? `${minutesRemaining} min remaining` : 'Finishing soon';
+    }
+    
+    return '';
+  };
+
+  const addToProcessingQueue = (operation: 'Delete' | 'Archive' | 'Label' | 'Analyze', count: number) => {
+    const newItem: QueueItem = {
+      id: Date.now().toString(),
+      operation,
+      targetName: selectedEmails.size > 0 
+        ? `${Array.from(selectedEmails).join(' OR ')}`
+        : 'Unknown',
+      targetCount: count,
+      status: 'pending',
+      progress: {
+        processed: 0,
+        total: count
+      }
+    };
+    
+    setProcessingQueue(prev => ({
+      items: [newItem, ...prev.items],
+      active: prev.active,
+      pending: prev.pending + 1
+    }));
+    
+    toast({
+      title: "Operation Queued",
+      description: `${operation} operation for ${count} emails has been added to the queue.`,
+    });
+    
+    // Clear selected emails after queueing operation
+    setSelectedEmails(new Set());
+  };
+
+  // New function to show filter options
+  const handleShowFilterOptions = () => {
+    setShowFilterOptions(true);
+  };
+
+  // New function to start processing after filter options are set
+  const handleStartProcessing = () => {
+    setShowFilterOptions(false);
+    handleProcessEmails();
+  };
+
+  // Clear cache on sign out
+  const handleSignOut = () => {
+    clearAllCachedData();
+    onSignOut();
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh]">
@@ -612,330 +1000,518 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 sm:px-6 space-y-6">
-      {/* Debug info */}
-      {/* <div className="text-xs text-muted-foreground mb-2">
-        Debug: {debugInfo.stage} | Token: {accessToken ? "present" : "missing"}
-      </div> */}
-      
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
-        <div className="flex flex-col items-start gap-0">
-          <div className="w-40 h-22 cursor-pointer" onClick={onSignOut}>
-            <img src="/images/logo.png" alt="MailMop Logo" className="w-full h-full object-contain" />
+    <div className="bg-white min-h-screen">
+      {/* Modern header with subtle shadow */}
+      <header className="bg-white border-b border-slate-100 sticky top-0 z-50 shadow-sm pt-2 rounded-lg">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 w-32">
+                <div className="flex items-center">
+                  <div className="bg-blue-600 text-white rounded-md p-1.5 mr-2">
+                    <Mail className="h-5 w-5" />
           </div>
+                  <span className="font-semibold text-lg text-slate-800">MailMop</span>
         </div>
-        
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:border-blue-200 transition-all">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
+                  <div className="flex items-center pl-3 cursor-pointer">
+                    <Avatar className="h-9 w-9 border-2 border-white">
+                      <AvatarImage src="/images/avatar.png" />
+                      <AvatarFallback className="bg-blue-600 text-white text-sm flex items-center justify-center">
+                        {emailCounts.emailAddress ? 
+                          emailCounts.emailAddress.split('@')[0].substring(0, 2).toUpperCase() : 
+                          'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="ml-2 hidden md:block">
+                      <p className="text-sm font-medium text-slate-800">Neil Bhammar</p>
+                      <p className="text-xs text-slate-500">{emailCounts.emailAddress || 'Your Account'}</p>
+                    </div>
+                  </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onResetPermissions} className="text-muted-foreground">
-                Reset Permissions
+                  <DropdownMenuItem onClick={onResetPermissions} className="cursor-pointer">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    <span>Revoke Gmail Access</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onSignOut}>
-                Sign Out
+                  <div className="px-3 py-2">
+                    <div className="flex items-center">
+                      <CreditCard className="h-4 w-4 mr-2 text-slate-500" />
+                      <span className="text-sm">My Plan:  <span className="text-blue-600"> Free</span></span>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600">
+                    <ArrowRight className="h-4 w-4 mr-2" />
+                    <span>Sign Out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
-      
-      <Separator className="bg-gradient-to-r from-blue-100 to-transparent" />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-6">
-          <Card className="border-blue-100 hover:border-blue-200 transition-all">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-blue-900">Account Summary</CardTitle>
-              <CardDescription>Overview of your Gmail account</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {emailCounts.emailAddress && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Email:</span>
-                  <span className="font-medium text-blue-700">{emailCounts.emailAddress}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Emails:</span>
-                <span className="font-medium text-blue-700">{emailCounts.messages?.toLocaleString() || 'Unknown'}</span>
-              </div>
-              {emailCounts.threads !== null && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Conversations:</span>
-                  <span className="font-medium text-blue-700">{emailCounts.threads.toLocaleString()}</span>
-                </div>
-              )}
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" size="sm" className="w-full hover:bg-blue-50 hover:border-blue-200 transition-all">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-            </CardFooter>
-          </Card>
+        </div>
+      </header>
 
-          <Card className="border-blue-100 hover:border-blue-200 transition-all">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-blue-900">Email Processing Options</CardTitle>
-              <CardDescription>Configure how emails are analyzed</CardDescription>
-            </CardHeader>
-            <div className="flex flex-col h-[calc(100%-theme(spacing.14))]">
-              <CardContent className="flex-1 space-y-4 pb-4">
+      <div className="container mx-auto pt-8 px-4 sm:px-6 pb-16">
+        {/* Title section with stats underneath */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-800">Email Analysis</h1>
+          <p className="text-slate-500 mt-1">Analyze and clean your inbox</p>
+          
+          <div className="mt-4 flex items-center gap-8 text-sm">
+            <div>
+              <span className="text-slate-500">Total Emails</span>
+              <p className="font-medium text-slate-800">{emailCounts.messages?.toLocaleString() || '...'}</p>
+                </div>
+            <div>
+              <span className="text-slate-500">Threads</span>
+              <p className="font-medium text-slate-800">{emailCounts.threads?.toLocaleString() || '...'}</p>
+              </div>
+            <div>
+              <span className="text-slate-500">Analyzed</span>
+              <p className="font-medium text-slate-800">{(senderSummary && Object.keys(senderSummary).length > 0) ? totalEmailsProcessed.toLocaleString() : '0'}</p>
+                </div>
+            <div className="text-xs text-slate-500 ml-auto">
+              {analysisTimestamp ? `Last analyzed: ${new Date(analysisTimestamp).toLocaleDateString()}` : 'Not analyzed yet'}
+            </div>
+          </div>
+        </div>
+
+        {/* Authentication status alert - show when there are API errors */}
+        {(error || hasMetadataScopeIssue) && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+            <div className="text-amber-500 shrink-0 mt-0.5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium text-amber-800 mb-1">Authentication Issue</h3>
+              <p className="text-sm text-amber-700 mb-3">
+                {hasMetadataScopeIssue 
+                  ? "Your current authentication doesn't have permission to use filters."
+                  : "There was a problem connecting to your Gmail account. Your session may have expired."}
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="bg-white border-amber-200 text-amber-800 hover:bg-amber-100"
+                onClick={onResetPermissions}
+              >
+                Reset Permissions
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Filter Options Modal */}
+        {showFilterOptions && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full">
+              <h3 className="text-xl font-semibold text-slate-800 mb-4">Analysis Options</h3>
+              <div className="space-y-4 mb-6">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
-                    id="exclude-sent" 
+                    id="modal-exclude-sent" 
                     checked={processingOptions.excludeSentByMe}
                     onCheckedChange={() => handleOptionChange('excludeSentByMe')}
-                    className="border-blue-200 data-[state=checked]:bg-blue-600"
+                    className="border-slate-300 data-[state=checked]:bg-blue-600"
                   />
-                  <label
-                    htmlFor="exclude-sent"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
+                  <label htmlFor="modal-exclude-sent" className="text-sm text-slate-700">
                     Exclude emails sent by me
                   </label>
                 </div>
-                
                 <div className="flex items-center space-x-2">
                   <Checkbox 
-                    id="only-unsubscribe" 
+                    id="modal-only-unsubscribe" 
                     checked={processingOptions.onlyUnsubscribe}
                     onCheckedChange={() => handleOptionChange('onlyUnsubscribe')}
-                    className="border-blue-200 data-[state=checked]:bg-blue-600"
+                    className="border-slate-300 data-[state=checked]:bg-blue-600"
                   />
-                  <label
-                    htmlFor="only-unsubscribe"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
+                  <label htmlFor="modal-only-unsubscribe" className="text-sm text-slate-700">
                     Only include emails with "unsubscribe"
                   </label>
                 </div>
-              </CardContent>
-              <CardFooter className="border-t pt-4">
-                {progress.status === 'processing' || progress.status === 'stopping' ? (
-                  <div className="space-y-4 w-full">
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm">
-                        <span className="font-medium text-blue-700">{progress.processed.toLocaleString()}</span> emails processed
-                        {progress.status === 'processing' && (
-                          <span className="text-xs text-muted-foreground ml-2">
-                            (Please do not close this tab until processing is complete)
-                          </span>
-                        )}
                       </div>
-                      
-                      {processingRate && (
-                        <div className="text-xs text-muted-foreground">
-                          {processingRate.toFixed(1)} emails/sec
+              <div className="flex justify-between">
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowFilterOptions(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleStartProcessing}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Start Analysis
+                </Button>
                         </div>
-                      )}
                     </div>
-                    
-                    <div className="w-full bg-blue-50 rounded-full h-2.5 overflow-hidden">
-                      <div 
-                        className="bg-blue-600 h-2.5 rounded-full animate-pulse"
-                        style={{ width: '100%' }}
-                      ></div>
                     </div>
-                    
-                    {formatEstimatedTimeRemaining() && (
-                      <div className="text-xs text-muted-foreground text-center">
-                        {formatEstimatedTimeRemaining()}
+        )}
+
+        {/* Main content area with guided workflow */}
+        {!senderSummary || !Object.keys(senderSummary).length ? (
+          // First-time setup - Simple, focused on starting analysis
+          <Card className="border rounded-xl shadow-sm bg-white">
+            <CardContent className="p-8">
+              <div className="max-w-2xl mx-auto text-center">
+                <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mb-6 mx-auto">
+                  <Mail className="h-10 w-10 text-blue-300" />
                       </div>
-                    )}
+                <h2 className="text-2xl font-semibold text-slate-800 mb-3">Start by Analyzing Your Inbox</h2>
+                <p className="text-slate-500 mb-8">
+                  We'll scan your inbox to find all the senders, so you can clean up unwanted emails in bulk.
+                  {emailCounts.messages && (
+                    <span className="block mt-2 text-sm">
+                      We'll analyze {emailCounts.messages.toLocaleString()} emails in your account.
+                    </span>
+                  )}
+                </p>
+                
+                <div className="bg-slate-50 rounded-lg p-6 mb-8">
+                  <h3 className="text-sm font-medium text-slate-700 mb-4">Options (optional)</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="exclude-sent" 
+                        checked={processingOptions.excludeSentByMe}
+                        onCheckedChange={() => handleOptionChange('excludeSentByMe')}
+                        className="border-slate-300 data-[state=checked]:bg-blue-600"
+                      />
+                      <label htmlFor="exclude-sent" className="text-sm text-slate-700">
+                        Exclude emails sent by me
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="only-unsubscribe" 
+                        checked={processingOptions.onlyUnsubscribe}
+                        onCheckedChange={() => handleOptionChange('onlyUnsubscribe')}
+                        className="border-slate-300 data-[state=checked]:bg-blue-600"
+                      />
+                      <label htmlFor="only-unsubscribe" className="text-sm text-slate-700">
+                        Only include emails with "unsubscribe"
+                      </label>
+                    </div>
+                  </div>
+                </div>
                     
                     <Button 
-                      variant="destructive"
-                      onClick={handleStopProcessing}
-                      disabled={progress.status === 'stopping'}
-                      className="w-full"
-                    >
-                      <StopCircle className="h-4 w-4 mr-2" />
-                      {progress.status === 'stopping' ? 'Stopping...' : 'Stop Processing'}
+                  onClick={handleProcessEmails}
+                  className="bg-blue-600 hover:bg-blue-700 w-full max-w-sm"
+                  size="lg"
+                >
+                  Start Analysis
                     </Button>
-                  </div>
-                ) : (
-                  <Button 
-                    onClick={handleProcessEmails}
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 transition-all shadow-lg hover:shadow-blue-200/50"
+
+                {/* Auth help */}
+                <div className="mt-4 text-center">
+                  <p className="text-xs text-slate-500">Having trouble? Try:</p>
+                  <button 
+                    onClick={onResetPermissions}
+                    className="text-xs text-blue-600 hover:text-blue-800 mt-1 hover:underline"
                   >
-                    Analyze Emails
-                  </Button>
-                )}
-              </CardFooter>
-            </div>
+                    Reset authentication
+                  </button>
+                  </div>
+              </div>
+            </CardContent>
           </Card>
+        ) : (
+          // Analysis complete - Results view with clear workflow
+          <div className="space-y-6">
+            {/* Analysis controls bar - Simple but powerful */}
+            <div className="bg-white rounded-xl border shadow-sm p-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center w-full">
+                {/* Start/restart analysis */}
+                <div>
+                  <Button 
+                    onClick={handleShowFilterOptions}
+                    className="bg-blue-600 hover:bg-blue-700"
+                    disabled={progress.status === 'processing' || progress.status === 'stopping'}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    {progress.status === 'idle' ? 'Reanalyze Inbox' : 'Processing...'}
+                  </Button>
         </div>
 
-        <Card className="border-blue-100 hover:border-blue-200 transition-all">
-          <CardHeader className="pb-2">
-            <div className="flex items-center mb-4">
-              <h2 className="text-2xl font-semibold">How it Works</h2>
-              <a 
-                href="https://www.youtube.com/watch?v=IfTeb3zfTL4" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="ml-2 text-sm text-blue-500 hover:text-blue-700"
-              >
-                (watch video)
-              </a>
+                {/* Progress indicator (only shown when processing) */}
+                {(progress.status === 'processing' || progress.status === 'stopping') && (
+                  <div className="min-w-[200px] sm:flex-1 max-w-md space-y-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-600">Processing emails...</span>
+                      <span className="text-blue-600 font-medium">
+                        {progress.processed.toLocaleString()} of {progress.total ? progress.total.toLocaleString() : '?'}
+                      </span>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="relative overflow-hidden flex flex-col min-h-[400px]">
-              <div 
-                className="flex-1 flex transition-transform duration-500 ease-in-out"
-                style={getCarouselStyle()}
-              >
-                <div className="w-full flex-shrink-0 p-6">
-                  <div className="flex items-center gap-4 mb-6">
-                    <span className="bg-gradient-to-r from-blue-600 to-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium shrink-0 shadow-lg">1</span>
-                    <div>
-                      <h4 className="font-medium mb-1 text-blue-900">Identify</h4>
-                      <p className="text-sm text-muted-foreground">MailMop identifies the senders who are cluttering your inbox most</p>
+                    <Progress 
+                      value={progress.total ? (progress.processed / progress.total) * 100 : undefined}
+                      className="h-2"
+                    />
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500">
+                        {formatEstimatedTimeRemaining() || 'Calculating...'}
+                      </span>
+                      {(progress.status === 'processing' || progress.status === 'stopping') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleStopProcessing}
+                          disabled={progress.status === 'stopping'}
+                          className="h-7 px-2 py-0 text-xs"
+                        >
+                          {progress.status === 'stopping' ? 'Stopping...' : 'Stop'}
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  <div className="aspect-video bg-gradient-to-br from-blue-50 to-white rounded-lg flex items-center justify-center border border-blue-100 shadow-lg">
-                    <div className="w-full h-full rounded-lg overflow-hidden">
-                      <img 
-                        src="/gifs/identify.gif" 
-                        alt="Identify step demonstration"
-                        className="w-full h-full object-cover"
-                      />
+                )}
+                
+                {/* Queue summary - collapsed version */}
+                {processingQueue.items.length > 0 && (
+                  <div className="min-w-[180px]">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="border-slate-200 w-full justify-between"
+                        >
+                          <div className="flex items-center">
+                            <div className={`w-2 h-2 rounded-full mr-2 ${processingQueue.active > 0 ? 'bg-blue-500 animate-pulse' : 'bg-amber-500'}`}></div>
+                            <span>Queue: {processingQueue.active + processingQueue.pending} items</span>
                     </div>
+                          <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-80">
+                        <div className="px-2 py-1.5 text-sm font-medium">Processing Queue</div>
+                        <DropdownMenuSeparator />
+                        <div className="max-h-[300px] overflow-y-auto p-1">
+                          {processingQueue.items.map((item, index) => (
+                            <div key={index} className={`p-2 rounded-md mb-1 ${item.status === 'active' ? 'bg-blue-50' : 'bg-slate-50'}`}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <div className={`w-2 h-2 rounded-full mr-2 ${getStatusColor(item.status)}`}></div>
+                                  <span className="font-medium">{item.operation}</span>
                   </div>
+                                <Badge variant={getBadgeVariant(item.status)} className="capitalize text-xs">
+                                  {item.status}
+                                </Badge>
                 </div>
-                <div className="w-full flex-shrink-0 p-6">
-                  <div className="flex items-center gap-4 mb-6">
-                    <span className="bg-gradient-to-r from-blue-600 to-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium shrink-0 shadow-lg">2</span>
-                    <div>
-                      <h4 className="font-medium mb-1 text-blue-900">Search</h4>
-                      <p className="text-sm text-muted-foreground">Copy and paste the search query to find all emails from a sender</p>
+                              {item.status === 'active' && (
+                                <Progress 
+                                  value={(item.progress.processed / item.targetCount) * 100} 
+                                  className="h-1 mt-2"
+                                />
+                              )}
                     </div>
+                          ))}
                   </div>
-                  <div className="aspect-video bg-gradient-to-br from-blue-50 to-white rounded-lg flex items-center justify-center border border-blue-100 shadow-lg">
-                    <div className="w-full h-full rounded-lg overflow-hidden">
-                      <img 
-                        src="/gifs/search.gif" 
-                        alt="Search step demonstration"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="justify-center text-slate-500 cursor-pointer"
+                          onClick={() => {
+                            setProcessingQueue({
+                              items: [],
+                              active: 0,
+                              pending: 0
+                            });
+                            toast({
+                              title: "Queue Cleared",
+                              description: "All operations have been cleared."
+                            });
+                          }}
+                        >
+                          Clear All
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
-                <div className="w-full flex-shrink-0 p-6">
-                  <div className="flex items-center gap-4 mb-6">
-                    <span className="bg-gradient-to-r from-blue-600 to-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium shrink-0 shadow-lg">3</span>
-                    <div>
-                      <h4 className="font-medium mb-1 text-blue-900">Clean Up</h4>
-                      <p className="text-sm text-muted-foreground">Delete or archive all emails from that sender and repeat the process</p>
+                )}
                     </div>
                   </div>
-                  <div className="aspect-video bg-gradient-to-br from-blue-50 to-white rounded-lg flex items-center justify-center border border-blue-100 shadow-lg">
-                    <div className="w-full h-full rounded-lg overflow-hidden">
-                      <img 
-                        src="/gifs/cleanup.gif" 
-                        alt="Clean up step demonstration"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
+            
+            {/* Results table with simplified interface */}
+            <Card className="border rounded-xl shadow-sm bg-white">
+              <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-semibold text-slate-800">Email Senders</h2>
+                    <TooltipProvider delayDuration={150}>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <div className="text-slate-400 hover:text-slate-600 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="12" y1="16" x2="12" y2="12"></line>
+                              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="p-0 w-[280px] overflow-hidden rounded-lg">
+                          <div className="bg-white px-4 py-3 border-b border-slate-100">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                              <p className="font-medium text-sm">Analysis Details</p>
+                            </div>
+                          </div>
+                          <div className="px-4 py-3 space-y-3 bg-slate-50">
+                            <div>
+                              <p className="text-xs font-medium text-slate-500 mb-1">Last Analysis</p>
+                              <p className="text-sm text-slate-700">{analysisTimestamp ? new Date(analysisTimestamp).toLocaleString() : 'Not analyzed yet'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-slate-500 mb-1">Active Filters</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {processingOptions.excludeSentByMe && (
+                                  <div className="bg-white text-xs px-2 py-1 rounded border border-slate-200 text-slate-700">
+                                    Excluding sent emails
+                                  </div>
+                                )}
+                                {processingOptions.onlyUnsubscribe && (
+                                  <div className="bg-white text-xs px-2 py-1 rounded border border-slate-200 text-slate-700">
+                                    Unsubscribe only
+                                  </div>
+                                )}
+                                {!processingOptions.excludeSentByMe && !processingOptions.onlyUnsubscribe && (
+                                  <div className="text-xs text-slate-500">No filters applied</div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                 </div>
+                  {selectedEmails.size > 0 && (
+                    <div className="flex items-center gap-3 ml-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-slate-600">{selectedEmails.size} selected</span>
               </div>
-              <div className="sticky bottom-2 left-0 right-0 flex justify-center gap-2">
-                {[0, 1, 2].map((step) => (
-                  <button
-                    key={step}
-                    className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                      currentStep === step 
-                        ? 'bg-blue-600 shadow-sm' 
-                        : 'bg-blue-100 hover:bg-blue-200'
-                    }`}
-                    onClick={() => setCurrentStep(step)}
-                  />
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                      <Separator orientation="vertical" className="h-6" />
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          onClick={() => {
+                            const gmailUrl = `https://mail.google.com/mail/u/${emailCounts?.emailAddress || '0'}/#search/from:(${Array.from(selectedEmails).join(' OR ')})`;
+                            window.open(gmailUrl, '_blank');
+                          }}
+                        >
+                          <Search className="h-4 w-4 mr-2" />
+                          View in Gmail
+                        </Button>
+                        <Button 
+                          variant="ghost"
+                          size="sm"
+                          className="text-slate-600 hover:text-blue-700 hover:bg-blue-50"
+                          onClick={() => {
+                            const query = `{from:(${Array.from(selectedEmails).join(' OR ')})}`; 
+                            navigator.clipboard.writeText(query);
+                            toast({
+                              title: "Copied Search Query",
+                              description: `Search query for ${selectedEmails.size} senders copied to clipboard`,
+                            });
+                          }}
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copy Query
+                        </Button>
+                        <Button 
+                          variant="ghost"
+                          size="sm"
+                          className="text-amber-600 hover:text-amber-700 hover:bg-red-50"
+                          onClick={() => {
+                            const totalEmails = Array.from(selectedEmails).reduce((total, email) => {
+                              const sender = sortedAndPaginatedData.items.find(s => s.email === email);
+                              return total + (sender?.count || 0);
+                            }, 0);
+                            addToProcessingQueue('Delete', totalEmails);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-slate-600 hover:text-slate-700"
+                            >
+                              <MoreHorizontal className="h-4 w-4 mr-2" />
+                              More
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem 
+                              className="cursor-pointer"
+                              onClick={() => {/* TODO: Implement bulk delete with exceptions */}}
+                            >
+                              <FileEdit className="h-4 w-4 mr-2" />
+                              Delete with Exceptions
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="cursor-pointer text-amber-600"
+                              onClick={() => {/* TODO: Implement block sender */}}
+                            >
+                              <MinusSquare className="h-4 w-4 mr-2" />
+                              Block Sender
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  )}
       </div>
-
-      {Object.keys(senderSummary).length > 0 && (
-        <Card className="border-blue-100 hover:border-blue-200 transition-all">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <CardTitle className="mb-1 text-blue-900">Sender Analysis</CardTitle>
-                <CardDescription>
-                  <span className="font-medium text-blue-700">{Object.keys(senderSummary).length.toLocaleString()} Senders</span>
-                  {analysisTimestamp && ` • Run at ${formatTimestamp(analysisTimestamp)}`}
-                  {` • ${getFilterDescription()}`}
-                  {totalEmailsProcessed > 0 && ` • ${totalEmailsProcessed.toLocaleString()} emails analyzed`}
-                </CardDescription>
-              </div>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
-                <div className="relative w-full sm:w-auto">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-3">
+                  <div className="relative">
                   <input
                     type="text"
-                    placeholder="Filter senders..."
-                    className="pl-8 h-9 w-full sm:w-[200px] rounded-md border border-blue-100 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400 hover:border-blue-200"
+                      placeholder="Search senders..."
+                      className="w-64 h-9 px-3 py-2 text-sm rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     value={filterText}
                     onChange={(e) => setFilterText(e.target.value)}
                   />
+                    <Search className="absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
                 </div>
-                <Button variant="outline" size="sm" onClick={handleDownloadCSV} className="hover:bg-blue-50 hover:border-blue-200 transition-all">
+                  <Button variant="outline" size="sm" onClick={handleDownloadCSV}>
                   <Download className="h-4 w-4 mr-2" />
                   Export CSV
                 </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="w-full overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-blue-50/50">
+              <div className="relative">
+                <div className="overflow-auto max-h-[600px] relative">
+                  <Table className="relative">
+                    <TableHeader className="bg-white sticky top-0 z-20">
+                      <TableRow className="hover:bg-slate-100 after:absolute after:left-0 after:right-0 after:bottom-0 after:h-[1px] after:bg-slate-200">
                     <TableHead className="w-[50px]">
                       {selectedEmails.size > 0 ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => {
-                                  const query = `{from:(${Array.from(selectedEmails).join(' OR ')})}`; 
-                                  navigator.clipboard.writeText(query);
-                                  toast({
-                                    title: "Copied Search Query",
-                                    description: `Search query for ${selectedEmails.size} senders copied to clipboard`,
-                                  });
-                                }}
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="h-4 w-4 border border-slate-300 rounded flex items-center justify-center cursor-pointer"
+                                onClick={() => setSelectedEmails(new Set())}
                               >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Copy search query for {selectedEmails.size} selected senders</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <div className="h-8 w-8" />
+                                <div className="h-[2px] w-2 bg-slate-600" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="h-4 w-4" />
                       )}
                     </TableHead>
                     <TableHead 
-                      className="cursor-pointer whitespace-nowrap w-[250px] hover:text-blue-700"
+                          className="cursor-pointer hover:text-blue-700 text-slate-600 font-medium"
                       onClick={() => handleSort('name')}
                     >
                       <div className="flex items-center">
@@ -946,7 +1522,7 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
                       </div>
                     </TableHead>
                     <TableHead 
-                      className="cursor-pointer whitespace-nowrap hover:text-blue-700"
+                          className="cursor-pointer hover:text-blue-700 text-slate-600 font-medium"
                       onClick={() => handleSort('email')}
                     >
                       <div className="flex items-center">
@@ -957,7 +1533,7 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
                       </div>
                     </TableHead>
                     <TableHead 
-                      className="cursor-pointer text-right whitespace-nowrap w-[100px] hover:text-blue-700"
+                          className="cursor-pointer text-right hover:text-blue-700 text-slate-600 font-medium w-[100px]"
                       onClick={() => handleSort('count')}
                     >
                       <div className="flex items-center justify-end">
@@ -967,43 +1543,76 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
                         )}
                       </div>
                     </TableHead>
+                        <TableHead className="w-[20px]"></TableHead>
+                        <TableHead className="text-slate-600 font-medium w-[150px]">
+                          Unsubscribe
+                        </TableHead>
+                        <TableHead className="w-[120px] text-center text-slate-600 font-medium">
+                          Actions
+                        </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedAndPaginatedData.items.map((sender: SenderData) => (
+                      {sortedAndPaginatedData.items.map((sender: SenderData, index) => (
                     <SenderRow
                       key={sender.email}
                       sender={sender}
                       isSelected={selectedEmails.has(sender.email)}
-                      onToggleSelect={(email) => {
-                        setSelectedEmails(prev => {
-                          const next = new Set(prev);
-                          if (next.has(email)) {
-                            next.delete(email);
-                          } else {
-                            next.add(email);
-                          }
-                          return next;
-                        });
+                      onToggleSelect={(email, shiftKey, currentIndex) => {
+                        if (shiftKey && lastCheckedEmail) {
+                          const emails = sortedAndPaginatedData.items;
+                          const lastIndex = emails.findIndex(s => s.email === lastCheckedEmail);
+                          const [start, end] = [Math.min(lastIndex, currentIndex), Math.max(lastIndex, currentIndex)];
+                          
+                          setSelectedEmails(prev => {
+                            const next = new Set(prev);
+                            const isAdding = !prev.has(email);
+                            
+                            for (let i = start; i <= end; i++) {
+                              if (isAdding) {
+                                next.add(emails[i].email);
+                              } else {
+                                next.delete(emails[i].email);
+                              }
+                            }
+                            return next;
+                          });
+                        } else {
+                          setSelectedEmails(prev => {
+                            const next = new Set(prev);
+                            if (next.has(email)) {
+                              next.delete(email);
+                            } else {
+                              next.add(email);
+                            }
+                            return next;
+                          });
+                        }
+                        setLastCheckedEmail(email);
                       }}
                       copiedEmail={copiedEmail}
                       onCopyQuery={handleCopySearchQuery}
+                      onDelete={addToProcessingQueue}
+                      index={index}
+                      allEmails={sortedAndPaginatedData.items}
+                      userEmail={emailCounts?.emailAddress || '0'}
                     />
                   ))}
-                  {sortedAndPaginatedData.items.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                        No results found. Try adjusting your filter.
-                      </TableCell>
-                    </TableRow>
-                  )}
                 </TableBody>
               </Table>
+                </div>
+              </div>
+
+              {/* Pagination controls */}
+              {sortedAndPaginatedData.totalPages > 1 && (
+                <div className="mt-4">
               <PaginationControls totalPages={sortedAndPaginatedData.totalPages} />
             </div>
-          </CardContent>
+              )}
         </Card>
+          </div>
       )}
+      </div>
     </div>
   );
 } 

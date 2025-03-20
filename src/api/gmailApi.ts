@@ -23,6 +23,7 @@ export interface SenderSummary {
   [email: string]: {
     count: number;
     name: string;
+    unsubscribeLink?: string;
   };
 }
 
