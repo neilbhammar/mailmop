@@ -16,7 +16,12 @@ import { Separator } from '../ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useToast } from '../../lib/use-toast';
-import { Settings, Download, RefreshCw, ChevronDown, Search, ArrowUpDown, StopCircle, Copy, Check, Group, Mail, Trash2, ArrowRight, ChevronLeft, Bell, X, MinusSquare, CreditCard, MoreHorizontal, FileEdit } from 'lucide-react';
+import { 
+  Settings, Download, RefreshCw, ChevronDown, Eye, ArrowUpDown, 
+  StopCircle, Copy, Check, Group, Mail, Trash2, ArrowRight, 
+  ChevronLeft, Bell, X, Ban, CreditCard, MoreHorizontal, 
+  FileEdit, Sparkles, FilterX, Search
+} from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -121,7 +126,7 @@ const SenderRow = memo(({
 }) => {
   return (
     <TableRow 
-      className="group hover:bg-blue-50/50 cursor-pointer"
+      className="group hover:bg-blue-50/50 cursor-pointer select-none"
       onClick={(e) => {
         const shiftKey = e.shiftKey;
         onToggleSelect(sender.email, shiftKey, index);
@@ -204,7 +209,7 @@ const SenderRow = memo(({
                     window.open(`https://mail.google.com/mail/u/${userEmail}/#search/from:${encodeURIComponent(sender.email)}`, '_blank');
                   }}
                 >
-                  <Search className="h-4 w-4" />
+                  <Eye className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -245,7 +250,7 @@ const SenderRow = memo(({
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem 
                 className="cursor-pointer"
                 onClick={(e) => {
@@ -253,7 +258,7 @@ const SenderRow = memo(({
                   /* TODO: Implement delete with exceptions */
                 }}
               >
-                <FileEdit className="h-4 w-4 mr-2" />
+                <FilterX className="h-4 w-4 mr-2 text-slate-600" />
                 Delete with Exceptions
               </DropdownMenuItem>
               <DropdownMenuItem 
@@ -263,7 +268,7 @@ const SenderRow = memo(({
                   /* TODO: Implement block sender */
                 }}
               >
-                <MinusSquare className="h-4 w-4 mr-2" />
+                <Ban className="h-4 w-4 mr-2" />
                 Block Sender
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -1408,7 +1413,7 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
                             window.open(gmailUrl, '_blank');
                           }}
                         >
-                          <Search className="h-4 w-4 mr-2" />
+                          <Eye className="h-4 w-4 mr-2" />
                           View in Gmail
                         </Button>
                         <Button 
@@ -1456,16 +1461,22 @@ export default function EmailAnalyzer({ accessToken, onResetPermissions, onSignO
                           <DropdownMenuContent>
                             <DropdownMenuItem 
                               className="cursor-pointer"
-                              onClick={() => {/* TODO: Implement bulk delete with exceptions */}}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                /* TODO: Implement delete with exceptions */
+                              }}
                             >
-                              <FileEdit className="h-4 w-4 mr-2" />
+                              <FilterX className="h-4 w-4 mr-2 text-slate-600" />
                               Delete with Exceptions
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="cursor-pointer text-amber-600"
-                              onClick={() => {/* TODO: Implement block sender */}}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                /* TODO: Implement block sender */
+                              }}
                             >
-                              <MinusSquare className="h-4 w-4 mr-2" />
+                              <Ban className="h-4 w-4 mr-2" />
                               Block Sender
                             </DropdownMenuItem>
                           </DropdownMenuContent>
