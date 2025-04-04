@@ -1,6 +1,8 @@
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { GmailPermissionState, GoogleTokenResponse, GoogleTokenClient, GoogleTokenClientConfig } from '@/types/gmail';
-import { getStoredToken, isTokenValid, hasStoredAnalysis, storeGmailToken } from '@/lib/gmail/tokenStorage';
+import { getStoredToken, isTokenValid, hasStoredAnalysis, storeGmailToken, clearToken } from '@/lib/gmail/tokenStorage';
+import { fetchGmailProfile } from '@/lib/gmail/fetchProfile';
+import { useAuth } from './AuthProvider';
 
 const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.modify';
 const GOOGLE_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
@@ -10,11 +12,14 @@ interface GmailPermissionsContextType extends GmailPermissionState {
   isClientLoaded: boolean;
   requestPermissions: () => Promise<boolean>;
   shouldShowPermissionsModal: boolean;
+  shouldShowMismatchModal: boolean;
+  gmailEmail: string | null;
 }
 
 const GmailPermissionsContext = createContext<GmailPermissionsContextType | null>(null);
 
 export function GmailPermissionsProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [permissionState, setPermissionState] = useState<GmailPermissionState>({
     hasToken: false,
     isTokenValid: false,
@@ -22,6 +27,8 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isClientLoaded, setIsClientLoaded] = useState(false);
+  const [shouldShowMismatchModal, setShouldShowMismatchModal] = useState(false);
+  const [gmailEmail, setGmailEmail] = useState<string | null>(null);
 
   // Load Google OAuth client script
   useEffect(() => {
@@ -75,6 +82,32 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
     checkPermissionState();
   }, [checkPermissionState]);
 
+  // Verify Gmail profile matches Supabase user
+  const verifyEmailMatch = useCallback(async (accessToken: string): Promise<boolean> => {
+    try {
+      const profile = await fetchGmailProfile(accessToken);
+      setGmailEmail(profile.emailAddress);
+      
+      const emailsMatch = profile.emailAddress.toLowerCase() === user?.email?.toLowerCase();
+      if (!emailsMatch) {
+        console.log('[Gmail] Email mismatch detected:', {
+          gmail: profile.emailAddress,
+          supabase: user?.email
+        });
+        setShouldShowMismatchModal(true);
+        clearToken();
+        return false;
+      }
+      
+      setShouldShowMismatchModal(false);
+      return true;
+    } catch (error) {
+      console.error('[Gmail] Failed to verify email match:', error);
+      clearToken();
+      return false;
+    }
+  }, [user?.email]);
+
   // Request Gmail permissions
   const requestPermissions = useCallback(async () => {
     if (!isClientLoaded) {
@@ -82,15 +115,21 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
       return false;
     }
 
+    if (!user?.email) {
+      console.error('[Gmail] No authenticated user email found');
+      return false;
+    }
+
     console.log('[Gmail] Requesting permissions...');
     setIsLoading(true);
     try {
-      // Initialize Google client
+      // Initialize Google client with login_hint
       const tokenResponse = await new Promise<GoogleTokenResponse>((resolve, reject) => {
         console.log('[Gmail] Initializing OAuth client...');
         const client = window.google.accounts.oauth2.initTokenClient({
           client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
           scope: GMAIL_SCOPE,
+          login_hint: user.email, // Pre-fill with Supabase user's email
           callback: (response: GoogleTokenResponse) => {
             console.log('[Gmail] Received OAuth response:', { 
               hasError: !!response.error,
@@ -105,6 +144,12 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
         });
         client.requestAccessToken();
       });
+
+      // Verify email matches before storing token
+      const emailVerified = await verifyEmailMatch(tokenResponse.access_token);
+      if (!emailVerified) {
+        return false;
+      }
 
       console.log('[Gmail] Permissions granted successfully, storing token...');
       
@@ -122,10 +167,10 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
     } finally {
       setIsLoading(false);
     }
-  }, [isClientLoaded, checkPermissionState]);
+  }, [isClientLoaded, checkPermissionState, verifyEmailMatch, user?.email]);
 
   // Determine if we need to show the permissions modal
-  const shouldShowPermissionsModal = !permissionState.hasToken && !permissionState.hasEmailData;
+  const shouldShowPermissionsModal = !permissionState.hasToken && !permissionState.hasEmailData && !shouldShowMismatchModal;
 
   // Log any changes to the modal visibility
   useEffect(() => {
@@ -141,6 +186,8 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
     isClientLoaded,
     requestPermissions,
     shouldShowPermissionsModal,
+    shouldShowMismatchModal,
+    gmailEmail,
   };
 
   return (

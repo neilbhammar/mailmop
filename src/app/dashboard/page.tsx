@@ -9,7 +9,11 @@ export default function Dashboard() {
   const router = useRouter()
   const [checked, setChecked] = useState(false)
 
+  // Only run this effect once on mount and when user changes from null to non-null or vice versa
   useEffect(() => {
+    // Skip if we've already checked
+    if (checked) return;
+
     console.log('[Dashboard] useAuth user →', user)
 
     if (user === null) {
@@ -20,16 +24,16 @@ export default function Dashboard() {
     }
 
     setChecked(true)
-  }, [user])
+  }, [user, router, checked])
 
-  if (!checked) {
+  if (!checked || !user) {
     return <div className="p-8">Checking session...</div>
   }
 
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold">Welcome to the Dashboard</h1>
-      <p className="mt-2">Signed in as: {user?.email}</p>
+      <p className="mt-2">Signed in as: {user.email}</p>
     </div>
   )
 }

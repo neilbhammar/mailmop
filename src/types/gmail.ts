@@ -24,6 +24,7 @@ export interface GoogleTokenClientConfig {
   client_id: string;
   scope: string;
   callback: (response: GoogleTokenResponse) => void;
+  login_hint?: string; // Optional email to pre-fill in the Google account selector
 }
 
 // Declare global Google namespace

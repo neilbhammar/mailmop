@@ -7,11 +7,12 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { BetaWaitlistModal } from '@/components/modals/BetaWaitlistModal'
 import { GrantPermissionsModal } from '@/components/modals/GrantPermissionsModal'
+import { EmailMismatchModal } from '@/components/modals/EmailMismatchModal'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading: authLoading } = useAuth()
   const { checkWhitelist, isWhitelisted, isLoading: whitelistLoading } = useWhitelist()
-  const { shouldShowPermissionsModal } = useGmailPermissions()
+  const { shouldShowPermissionsModal, shouldShowMismatchModal, gmailEmail } = useGmailPermissions()
   const router = useRouter()
 
   useEffect(() => {
@@ -47,6 +48,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </div>
         <BetaWaitlistModal />
+      </>
+    )
+  }
+
+  // If there's an email mismatch, show that modal
+  if (shouldShowMismatchModal && user.email && gmailEmail) {
+    return (
+      <>
+        <div className="filter blur-sm pointer-events-none">
+          {children}
+        </div>
+        <EmailMismatchModal 
+          supabaseEmail={user.email} 
+          gmailEmail={gmailEmail} 
+        />
       </>
     )
   }
