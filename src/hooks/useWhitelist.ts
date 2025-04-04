@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { supabase } from '@/supabase/client'
+import { isWhitelisted as checkWhitelistStatus } from '@/supabase/whitelist'
 
 export function useWhitelist() {
   const [isLoading, setIsLoading] = useState(false)
@@ -7,25 +8,17 @@ export function useWhitelist() {
   const [isWhitelisted, setIsWhitelisted] = useState<boolean | null>(null)
 
   const checkWhitelist = useCallback(async (email: string) => {
+    console.log('[Whitelist] Checking status for user...')
     setIsLoading(true)
     setError(null)
     try {
-      // Query the whitelist_emails table
-      const { data, error } = await supabase
-        .from('whitelist_emails')
-        .select('email')
-        .eq('email', email.toLowerCase())
-
-      if (error) throw error
-      
-      // If we found any rows, the email is whitelisted
-      const isAllowed = Array.isArray(data) && data.length > 0
-      setIsWhitelisted(isAllowed)
-      return isAllowed
-    } catch (e) {
-      const error = e as Error
-      console.error('[useWhitelist] Error:', error)
-      setError(error)
+      const whitelisted = await checkWhitelistStatus(email)
+      console.log(`[Whitelist] User ${whitelisted ? 'is' : 'is not'} on whitelist`)
+      setIsWhitelisted(whitelisted)
+      return whitelisted
+    } catch (error) {
+      console.error('[Whitelist] Error checking status:', error)
+      setError(error as Error)
       setIsWhitelisted(false)
       return false
     } finally {

@@ -2,13 +2,16 @@
 
 import { useAuth } from '@/context/AuthProvider'
 import { useWhitelist } from '@/hooks/useWhitelist'
+import { useGmailPermissions } from '@/hooks/useGmailPermissions'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { BetaWaitlistModal } from '@/components/modals/BetaWaitlistModal'
+import { GrantPermissionsModal } from '@/components/modals/GrantPermissionsModal'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading: authLoading } = useAuth()
   const { checkWhitelist, isWhitelisted, isLoading: whitelistLoading } = useWhitelist()
+  const { shouldShowPermissionsModal } = useGmailPermissions()
   const router = useRouter()
 
   useEffect(() => {
@@ -48,6 +51,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  // User is whitelisted (or check not complete), show dashboard
+  // If user needs to grant Gmail permissions, show that modal
+  if (shouldShowPermissionsModal) {
+    return (
+      <>
+        <div className="filter blur-sm pointer-events-none">
+          {children}
+        </div>
+        <GrantPermissionsModal />
+      </>
+    )
+  }
+
+  // User is whitelisted and has necessary permissions, show dashboard
   return <>{children}</>
 } 
