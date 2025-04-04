@@ -8,6 +8,7 @@ import { useEffect } from 'react'
 import { BetaWaitlistModal } from '@/components/modals/BetaWaitlistModal'
 import { GrantPermissionsModal } from '@/components/modals/GrantPermissionsModal'
 import { EmailMismatchModal } from '@/components/modals/EmailMismatchModal'
+import { TopBar } from '@/components/TopBar'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading: authLoading } = useAuth()
@@ -80,5 +81,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   // User is whitelisted and has necessary permissions, show dashboard
-  return <>{children}</>
+  return (
+    <>
+      <TopBar />
+      {children}
+    </>
+  )
 } 

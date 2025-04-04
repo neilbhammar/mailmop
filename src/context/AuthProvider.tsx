@@ -10,12 +10,14 @@ type AuthContextType = {
   session: Session | null
   user: User | null
   isLoading: boolean
+  signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({ 
   session: null, 
   user: null, 
-  isLoading: true 
+  isLoading: true,
+  signOut: async () => {} 
 })
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -25,6 +27,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const processingAuth = useRef(false)
   const lastSessionId = useRef<string | null>(null)
   const { updateProfile } = useUserProfile()
+
+  const signOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/')
+  }
 
   useEffect(() => {
     let mounted = true
@@ -100,7 +107,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     <AuthContext.Provider value={{ 
       session, 
       user: session?.user ?? null, 
-      isLoading 
+      isLoading,
+      signOut 
     }}>
       {children}
     </AuthContext.Provider>
