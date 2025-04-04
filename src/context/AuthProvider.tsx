@@ -3,8 +3,8 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/supabase/client'
-import { upsertProfile } from '@/supabase/profile/upsertProfile'
 import { useRouter } from 'next/navigation'
+import { useUserProfile } from '@/hooks/useUserProfile'
 
 type AuthContextType = {
   session: Session | null
@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter()
   const processingAuth = useRef(false)
   const lastSessionId = useRef<string | null>(null)
+  const { updateProfile } = useUserProfile()
 
   useEffect(() => {
     let mounted = true
@@ -50,23 +51,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log(`[Auth] Processing ${event || 'Initial'} auth`)
         if (mounted) setSession(session)
 
-        // Only upsert profile if this is a new session
+        // Only update profile if this is a new session
         if (sessionId !== lastSessionId.current) {
-          const result = await upsertProfile({
-            id: session.user.id,
-            email: session.user.email ?? '',
-            name: session.user.user_metadata.full_name ?? '',
-            avatar_url: session.user.user_metadata.avatar_url ?? ''
-          })
+          try {
+            await updateProfile({
+              user_id: session.user.id,
+              email: session.user.email ?? '',
+              name: session.user.user_metadata.full_name ?? '',
+              avatar_url: session.user.user_metadata.avatar_url ?? '',
+              last_login: new Date().toISOString()
+            })
+            console.log('[Auth] Profile update complete')
+            
+            if (event === 'SIGNED_IN') {
+              router.refresh()
+            }
 
-          if (result.error) throw result.error
-          console.log('[Auth] Profile upsert complete')
-          
-          if (event === 'SIGNED_IN') {
-            router.refresh()
+            lastSessionId.current = sessionId ?? null
+          } catch (error) {
+            console.error('[Auth] Profile update error:', error)
           }
-
-          lastSessionId.current = sessionId ?? null
         }
       } catch (error) {
         console.error('[Auth] Error:', error)
@@ -90,7 +94,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       mounted = false
       listener.subscription.unsubscribe()
     }
-  }, [router])
+  }, [router, updateProfile])
 
   return (
     <AuthContext.Provider value={{ 
