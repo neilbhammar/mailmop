@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/context/AuthProvider'
 import { useWhitelist } from '@/hooks/useWhitelist'
-import { useGmailPermissions } from '@/hooks/useGmailPermissions'
+import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { BetaWaitlistModal } from '@/components/modals/BetaWaitlistModal'

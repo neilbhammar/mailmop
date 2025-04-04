@@ -1,7 +1,7 @@
-import { useGmailPermissions } from '@/hooks/useGmailPermissions';
+import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
 
 export function GrantPermissionsModal() {
-  const { requestPermissions } = useGmailPermissions();
+  const { requestPermissions, isLoading } = useGmailPermissions();
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
@@ -25,9 +25,10 @@ export function GrantPermissionsModal() {
 
         <button
           onClick={requestPermissions}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+          disabled={isLoading}
+          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400"
         >
-          Grant Access
+          {isLoading ? 'Granting Access...' : 'Grant Access'}
         </button>
       </div>
     </div>

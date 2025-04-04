@@ -26,7 +26,20 @@ export interface GoogleTokenClientConfig {
   callback: (response: GoogleTokenResponse) => void;
 }
 
-// These types are for checking if we have cached data
+// Declare global Google namespace
+declare global {
+  interface Window {
+    google: {
+      accounts: {
+        oauth2: {
+          initTokenClient(config: GoogleTokenClientConfig): GoogleTokenClient;
+        };
+      };
+    };
+  }
+}
+
+// Analysis Types
 export interface CachedAnalysis {
   timestamp: number;
   senders: SenderSummary[];

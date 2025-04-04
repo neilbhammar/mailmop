@@ -1,24 +1,20 @@
-import { useCallback, useEffect, useState } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { GmailPermissionState, GoogleTokenResponse, GoogleTokenClient, GoogleTokenClientConfig } from '@/types/gmail';
 import { getStoredToken, isTokenValid, hasStoredAnalysis, storeGmailToken } from '@/lib/gmail/tokenStorage';
-
-// Declare the google namespace
-declare global {
-  interface Window {
-    google: {
-      accounts: {
-        oauth2: {
-          initTokenClient(config: GoogleTokenClientConfig): GoogleTokenClient;
-        };
-      };
-    };
-  }
-}
 
 const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.modify';
 const GOOGLE_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
 
-export function useGmailPermissions() {
+interface GmailPermissionsContextType extends GmailPermissionState {
+  isLoading: boolean;
+  isClientLoaded: boolean;
+  requestPermissions: () => Promise<boolean>;
+  shouldShowPermissionsModal: boolean;
+}
+
+const GmailPermissionsContext = createContext<GmailPermissionsContextType | null>(null);
+
+export function GmailPermissionsProvider({ children }: { children: ReactNode }) {
   const [permissionState, setPermissionState] = useState<GmailPermissionState>({
     hasToken: false,
     isTokenValid: false,
@@ -57,21 +53,25 @@ export function useGmailPermissions() {
     const tokenValid = isTokenValid();
     const hasData = hasStoredAnalysis();
 
-    console.log('[Gmail] Checking permission state:', {
-      hasToken: !!token,
-      isTokenValid: tokenValid,
-      hasEmailData: hasData
-    });
-
-    setPermissionState({
+    const newState = {
       hasToken: !!token,
       isTokenValid: tokenValid,
       hasEmailData: hasData,
-    });
+    };
+
+    console.log('[Gmail] Permission state changing to:', newState);
+    setPermissionState(newState);
+
+    // Calculate and log if modal should show with new state
+    const shouldShow = !newState.hasToken && !newState.hasEmailData;
+    console.log('[Gmail] Modal should show:', shouldShow);
+
+    return newState;
   }, []);
 
   // Initial check on mount
   useEffect(() => {
+    console.log('[Gmail] Running initial permission state check');
     checkPermissionState();
   }, [checkPermissionState]);
 
@@ -87,10 +87,15 @@ export function useGmailPermissions() {
     try {
       // Initialize Google client
       const tokenResponse = await new Promise<GoogleTokenResponse>((resolve, reject) => {
+        console.log('[Gmail] Initializing OAuth client...');
         const client = window.google.accounts.oauth2.initTokenClient({
           client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
           scope: GMAIL_SCOPE,
           callback: (response: GoogleTokenResponse) => {
+            console.log('[Gmail] Received OAuth response:', { 
+              hasError: !!response.error,
+              hasToken: !!response.access_token 
+            });
             if (response.error) {
               reject(response);
             } else {
@@ -101,13 +106,14 @@ export function useGmailPermissions() {
         client.requestAccessToken();
       });
 
-      console.log('[Gmail] Permissions granted successfully');
+      console.log('[Gmail] Permissions granted successfully, storing token...');
       
       // Store the new token
       storeGmailToken(tokenResponse.access_token, tokenResponse.expires_in);
       
-      // Immediately check and update state to prevent stale UI
-      checkPermissionState();
+      // Force an immediate state check
+      const newState = checkPermissionState();
+      console.log('[Gmail] State after permission grant:', newState);
 
       return true;
     } catch (error) {
@@ -121,11 +127,33 @@ export function useGmailPermissions() {
   // Determine if we need to show the permissions modal
   const shouldShowPermissionsModal = !permissionState.hasToken && !permissionState.hasEmailData;
 
-  return {
+  // Log any changes to the modal visibility
+  useEffect(() => {
+    console.log('[Gmail] Modal visibility changed:', { 
+      shouldShow: shouldShowPermissionsModal,
+      state: permissionState 
+    });
+  }, [shouldShowPermissionsModal, permissionState]);
+
+  const value = {
     ...permissionState,
     isLoading,
     isClientLoaded,
     requestPermissions,
     shouldShowPermissionsModal,
   };
+
+  return (
+    <GmailPermissionsContext.Provider value={value}>
+      {children}
+    </GmailPermissionsContext.Provider>
+  );
+}
+
+export function useGmailPermissions() {
+  const context = useContext(GmailPermissionsContext);
+  if (!context) {
+    throw new Error('useGmailPermissions must be used within a GmailPermissionsProvider');
+  }
+  return context;
 } 
