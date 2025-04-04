@@ -10,7 +10,7 @@ interface UserDropdownProps {
 
 export function UserDropdown({ user }: UserDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { signOut } = useAuth()
+  const { signOut, plan } = useAuth()
 
   return (
     <div className="relative">
@@ -45,7 +45,7 @@ export function UserDropdown({ user }: UserDropdownProps) {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-100 rounded-lg shadow-lg">
+        <div className="absolute left-[-1rem] right-[-1rem] mt-2 bg-white border-x border-b border-gray-100 rounded-b-lg shadow-md z-50">
           <div className="py-1">
             {/* Revoke Gmail Access */}
             <button
@@ -57,9 +57,20 @@ export function UserDropdown({ user }: UserDropdownProps) {
 
             {/* Manage Plan */}
             <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-              <CreditCard className="w-4 h-4 mr-3" />
-              <span>Manage Plan</span>
-              <span className="ml-auto text-xs text-blue-600 font-medium">Free</span>
+              <CreditCard className="w-4 h-4 mr-3 shrink-0" />
+              <span className="truncate">
+                {plan === 'pro' ? 'Manage Subscription' : 'Upgrade to Pro'}
+              </span>
+              <span 
+                className={cn(
+                  "ml-auto shrink-0 text-xs font-medium px-2.5 py-0.5 rounded-sm",
+                  plan === 'pro'
+                    ? "bg-purple-50 text-purple-700" 
+                    : "bg-blue-50 text-blue-700"
+                )}
+              >
+                {plan === 'pro' ? 'Pro' : 'Free'}
+              </span>
             </button>
 
             {/* Contact Support */}

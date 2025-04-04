@@ -11,22 +11,25 @@ type AuthContextType = {
   user: User | null
   isLoading: boolean
   signOut: () => Promise<void>
+  plan: string | null
 }
 
 const AuthContext = createContext<AuthContextType>({ 
   session: null, 
   user: null, 
   isLoading: true,
-  signOut: async () => {} 
+  signOut: async () => {},
+  plan: null
 })
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [plan, setPlan] = useState<string | null>(null)
   const router = useRouter()
   const processingAuth = useRef(false)
   const lastSessionId = useRef<string | null>(null)
-  const { updateProfile } = useUserProfile()
+  const { updateProfile, fetchProfile } = useUserProfile()
 
   const signOut = async () => {
     await supabase.auth.signOut()
@@ -50,6 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (!session?.user) {
           if (mounted) {
             setSession(null)
+            setPlan(null)
             setIsLoading(false)
           }
           return
@@ -61,6 +65,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Only update profile if this is a new session
         if (sessionId !== lastSessionId.current) {
           try {
+            // Update profile in Supabase
             await updateProfile({
               user_id: session.user.id,
               email: session.user.email ?? '',
@@ -68,6 +73,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               avatar_url: session.user.user_metadata.avatar_url ?? '',
               last_login: new Date().toISOString()
             })
+
+            // Fetch full profile to get plan
+            const profile = await fetchProfile(session.user.id)
+            if (mounted && profile) {
+              setPlan(profile.plan ?? 'free')
+            }
+
             console.log('[Auth] Profile update complete')
             
             if (event === 'SIGNED_IN') {
@@ -87,12 +99,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
 
-    // Initial session check
+    // Initial session check and auth listener setup
     supabase.auth.getSession().then(({ data: { session }}) => {
       handleAuth(session)
     })
 
-    // Listen for auth changes
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       handleAuth(session, event)
     })
@@ -101,14 +112,53 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       mounted = false
       listener.subscription.unsubscribe()
     }
-  }, [router, updateProfile])
+  }, [router, updateProfile, fetchProfile])
+
+  // Separate effect for profile changes subscription
+  useEffect(() => {
+    let mounted = true
+    let subscription: ReturnType<typeof supabase.channel> | null = null
+
+    // Only set up subscription if we have a user ID
+    if (session?.user?.id) {
+      subscription = supabase
+        .channel('profile-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'profiles',
+            filter: `user_id=eq.${session.user.id}`
+          },
+          async (payload) => {
+            console.log('[Auth] Profile changed:', payload)
+            if (mounted) {
+              const profile = await fetchProfile(session.user.id)
+              if (profile) {
+                setPlan(profile.plan ?? 'free')
+              }
+            }
+          }
+        )
+        .subscribe()
+    }
+
+    return () => {
+      mounted = false
+      if (subscription) {
+        subscription.unsubscribe()
+      }
+    }
+  }, [session?.user?.id, fetchProfile])
 
   return (
     <AuthContext.Provider value={{ 
       session, 
       user: session?.user ?? null, 
       isLoading,
-      signOut 
+      signOut,
+      plan 
     }}>
       {children}
     </AuthContext.Provider>
