@@ -1,6 +1,6 @@
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { GmailPermissionState, GoogleTokenResponse, GoogleTokenClient, GoogleTokenClientConfig } from '@/types/gmail';
-import { getStoredToken, isTokenValid, hasStoredAnalysis, storeGmailToken, clearToken } from '@/lib/gmail/tokenStorage';
+import { getStoredToken, isTokenValid, hasStoredAnalysis, storeGmailToken, clearToken as clearStoredToken } from '@/lib/gmail/tokenStorage';
 import { fetchGmailProfile } from '@/lib/gmail/fetchProfile';
 import { useAuth } from './AuthProvider';
 
@@ -14,6 +14,7 @@ interface GmailPermissionsContextType extends GmailPermissionState {
   shouldShowPermissionsModal: boolean;
   shouldShowMismatchModal: boolean;
   gmailEmail: string | null;
+  clearToken: () => void;
 }
 
 const GmailPermissionsContext = createContext<GmailPermissionsContextType | null>(null);
@@ -95,7 +96,7 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
           supabase: user?.email
         });
         setShouldShowMismatchModal(true);
-        clearToken();
+        clearStoredToken();
         return false;
       }
       
@@ -103,7 +104,7 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
       return true;
     } catch (error) {
       console.error('[Gmail] Failed to verify email match:', error);
-      clearToken();
+      clearStoredToken();
       return false;
     }
   }, [user?.email]);
@@ -180,6 +181,16 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
     });
   }, [shouldShowPermissionsModal, permissionState]);
 
+  const clearToken = useCallback(() => {
+    clearStoredToken();
+    // Force an immediate state check to update UI
+    setPermissionState(prev => ({
+      ...prev,
+      hasToken: false,
+      isTokenValid: false
+    }));
+  }, []);
+
   const value = {
     ...permissionState,
     isLoading,
@@ -188,6 +199,7 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
     shouldShowPermissionsModal,
     shouldShowMismatchModal,
     gmailEmail,
+    clearToken,
   };
 
   return (

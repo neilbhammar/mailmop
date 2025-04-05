@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
-import { ChevronDown, Settings, CreditCard, HelpCircle, LogOut } from 'lucide-react'
+import { ChevronDown, Settings, CreditCard, HelpCircle, LogOut, Ban } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthProvider'
+import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
+import { RevokeAccessDialog } from './modals/RevokeAccessDialog'
 import Image from 'next/image'
 import { toast } from 'sonner'
+import { AnimatePresence, motion } from 'framer-motion'
 
 interface UserDropdownProps {
   user: User
@@ -12,8 +15,23 @@ interface UserDropdownProps {
 
 export function UserDropdown({ user }: UserDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [showRevokeDialog, setShowRevokeDialog] = useState(false)
   const { signOut, plan } = useAuth()
+  const { isTokenValid } = useGmailPermissions()
   const avatarUrl = user.user_metadata?.avatar_url
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Handle click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleContactSupport = () => {
     toast.info("Please email help@mailmop.com for support", {
@@ -36,7 +54,7 @@ export function UserDropdown({ user }: UserDropdownProps) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       {/* User Profile Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -81,61 +99,84 @@ export function UserDropdown({ user }: UserDropdownProps) {
       </button>
 
       {/* Dropdown Menu */}
-      {isOpen && (
-        <div className="absolute left-[-1rem] right-[-1rem] mt-2 bg-white border-x border-b border-gray-100 rounded-b-lg shadow-md z-50">
-          <div className="py-1">
-            {/* Revoke Gmail Access */}
-            <button
-              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <Settings className="w-4 h-4 mr-3" />
-              Revoke Gmail Access
-            </button>
-
-            {/* Manage Plan */}
-            <button 
-              onClick={handleSubscription}
-              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <CreditCard className="w-4 h-4 mr-3 shrink-0" />
-              <span className="truncate">
-                {plan === 'pro' ? 'Manage Subscription' : 'Upgrade to Pro'}
-              </span>
-              <span 
-                className={cn(
-                  "ml-auto shrink-0 text-xs font-medium px-2.5 py-0.5 rounded-sm",
-                  plan === 'pro'
-                    ? "bg-purple-50 text-purple-700" 
-                    : "bg-blue-50 text-blue-700"
-                )}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="absolute left-[-1rem] right-[-1rem] mt-2 bg-white border-x border-b border-gray-100 rounded-b-lg shadow-md z-50"
+          >
+            <div className="py-1">
+              {/* Manage Plan */}
+              <button 
+                onClick={handleSubscription}
+                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
-                {plan === 'pro' ? 'Pro' : 'Free'}
-              </span>
-            </button>
+                <CreditCard className="w-4 h-4 mr-3 shrink-0" />
+                <span className="truncate">
+                  {plan === 'pro' ? 'Manage Subscription' : 'Upgrade to Pro'}
+                </span>
+                <span 
+                  className={cn(
+                    "ml-auto shrink-0 text-xs font-medium px-2.5 py-0.5 rounded-sm",
+                    plan === 'pro'
+                      ? "bg-purple-50 text-purple-700" 
+                      : "bg-blue-50 text-blue-700"
+                  )}
+                >
+                  {plan === 'pro' ? 'Pro' : 'Free'}
+                </span>
+              </button>
 
-            {/* Contact Support */}
-            <button 
-              onClick={handleContactSupport}
-              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <HelpCircle className="w-4 h-4 mr-3" />
-              Contact Support
-            </button>
+              {/* Only show Revoke Gmail Access if token is valid */}
+              {isTokenValid && (
+                <button
+                  onClick={() => {
+                    setShowRevokeDialog(true)
+                    setIsOpen(false)
+                  }}
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <Ban className="w-4 h-4 mr-3" />
+                  Revoke Gmail Access
+                </button>
+              )}
 
-            {/* Divider */}
-            <div className="h-px my-1 bg-gray-100" />
+              {/* Contact Support */}
+              <button 
+                onClick={handleContactSupport}
+                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <HelpCircle className="w-4 h-4 mr-3" />
+                Contact Support
+              </button>
 
-            {/* Sign Out */}
-            <button
-              onClick={signOut}
-              className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-            >
-              <LogOut className="w-4 h-4 mr-3" />
-              Sign Out
-            </button>
-          </div>
-        </div>
-      )}
+              {/* Divider */}
+              <div className="h-px my-1 bg-gray-100" />
+
+              {/* Sign Out */}
+              <button
+                onClick={() => {
+                  signOut()
+                  setIsOpen(false)
+                }}
+                className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+              >
+                <LogOut className="w-4 h-4 mr-3" />
+                Sign Out
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Revoke Access Dialog */}
+      <RevokeAccessDialog
+        open={showRevokeDialog}
+        onOpenChange={setShowRevokeDialog}
+      />
     </div>
   )
 } 
