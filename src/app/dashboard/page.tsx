@@ -27,11 +27,11 @@ export default function Dashboard() {
   }, [user, router, checked])
 
   if (!checked || !user) {
-    return <div className="p-8">Checking session...</div>
+    return <div>Checking session...</div>
   }
 
   return (
-    <div className="p-8">
+    <div>
       <h1 className="text-2xl font-bold">Welcome to the Dashboard</h1>
       <p className="mt-2">Signed in as: {user.email}</p>
     </div>

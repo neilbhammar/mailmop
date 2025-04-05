@@ -41,24 +41,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return null
   }
 
-  // If whitelist check is complete and user is not whitelisted, show modal
+  // Main app content that may be blurred
+  const mainContent = (
+    <>
+      <TopBar />
+      <div className="max-w-7xl mx-auto px-4">
+        {children}
+      </div>
+    </>
+  )
+
+  // If whitelist check is complete and user is not whitelisted, show blurred content + modal
   if (isWhitelisted === false) {
     return (
       <>
         <div className="filter blur-sm pointer-events-none">
-          {children}
+          {mainContent}
         </div>
         <BetaWaitlistModal />
       </>
     )
   }
 
-  // If there's an email mismatch, show that modal
+  // If there's an email mismatch, show blurred content + modal
   if (shouldShowMismatchModal && user.email && gmailEmail) {
     return (
       <>
         <div className="filter blur-sm pointer-events-none">
-          {children}
+          {mainContent}
         </div>
         <EmailMismatchModal 
           supabaseEmail={user.email} 
@@ -68,12 +78,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  // If user needs to grant Gmail permissions, show that modal
+  // If user needs to grant Gmail permissions, show blurred content + modal
   if (shouldShowPermissionsModal) {
     return (
       <>
         <div className="filter blur-sm pointer-events-none">
-          {children}
+          {mainContent}
         </div>
         <GrantPermissionsModal />
       </>
@@ -81,10 +91,5 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   // User is whitelisted and has necessary permissions, show dashboard
-  return (
-    <>
-      <TopBar />
-      {children}
-    </>
-  )
+  return mainContent
 } 
