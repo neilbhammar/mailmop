@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { User } from '@supabase/supabase-js'
-import { ChevronDown, Settings, CreditCard, HelpCircle, LogOut, Moon } from 'lucide-react'
+import { ChevronDown, Settings, CreditCard, HelpCircle, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthProvider'
+import Image from 'next/image'
+import { toast } from 'sonner'
 
 interface UserDropdownProps {
   user: User
@@ -11,6 +13,27 @@ interface UserDropdownProps {
 export function UserDropdown({ user }: UserDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { signOut, plan } = useAuth()
+  const avatarUrl = user.user_metadata?.avatar_url
+
+  const handleContactSupport = () => {
+    toast.info("Please email help@mailmop.com for support", {
+      description: "We'll get back to you as soon as possible!"
+    })
+    setIsOpen(false)
+  }
+
+  const handleSubscription = () => {
+    if (plan === 'pro') {
+      toast.info("Subscription management coming soon!", {
+        description: "Need help with your subscription? Email help@mailmop.com"
+      })
+    } else {
+      toast.info("Pro plan coming soon!", {
+        description: "Want early access? Email help@mailmop.com"
+      })
+    }
+    setIsOpen(false)
+  }
 
   return (
     <div className="relative">
@@ -20,10 +43,24 @@ export function UserDropdown({ user }: UserDropdownProps) {
         className="flex items-center space-x-3"
       >
         <div className="flex items-center space-x-3">
-          {/* Avatar - using first letter as placeholder */}
-          <div className="w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
-            {user.email?.[0].toUpperCase()}
-          </div>
+          {/* Avatar - using image if available, otherwise first letter */}
+          {avatarUrl ? (
+            <div className="relative w-8 h-8 rounded-full overflow-hidden ring-1 ring-gray-200">
+              <Image
+                src={avatarUrl}
+                alt={`${user.email}'s avatar`}
+                width={32}
+                height={32}
+                className="object-cover"
+              />
+              {/* Light blue overlay for a bright, muted effect */}
+              <div className="absolute inset-0 bg-blue-100/80 mix-blend-multiply" />
+            </div>
+          ) : (
+            <div className="w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-600 rounded-full text-sm font-medium ring-1 ring-gray-200">
+              {user.email?.[0].toUpperCase()}
+            </div>
+          )}
           
           {/* Name and Email */}
           <div className="text-left">
@@ -56,7 +93,10 @@ export function UserDropdown({ user }: UserDropdownProps) {
             </button>
 
             {/* Manage Plan */}
-            <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+            <button 
+              onClick={handleSubscription}
+              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
               <CreditCard className="w-4 h-4 mr-3 shrink-0" />
               <span className="truncate">
                 {plan === 'pro' ? 'Manage Subscription' : 'Upgrade to Pro'}
@@ -74,7 +114,10 @@ export function UserDropdown({ user }: UserDropdownProps) {
             </button>
 
             {/* Contact Support */}
-            <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+            <button 
+              onClick={handleContactSupport}
+              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
               <HelpCircle className="w-4 h-4 mr-3" />
               Contact Support
             </button>
