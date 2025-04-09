@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
-import { ChevronDown, Settings, CreditCard, HelpCircle, LogOut, Ban } from 'lucide-react'
+import { ChevronDown, Settings, CreditCard, HelpCircle, LogOut, RefreshCwOff, RefreshCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthProvider'
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
 import { RevokeAccessDialog } from '../modals/RevokeAccessDialog'
+import { SignOutDialog } from '../modals/SignOutDialog'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -16,8 +17,9 @@ interface UserDropdownProps {
 export function UserDropdown({ user }: UserDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [showRevokeDialog, setShowRevokeDialog] = useState(false)
-  const { signOut, plan } = useAuth()
-  const { isTokenValid } = useGmailPermissions()
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false)
+  const { plan } = useAuth()
+  const { isTokenValid, requestPermissions } = useGmailPermissions()
   const avatarUrl = user.user_metadata?.avatar_url
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -130,19 +132,26 @@ export function UserDropdown({ user }: UserDropdownProps) {
                 </span>
               </button>
 
-              {/* Only show Revoke Gmail Access if token is valid */}
-              {isTokenValid && (
-                <button
-                  onClick={() => {
+              {/* Gmail Access Button - Show either Revoke or Reconnect */}
+              <button
+                onClick={() => {
+                  if (isTokenValid) {
                     setShowRevokeDialog(true)
                     setIsOpen(false)
-                  }}
-                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <Ban className="w-4 h-4 mr-3" />
-                  Revoke Gmail Access
-                </button>
-              )}
+                  } else {
+                    requestPermissions()
+                    setIsOpen(false)
+                  }
+                }}
+                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                {isTokenValid ? (
+                  <RefreshCwOff className="w-4 h-4 mr-3" />
+                ) : (
+                  <RefreshCcw className="w-4 h-4 mr-3" />
+                )}
+                {isTokenValid ? 'Revoke Gmail Access' : 'Reconnect Gmail'}
+              </button>
 
               {/* Contact Support */}
               <button 
@@ -159,7 +168,7 @@ export function UserDropdown({ user }: UserDropdownProps) {
               {/* Sign Out */}
               <button
                 onClick={() => {
-                  signOut()
+                  setShowSignOutDialog(true)
                   setIsOpen(false)
                 }}
                 className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
@@ -176,6 +185,12 @@ export function UserDropdown({ user }: UserDropdownProps) {
       <RevokeAccessDialog
         open={showRevokeDialog}
         onOpenChange={setShowRevokeDialog}
+      />
+
+      {/* Sign Out Dialog */}
+      <SignOutDialog
+        open={showSignOutDialog}
+        onOpenChange={setShowSignOutDialog}
       />
     </div>
   )
