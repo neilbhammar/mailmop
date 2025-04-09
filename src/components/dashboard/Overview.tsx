@@ -1,5 +1,5 @@
 import React from 'react';
-import InboxStats from './InboxStats';
+import InboxStats from './overview/InboxStats';
 
 export default function Overview() {
   return (

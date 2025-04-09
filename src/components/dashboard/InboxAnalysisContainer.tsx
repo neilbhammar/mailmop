@@ -1,0 +1,39 @@
+'use client'
+
+import { useState } from 'react'
+import { Card } from '@/components/ui/card'
+import { useAnalysis } from '@/context/AnalysisProvider'
+import IntroStepper from './analysisintro/IntroStepper'
+import AnalysisTable from './analysis/AnalysisView'
+
+export default function InboxAnalysisContainer() {
+  // Get state from analysis context
+  const { hasAnalysis } = useAnalysis()
+  
+  // Local state for tracking reanalysis requests
+  const [reanalyzeRequested, setReanalyzeRequested] = useState(false)
+
+  // Show stepper if reanalyzing or no analysis data yet
+  const showingStepper = reanalyzeRequested || !hasAnalysis
+
+  // Handle canceling reanalysis
+  const handleCancel = () => {
+    setReanalyzeRequested(false)
+  }
+
+  return (
+    <Card className="!rounded-lg !border !border-slate-200 !p-0 h-[calc(100vh-19rem)] w-full max-w-7xl mx-auto bg-white px-6 py-5 !shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all duration-300 sm:px-8 sm:py-6">
+      {showingStepper ? (
+        <IntroStepper 
+          onComplete={() => setReanalyzeRequested(false)}
+          onCancel={hasAnalysis ? handleCancel : undefined}
+          isReanalysis={hasAnalysis}
+        />
+      ) : (
+        <AnalysisTable 
+          onReanalyze={() => setReanalyzeRequested(true)}
+        />
+      )}
+    </Card>
+  )
+}

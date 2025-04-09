@@ -1,3 +1,5 @@
+'use client'
+
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { GmailPermissionState, GoogleTokenResponse, GoogleTokenClient, GoogleTokenClientConfig } from '@/types/gmail';
 import { getStoredToken, isTokenValid, hasStoredAnalysis, storeGmailToken, clearToken as clearStoredToken } from '@/lib/gmail/tokenStorage';
@@ -67,13 +69,12 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
       hasEmailData: hasData,
     };
 
-    console.log('[Gmail] Permission state changing to:', newState);
+    console.log('[Gmail] Permission state check:', {
+      hasData,
+      tokenValid
+    });
+
     setPermissionState(newState);
-
-    // Calculate and log if modal should show with new state
-    const shouldShow = !newState.hasToken && !newState.hasEmailData;
-    console.log('[Gmail] Modal should show:', shouldShow);
-
     return newState;
   }, []);
 
@@ -81,6 +82,39 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
   useEffect(() => {
     console.log('[Gmail] Running initial permission state check');
     checkPermissionState();
+  }, [checkPermissionState]);
+
+  // Listen for localStorage changes and window focus
+  useEffect(() => {
+    // Function to handle storage changes
+    const handleStorageChange = (e: Event) => {
+      if (e instanceof CustomEvent) {
+        const { key } = e.detail as { key: string };
+        if (key === 'email_analysis' || key === 'gmail_token' || key === 'email_data') {
+          console.log('[Gmail] Storage changed, rechecking state');
+          checkPermissionState();
+        }
+      }
+    };
+
+    // Function to handle window focus
+    const handleFocus = () => {
+      console.log('[Gmail] Window focused, rechecking state');
+      checkPermissionState();
+    };
+
+    // Add listeners
+    window.addEventListener('mailmop:storage-change', handleStorageChange);
+    window.addEventListener('focus', handleFocus);
+
+    // Initial check
+    checkPermissionState();
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('mailmop:storage-change', handleStorageChange);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [checkPermissionState]);
 
   // Verify Gmail profile matches Supabase user

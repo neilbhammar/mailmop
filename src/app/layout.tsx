@@ -4,6 +4,7 @@
 import './globals.css'
 import { AuthProvider } from '@/context/AuthProvider'
 import { GmailPermissionsProvider } from '@/context/GmailPermissionsProvider'
+import { AnalysisProvider } from '@/context/AnalysisProvider'
 import { Toaster } from 'sonner'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -12,7 +13,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AuthProvider>
           <GmailPermissionsProvider>
-            {children}
+            <AnalysisProvider>
+              {children}
+            </AnalysisProvider>
           </GmailPermissionsProvider>
         </AuthProvider>
         <Toaster richColors position="bottom-right" />

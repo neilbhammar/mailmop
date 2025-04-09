@@ -43,12 +43,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // Main app content that may be blurred
   const mainContent = (
-    <>
+    <div className="min-h-screen bg-white-50">
       <TopBar />
-      <div className="max-w-7xl mx-auto px-4">
-        {children}
-      </div>
-    </>
+      <main className="px-4 pt-2 pb-6">
+        <div className="max-w-7xl mx-auto">
+          {children}
+        </div>
+      </main>
+    </div>
   )
 
   // If whitelist check is complete and user is not whitelisted, show blurred content + modal
