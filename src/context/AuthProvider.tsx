@@ -5,6 +5,7 @@ import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useUserProfile } from '@/hooks/useUserProfile'
+import { SessionContextProvider } from '@supabase/auth-helpers-react'
 
 type AuthContextType = {
   session: Session | null
@@ -153,15 +154,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [session?.user?.id, fetchProfile])
 
   return (
-    <AuthContext.Provider value={{ 
-      session, 
-      user: session?.user ?? null, 
-      isLoading,
-      signOut,
-      plan 
-    }}>
-      {children}
-    </AuthContext.Provider>
+    <SessionContextProvider supabaseClient={supabase}>
+      <AuthContext.Provider value={{ 
+        session, 
+        user: session?.user ?? null, 
+        isLoading,
+        signOut,
+        plan 
+      }}>
+        {children}
+      </AuthContext.Provider>
+    </SessionContextProvider>
   )
 }
 

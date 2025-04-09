@@ -3,6 +3,7 @@
 import { useAuth } from '@/context/AuthProvider'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Overview from '@/components/dashboard/Overview'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -31,9 +32,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold">Welcome to the Dashboard</h1>
-      <p className="mt-2">Signed in as: {user.email}</p>
+    <div className="container mx-auto px-4">
+      <Overview />
     </div>
   )
 }

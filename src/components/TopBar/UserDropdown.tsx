@@ -4,7 +4,7 @@ import { ChevronDown, Settings, CreditCard, HelpCircle, LogOut, Ban } from 'luci
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthProvider'
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
-import { RevokeAccessDialog } from './modals/RevokeAccessDialog'
+import { RevokeAccessDialog } from '../modals/RevokeAccessDialog'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { AnimatePresence, motion } from 'framer-motion'

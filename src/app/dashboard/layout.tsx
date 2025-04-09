@@ -8,7 +8,7 @@ import { useEffect } from 'react'
 import { BetaWaitlistModal } from '@/components/modals/BetaWaitlistModal'
 import { GrantPermissionsModal } from '@/components/modals/GrantPermissionsModal'
 import { EmailMismatchModal } from '@/components/modals/EmailMismatchModal'
-import { TopBar } from '@/components/TopBar'
+import { TopBar } from '@/components/TopBar/TopBar'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading: authLoading } = useAuth()
