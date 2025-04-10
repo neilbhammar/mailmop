@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Shield, ChevronRight } from 'lucide-react'
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
 import Step1_ConnectGmail from './Step1_ConnectGmail'
 import Step2_RunAnalysis from './Step2_RunAnalysis'
 import { storeDummyAnalysis } from '@/lib/gmail/tokenStorage'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowLeft } from 'lucide-react'
 
 interface IntroStepperProps {
   onComplete: () => void;
@@ -50,77 +50,77 @@ export default function IntroStepper({
   const totalSteps = 2
   
   return (
-    <div className="relative flex flex-col min-h-[500px] w-full max-w-3xl mx-auto rounded-2xl bg-gradient-to-b from-white to-blue-50/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-blue-100/60 overflow-hidden">
-      {/* Glass header with progress indicator */}
-      <div className="sticky top-0 z-10 backdrop-blur-sm bg-white/80 border-b border-blue-100/50 p-5 shadow-sm">
-        <div className="mx-auto max-w-xl relative">
-          {/* Pill-shaped progress bar */}
-          <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden w-full max-w-[240px] mx-auto">
-            <div 
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${(step / totalSteps) * 100}%` }}
-            />
-          </div>
-          
-          {/* Step circles on top of progress bar */}
-          <div className="absolute top-0 left-0 w-full flex justify-between px-1 -translate-y-[3px]">
-            {Array.from({ length: totalSteps }).map((_, i) => (
+    <div className="flex flex-col w-full h-full bg-white">
+      {/* Refined header with step indicator */}
+      <div className="h-16 flex items-center justify-center border-b border-gray-100 relative">
+        {onCancel && (
+          <button 
+            onClick={onCancel}
+            className="absolute left-4 flex items-center text-slate-500 hover:text-slate-600 transition-colors py-2"
+            aria-label={isReanalysis ? "Back to sender analysis" : "Back"}
+          >
+            <ArrowLeft size={16} className="mr-1.5" />
+            <span className="text-sm font-medium">
+              {isReanalysis ? "Back to sender analysis" : "Back"}
+            </span>
+          </button>
+        )}
+        
+        {/* Step indicator */}
+        <div className="flex items-center space-x-0">
+          {Array.from({ length: totalSteps }).map((_, i) => (
+            <div key={i} className="flex items-center">
+              {i > 0 && (
+                <div className="h-0.5 w-12 bg-gray-200 relative overflow-hidden mx-2">
+                  <div className={cn(
+                    "h-full absolute inset-0 transition-all duration-500 ease-in-out",
+                    step > i ? "w-full bg-blue-600" : "w-0 bg-blue-600"
+                  )} />
+                </div>
+              )}
               <div 
-                key={i}
                 className={cn(
-                  "flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300",
+                  "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all",
                   step > i 
-                    ? "bg-blue-500 text-white transform scale-100" 
-                    : "bg-white border-2 border-gray-200 text-gray-400 transform scale-75"
+                    ? "bg-blue-600 text-white" 
+                    : step === i + 1
+                      ? "bg-blue-600 text-white ring-4 ring-blue-100" 
+                      : "bg-gray-200 text-gray-500"
                 )}
               >
-                {step > i ? (
-                  <span className="text-xs font-medium">✓</span>
-                ) : (
-                  <span className="text-xs font-medium">{i + 1}</span>
-                )}
+                {i + 1}
               </div>
-            ))}
-          </div>
-          
-          {/* Step labels under progress bar */}
-          <div className="flex justify-between mt-5 text-xs text-gray-500 font-medium max-w-[240px] mx-auto px-1">
-            <span className={step >= 1 ? "text-blue-600" : ""}>Connect</span>
-            <span className={step >= 2 ? "text-blue-600" : ""}>Analyze</span>
-          </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="absolute right-4 text-sm font-medium text-gray-500">
+          Step {step} of {totalSteps}
         </div>
       </div>
-      
-      {/* Close button - always show it, but styled differently for reanalysis */}
-      <button 
-        onClick={onCancel}
-        className={cn(
-          "absolute top-4 right-4 z-20 p-2 rounded-full transition-all",
-          isReanalysis 
-            ? "text-gray-500 hover:text-gray-700 hover:bg-gray-100/80" 
-            : "text-gray-400 hover:text-gray-600 hover:bg-gray-50/80"
-        )}
-        aria-label={isReanalysis ? "Cancel reanalysis" : "Close"}
-      >
-        <X size={20} />
-      </button>
-      
-      {/* Security badge */}
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-full py-1 px-3 border border-emerald-100">
-        <Shield size={12} className="text-emerald-600" />
-        <span>Secure Connection</span>
-      </div>
 
-      {/* Content area with animation */}
-      <div className="flex-grow p-8 flex items-center justify-center">
+      {/* Content area with refined animation */}
+      <div className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={step}
-            initial={{ opacity: 0, x: animationDirection * 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="w-full"
+            initial={{ 
+              opacity: 0,
+              x: animationDirection === 1 ? 20 : -20
+            }}
+            animate={{ 
+              opacity: 1,
+              x: 0
+            }}
+            exit={{ 
+              opacity: 0,
+              x: animationDirection === 1 ? -20 : 20
+            }}
+            transition={{ 
+              duration: 0.3, 
+              ease: "easeInOut" 
+            }}
+            className="h-full"
           >
             {step === 1 && (
               <Step1_ConnectGmail onNext={goToNextStep} />
@@ -131,11 +131,6 @@ export default function IntroStepper({
             )}
           </motion.div>
         </AnimatePresence>
-      </div>
-      
-      {/* Privacy footer */}
-      <div className="bg-white/90 border-t border-blue-50 p-4 text-center text-xs text-gray-500">
-        <p>Your data never leaves your browser. <a href="#" className="text-blue-500 hover:text-blue-700 hover:underline inline-flex items-center">Learn more <ChevronRight size={12} /></a></p>
       </div>
     </div>
   )

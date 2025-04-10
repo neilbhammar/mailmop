@@ -1,67 +1,372 @@
 'use client'
 
-import { useGmailStats } from '@/hooks/useGmailStats'
-import { getStoredToken } from '@/lib/gmail/tokenStorage'
+import { getStoredGmailStats, GmailStats } from '@/lib/gmail/fetchGmailStats'
+import { useState, useEffect } from 'react'
+import { 
+  MailIcon, 
+  ClockIcon, 
+  ShieldIcon,
+  AlertCircleIcon,
+  LaptopIcon,
+  SparklesIcon,
+  CheckIcon,
+  ChevronRightIcon,
+  ExternalLinkIcon,
+  MoreHorizontalIcon,
+  TrashIcon,
+  BanIcon,
+  ZapIcon
+} from 'lucide-react'
+import { motion, AnimatePresence, Transition } from 'framer-motion'
+import { cn } from '@/lib/utils'
+
+// BorderTrail component for the magical button effect
+function BorderTrail({
+  className,
+  size = 60,
+  transition,
+  delay = 0,
+  style,
+}: {
+  className?: string;
+  size?: number;
+  transition?: Transition;
+  delay?: number;
+  style?: React.CSSProperties;
+}) {
+  const BASE_TRANSITION = {
+    repeat: Infinity,
+    duration: 3.5,
+    ease: 'linear',
+  };
+
+  return (
+    <div className='pointer-events-none absolute inset-0 rounded-[inherit] border border-transparent [mask-clip:padding-box,border-box] [mask-composite:intersect] [mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000)]'>
+      <motion.div
+        className={cn('absolute aspect-square', className)}
+        style={{
+          width: size,
+          offsetPath: `rect(0 auto auto 0 round ${16}px)`,
+          ...style,
+        }}
+        animate={{
+          offsetDistance: ['0%', '100%'],
+        }}
+        transition={{
+          ...(transition ?? BASE_TRANSITION),
+          delay: delay,
+        }}
+      />
+    </div>
+  );
+}
 
 interface Step2Props {
   onStart: () => void;
 }
 
 export default function Step2_RunAnalysis({ onStart }: Step2Props) {
-  const token = getStoredToken()
-  const { stats, isLoading } = useGmailStats(token?.accessToken)
+  // Use stored stats directly
+  const [stats, setStats] = useState<GmailStats | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [unsubscribeOnly, setUnsubscribeOnly] = useState(false) // Default to full analysis
+  
+  // Get stored stats on component mount
+  useEffect(() => {
+    setStats(getStoredGmailStats())
+    setIsLoading(false)
+  }, [])
+  
+  // Calculate number of emails to analyze
+  const emailsToAnalyze = stats?.totalEmails ? 
+    (unsubscribeOnly ? Math.floor(stats.totalEmails * 0.67) : stats.totalEmails) :
+    0
+  
+  // Round to nearest thousand for display
+  const roundedEmails = Math.max(1000, Math.floor(emailsToAnalyze / 1000) * 1000)
   
   // Rough estimate: 1000 messages per minute
-  const estimatedMinutes = stats?.totalEmails ? Math.ceil(stats.totalEmails / 1000) : 2
+  const estimatedMinutes = Math.max(1, Math.ceil(roundedEmails / 1000))
   
-  // Round to nearest thousand
-  const roundedEmails = stats?.totalEmails 
-    ? Math.floor(stats.totalEmails / 1000) * 1000
-    : 0
+  // Calculate a more human-readable time estimate
+  const getTimeEstimate = () => {
+    if (estimatedMinutes < 1) return 'less than a minute';
+    if (estimatedMinutes === 1) return 'about a minute';
+    if (estimatedMinutes < 60) return `about ${estimatedMinutes} minutes`;
+    
+    const hours = Math.floor(estimatedMinutes / 60);
+    const mins = estimatedMinutes % 60;
+    
+    if (mins === 0) return `about ${hours} hour${hours > 1 ? 's' : ''}`;
+    return `about ${hours} hour${hours > 1 ? 's' : ''} and ${mins} minute${mins > 1 ? 's' : ''}`;
+  };
+
+  // Sample senders for visualization
+  const sampleSenders = [
+    { name: "Pinterest", email: "tips@pinterest.com", count: 1450, lastEmail: "Apr 8" },
+    { name: "Spotify", email: "hi@sotify.com", count: 780, lastEmail: "Mar 5" },
+    { name: "LinkedIn", email: "news@linkedin.com", count: 420, lastEmail: "3 days ago" }
+  ];
 
   return (
-    <div className="flex flex-col items-center space-y-8 max-w-xl mx-auto text-center">
-      <h3 className="text-2xl font-semibold text-gray-800">
-        Ready to analyze your inbox
-      </h3>
-
-      <div className="space-y-4">
-        <p className="text-gray-600">
-          We'll scan your inbox to show you which senders are taking up space. 
-          This is local and private.
-        </p>
-
-        {/* Stats with placeholder */}
-        <div className="min-h-[24px]"> {/* Fixed height container */}
-          {isLoading ? (
-            <div className="animate-pulse flex justify-center">
-              <div className="h-5 bg-gray-200 rounded w-64"></div>
+    <div className="h-full w-full flex items-center">
+      {/* Left side - Visualization */}
+      <div className="hidden md:flex md:w-1/2 h-full bg-slate-50 items-center justify-center p-12">
+        <div className="w-full max-w-lg">
+          {/* Keep tab open notice - Made more prominent */}
+          <motion.div 
+            className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex items-center shadow-sm mb-6"
+            initial={{ opacity: 0.9 }}
+            animate={{ 
+              opacity: [0.9, 1, 0.9]
+            }}
+            transition={{ duration: 4, repeat: Infinity }}
+          >
+            <div className="flex-shrink-0 mr-4">
+              <div className="bg-amber-100 p-2 rounded-full">
+                <AlertCircleIcon size={22} className="text-amber-600" />
+              </div>
             </div>
-          ) : stats?.totalEmails ? (
-            <p className="text-sm text-gray-500">
-              You have over {(roundedEmails).toLocaleString()} emails.
-              This can take up to {estimatedMinutes} minute{estimatedMinutes !== 1 ? 's' : ''}.
-            </p>
-          ) : null}
+            <div>
+              <h3 className="font-medium text-amber-900 text-base">Keep this tab open during analysis</h3>
+              <p className="text-sm text-amber-800 mt-0.5">
+                You can use other browser tabs while we work in the background
+              </p>
+            </div>
+          </motion.div>
+          
+          <div className="rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden">
+            <div className="p-6">
+              {/* Static sample display instead of overly dynamic animation */}
+              <div className="space-y-5">             
+                {/* Static loading indicator with simpler animation */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-medium text-gray-700">Analyzing {!isLoading && stats?.totalEmails && (
+                      <span>{roundedEmails.toLocaleString()}</span>
+                    )} emails in real-time</span>
+                    <span className="text-gray-500">Sample results</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full w-2/3 bg-blue-500 rounded-full" />
+                  </div>
+                </div>
+                
+                {/* Sample senders with frequency - Static sample */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium text-gray-700">Top Senders Identified</h4>
+                    <div className="px-2 py-0.5 bg-green-100 rounded text-xs font-medium text-green-800 flex items-center gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      Sample
+                    </div>
+                  </div>
+                  
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    {/* Table header - Simplified with flex layout */}
+                    <div className="flex items-center bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500">
+                      <div className="w-1/5">Name</div>
+                      <div className="w-1/5">Email</div>
+                      <div className="w-1/5 text-center">Count</div>
+                      <div className="w-2/5 text-left">Actions</div>
+                    </div>
+                    
+                    {/* Sample senders - Static content without distracting animations */}
+                    {sampleSenders.map((sender, idx) => (
+                      <div
+                        key={`sender-${idx}`}
+                        className="flex items-center px-3 py-3 border-t border-gray-100 hover:bg-gray-50"
+                      >
+                        <div className="w-1/5 text-gray-500 text-xs truncate">
+                          {sender.name}
+                        </div>
+                        <div className="w-1/5 text-gray-500 text-xs truncate">
+                          {sender.email}
+                        </div>
+                        <div className="w-1/5 text-gray-500 text-center text-xs truncate">
+                          {sender.count}
+                        </div>
+                        <div className="w-2/5 flex items-left justify-end space-x-3">
+                          <button className="text-blue-600 text-xs font-medium">
+                            Unsubscribe
+                          </button>
+                          <div className="flex items-center space-x-2">
+                            <button className="text-gray-400 hover:text-gray-500">
+                              <ExternalLinkIcon size={15} />
+                            </button>
+                            <button className="text-gray-400 hover:text-gray-500">
+                              <TrashIcon size={15} />
+                            </button>
+                            <button className="text-gray-400 hover:text-gray-500">
+                              <MailIcon size={15} />
+                            </button>
+                            <button className="text-gray-400 hover:text-gray-500">
+                              <MoreHorizontalIcon size={15} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Message at the bottom - Simplified animation */}
+          <div className="mt-6 text-center">
+            <div className="inline-flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full">
+              <SparklesIcon size={12} />
+              <span>Analysis happens locally in your browser for privacy</span>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Analysis settings - we'll add these later */}
-      <div className="w-full bg-gray-50 p-6 rounded-lg space-y-4">
-        <h4 className="font-medium text-gray-700 text-left">Analysis Settings</h4>
-        <p className="text-sm text-gray-500 text-left">
-          Configure how you want to analyze your inbox. 
-          Default settings work well for most users.
-        </p>
+      
+      {/* Right side - Content */}
+      <div className="w-full md:w-1/2 px-8 py-12 flex items-center justify-center">
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
+              <SparklesIcon className="h-8 w-8 text-blue-500" />
+            </div>
+          </div>
+          
+          {/* Title and description */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-semibold text-gray-900 mb-3">Ready to analyze your inbox</h1>
+            <p className="text-gray-600">
+              {!isLoading && stats?.emailAddress ? (
+                <>Analyzing {stats.emailAddress} with {stats.totalEmails?.toLocaleString()} emails</>
+              ) : (
+                <>MailMop will analyze your emails to find cleanup opportunities</>
+              )}
+            </p>
+          </div>
+          
+          {/* Analysis Options */}
+          <div className="bg-gray-50 rounded-xl mb-8">
+            <div className="py-5 px-6 space-y-5">
+              <div className="flex justify-between items-center">
+                <h3 className="font-medium text-gray-900">Analysis Type</h3>
+              </div>
+              
+              <div className="space-y-3">
+                <label className="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer transition-colors hover:border-blue-200 hover:bg-blue-50">
+                  <input 
+                    type="radio" 
+                    name="analysis-type" 
+                    className="w-4 h-4 text-blue-500 focus:ring-blue-400 border-gray-300" 
+                    checked={!unsubscribeOnly}
+                    onChange={() => setUnsubscribeOnly(false)}
+                  />
+                  <div className="ml-3">
+                    <span className="font-medium text-gray-700">Full Inbox Analysis</span>
+                    <div className="inline-flex items-center ml-2">
+                      <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Thorough</span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      Analyze all emails for maximum cleanup potential
+                    </p>
+                  </div>
+                </label>
+                
+                <label className="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer transition-colors hover:border-blue-200 hover:bg-blue-50">
+                  <input 
+                    type="radio" 
+                    name="analysis-type" 
+                    className="w-4 h-4 text-blue-500 focus:ring-blue-400 border-gray-300" 
+                    checked={unsubscribeOnly}
+                    onChange={() => setUnsubscribeOnly(true)}
+                  />
+                  <div className="ml-3">
+                    <span className="font-medium text-gray-700">Optimize for Speed</span>
+                    <div className="inline-flex items-center ml-2">
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Faster</span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      Focus on emails with unsubscribe links for quicker results
+                    </p>
+                  </div>
+                </label>
+              </div>
+              
+              <div className="flex items-center pt-2">
+                <ClockIcon size={16} className="text-gray-400 flex-shrink-0" />
+                <span className="ml-2 text-sm text-gray-500">
+                  Estimated time: <span className="font-medium text-gray-700">{getTimeEstimate()}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Start Button - With focus-grabbing animation and design */}
+          <motion.div
+            className="relative"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+          >
+            <button
+              onClick={onStart}
+              disabled={isLoading}
+              className="relative w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-4 px-6 text-white font-medium shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <svg className="animate-spin mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Loading...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center">
+                  <SparklesIcon size={18} className="text-white mr-2" />
+                  <span className="text-base">Start Analysis</span>
+                </div>
+              )}
+              
+              {/* Border trail animation */}
+              <BorderTrail 
+                className="bg-white bg-opacity-30" 
+                size={10}
+              />
+              <BorderTrail 
+                className="bg-white bg-opacity-60" 
+                size={10}
+                delay={1.75}
+              />
+            </button>
+          </motion.div>
+          
+          {/* Security indicators */}
+          <div className="mt-6 text-center space-y-3">
+            <div className="flex items-center justify-center">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <ShieldIcon size={12} className="text-gray-400" />
+                  <p className="text-xs text-gray-500">
+                    100% Private
+                  </p>
+                </div>
+                <span className="text-gray-300">•</span>
+                <div className="flex items-center gap-1.5">
+                  <LaptopIcon size={12} className="text-gray-400" />
+                  <p className="text-xs text-gray-500">
+                    Browser-Only
+                  </p>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">
+              Your analysis will be ready in {getTimeEstimate()}
+            </p>
+          </div>
+        </div>
       </div>
-
-      <button
-        onClick={onStart}
-        disabled={isLoading}
-        className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
-      >
-        {isLoading ? 'Getting inbox size...' : 'Start Analysis'}
-      </button>
     </div>
   )
 } 

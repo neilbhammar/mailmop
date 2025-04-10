@@ -16,7 +16,7 @@ export function TopBar() {
         {/* Logo Section */}
         <Link href="/dashboard" className="flex items-center space-x-2">
           <Image
-            src="/logo7.png"
+            src="/logo9.png"
             alt="MailMop Logo"
             width={140}
             height={30}
