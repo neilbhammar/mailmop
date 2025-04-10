@@ -205,7 +205,7 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
   }, [isClientLoaded, checkPermissionState, verifyEmailMatch, user?.email]);
 
   // Determine if we need to show the permissions modal
-  const shouldShowPermissionsModal = !permissionState.isTokenValid && !permissionState.hasEmailData && !shouldShowMismatchModal;
+  const shouldShowPermissionsModal = false; // Disabled - permissions now handled in IntroStepper - old logic was: !permissionState.isTokenValid && !permissionState.hasEmailData && !shouldShowMismatchModal;
 
   // Log any changes to the modal visibility
   useEffect(() => {
