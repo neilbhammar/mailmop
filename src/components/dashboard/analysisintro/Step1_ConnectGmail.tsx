@@ -52,7 +52,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
           </div>
           
           {/* Benefits - now with hover functionality to control animations */}
-          <div className="bg-gray-50 rounded-xl mb-6">
+          <div className="bg-white-50 rounded-xl mb-6">
             <div className="py-5 px-6 space-y-5">
               <div 
                 className="flex cursor-pointer hover:bg-gray-100 p-2 rounded-lg transition-colors"

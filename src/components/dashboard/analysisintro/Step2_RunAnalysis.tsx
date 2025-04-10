@@ -236,7 +236,7 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
           </div>
           
           {/* Title and description */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-4">
             <h1 className="text-2xl font-semibold text-gray-900 mb-3">Ready to analyze your inbox</h1>
             <p className="text-gray-600">
               {!isLoading && stats?.emailAddress ? (
@@ -248,11 +248,8 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
           </div>
           
           {/* Analysis Options */}
-          <div className="bg-gray-50 rounded-xl mb-8">
+          <div className="bg-white-50 rounded-xl mb-8">
             <div className="py-5 px-6 space-y-5">
-              <div className="flex justify-between items-center">
-                <h3 className="font-medium text-gray-900">Analysis Type</h3>
-              </div>
               
               <div className="space-y-3">
                 <label className="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer transition-colors hover:border-blue-200 hover:bg-blue-50">
