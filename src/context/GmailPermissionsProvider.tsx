@@ -4,6 +4,7 @@ import { createContext, useContext, useCallback, useEffect, useState, ReactNode 
 import { GmailPermissionState, GoogleTokenResponse, GoogleTokenClient, GoogleTokenClientConfig } from '@/types/gmail';
 import { getStoredToken, isTokenValid, hasStoredAnalysis, storeGmailToken, clearToken as clearStoredToken } from '@/lib/gmail/tokenStorage';
 import { fetchGmailProfile } from '@/lib/gmail/fetchProfile';
+import { fetchGmailStats } from '@/lib/gmail/fetchGmailStats';
 import { useAuth } from './AuthProvider';
 
 const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.modify';
@@ -190,6 +191,16 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
       
       // Store the new token
       storeGmailToken(tokenResponse.access_token, tokenResponse.expires_in);
+      
+      // Fetch Gmail stats immediately after successful authentication
+      try {
+        console.log('[Gmail] Fetching Gmail stats after authentication...');
+        await fetchGmailStats(tokenResponse.access_token);
+        console.log('[Gmail] Gmail stats fetched and stored successfully');
+      } catch (statsError) {
+        // Don't fail the auth process if stats fetching fails
+        console.error('[Gmail] Failed to fetch Gmail stats after authentication:', statsError);
+      }
       
       // Force an immediate state check
       const newState = checkPermissionState();

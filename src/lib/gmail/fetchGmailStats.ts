@@ -14,6 +14,23 @@ export interface GmailStats {
 const GMAIL_STATS_KEY = 'mailmop:gmail-stats';
 
 /**
+ * Custom event for Gmail stats updates
+ */
+export const GMAIL_STATS_UPDATED_EVENT = 'mailmop:gmail-stats-updated';
+
+/**
+ * Helper to notify components of stats updates
+ */
+function notifyStatsUpdated(stats: GmailStats) {
+  if (typeof window === 'undefined') return;
+  
+  // Dispatch a custom event with the stats data
+  window.dispatchEvent(new CustomEvent(GMAIL_STATS_UPDATED_EVENT, { 
+    detail: { stats } 
+  }));
+}
+
+/**
  * Fetches Gmail statistics (total emails and threads) for the authenticated user
  * @param accessToken - The Gmail OAuth access token
  * @returns The Gmail statistics including email counts and threads
@@ -32,28 +49,20 @@ export async function fetchGmailStats(accessToken: string): Promise<GmailStats> 
 
   const profile = await profileResponse.json();
   
-  // Then get the message and thread counts
-  const countsResponse = await fetch('https://www.googleapis.com/gmail/v1/users/me/profile', {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
-
-  if (!countsResponse.ok) {
-    throw new Error('Failed to fetch Gmail counts');
-  }
-
-  const { messagesTotal, threadsTotal } = await countsResponse.json();
-
+  // Then get the message and thread counts - using the same profile endpoint
+  // since it already contains the counts we need
   const stats: GmailStats = {
     emailAddress: profile.emailAddress,
-    totalEmails: messagesTotal || 0,
-    totalThreads: threadsTotal || 0,
+    totalEmails: profile.messagesTotal || 0,
+    totalThreads: profile.threadsTotal || 0,
     lastUpdated: Date.now(),
   };
 
   // Store in localStorage
   localStorage.setItem(GMAIL_STATS_KEY, JSON.stringify(stats));
+  
+  // Notify components that stats have been updated
+  notifyStatsUpdated(stats);
 
   return stats;
 }

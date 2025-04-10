@@ -4,6 +4,8 @@ import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
 import { CheckIcon, ChevronRightIcon, ShieldIcon, MailIcon, SparklesIcon, TrashIcon, BanIcon, ExternalLinkIcon, RefreshCw } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { getStoredToken } from '@/lib/gmail/tokenStorage'
+import { fetchGmailStats } from '@/lib/gmail/fetchGmailStats'
 
 interface Step1Props {
   onNext: () => void;
@@ -13,6 +15,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
   const { requestPermissions, isLoading } = useGmailPermissions()
   const [currentAnimation, setCurrentAnimation] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
+  const [fetchingStats, setFetchingStats] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   
   // No longer using auto-rotate, will be triggered by hover
@@ -21,7 +24,26 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
     try {
       const success = await requestPermissions()
       if (success) {
-        onNext()
+        // Fetch Gmail stats before proceeding to the next step
+        const token = getStoredToken();
+        if (token?.accessToken) {
+          // Show loading state while fetching stats
+          setFetchingStats(true);
+          try {
+            // Fetch and store the stats in localStorage
+            await fetchGmailStats(token.accessToken);
+            // Now proceed to next step
+            onNext();
+          } catch (error) {
+            console.error('Failed to fetch Gmail stats:', error);
+            // Still proceed to next step even if stats fetch fails
+            onNext();
+          } finally {
+            setFetchingStats(false);
+          }
+        } else {
+          onNext();
+        }
       }
     } catch (error) {
       console.error('Failed to connect to Gmail:', error)
@@ -138,10 +160,10 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
             {/* CTA Button */}
             <button
               onClick={handleConnect}
-              disabled={isLoading}
+              disabled={isLoading || fetchingStats}
               className="flex w-full items-center justify-center px-6 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (
+              {isLoading || fetchingStats ? (
                 <div className="flex items-center">
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

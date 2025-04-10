@@ -1,6 +1,7 @@
 'use client'
 
-import { getStoredGmailStats, GmailStats } from '@/lib/gmail/fetchGmailStats'
+import { getStoredGmailStats, GmailStats, fetchGmailStats, GMAIL_STATS_UPDATED_EVENT } from '@/lib/gmail/fetchGmailStats'
+import { getStoredToken } from '@/lib/gmail/tokenStorage'
 import { useState, useEffect } from 'react'
 import { 
   MailIcon, 
@@ -73,8 +74,56 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
   
   // Get stored stats on component mount
   useEffect(() => {
-    setStats(getStoredGmailStats())
-    setIsLoading(false)
+    // Try to get stats from localStorage first
+    const storedStats = getStoredGmailStats();
+    
+    if (storedStats) {
+      setStats(storedStats);
+      setIsLoading(false);
+    } else {
+      // If no stats in localStorage, fetch them using the token
+      const token = getStoredToken();
+      
+      if (token?.accessToken) {
+        setIsLoading(true);
+        fetchGmailStats(token.accessToken)
+          .then(freshStats => {
+            setStats(freshStats);
+          })
+          .catch(error => {
+            console.error('Failed to fetch Gmail stats:', error);
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+      } else {
+        // No token available - can't fetch stats
+        setIsLoading(false);
+      }
+    }
+
+    // Listen for Gmail stats updates
+    const handleStatsUpdated = (event: Event) => {
+      if (event instanceof CustomEvent && event.detail?.stats) {
+        console.log('[Step2_RunAnalysis] Received stats update event');
+        setStats(event.detail.stats);
+      } else {
+        // If the event doesn't contain stats data, fall back to localStorage
+        const freshStoredStats = getStoredGmailStats();
+        if (freshStoredStats) {
+          console.log('[Step2_RunAnalysis] Using fresh stored stats from localStorage');
+          setStats(freshStoredStats);
+        }
+      }
+    };
+    
+    // Add event listener
+    window.addEventListener(GMAIL_STATS_UPDATED_EVENT, handleStatsUpdated);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener(GMAIL_STATS_UPDATED_EVENT, handleStatsUpdated);
+    };
   }, [])
   
   // Calculate number of emails to analyze
