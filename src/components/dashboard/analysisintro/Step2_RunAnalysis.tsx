@@ -188,7 +188,7 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
                         <div className="w-1/5 text-gray-500 text-center text-xs truncate">
                           {sender.count}
                         </div>
-                        <div className="w-2/5 flex items-left justify-end space-x-3">
+                        <div className="w-2/5 flex items-left justify-start space-x-3">
                           <button className="text-blue-600 text-xs font-medium">
                             Unsubscribe
                           </button>

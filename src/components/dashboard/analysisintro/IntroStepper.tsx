@@ -50,7 +50,7 @@ export default function IntroStepper({
   const totalSteps = 2
   
   return (
-    <div className="flex flex-col w-full h-full bg-white">
+    <div className="flex flex-col w-full h-full bg-white rounded-lg overflow-hidden">
       {/* Refined header with step indicator */}
       <div className="h-16 flex items-center justify-center border-b border-gray-100 relative">
         {onCancel && (
@@ -120,7 +120,7 @@ export default function IntroStepper({
               duration: 0.3, 
               ease: "easeInOut" 
             }}
-            className="h-full"
+            className="h-full w-full"
           >
             {step === 1 && (
               <Step1_ConnectGmail onNext={goToNextStep} />
