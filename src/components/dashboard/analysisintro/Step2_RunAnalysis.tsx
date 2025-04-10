@@ -153,15 +153,15 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
   // Sample senders for visualization
   const sampleSenders = [
     { name: "Pinterest", email: "tips@pinterest.com", count: 1450, lastEmail: "Apr 8" },
-    { name: "Spotify", email: "hi@sotify.com", count: 780, lastEmail: "Mar 5" },
+    { name: "Spotify", email: "hi@spotify.com", count: 780, lastEmail: "Mar 5" },
     { name: "LinkedIn", email: "news@linkedin.com", count: 420, lastEmail: "3 days ago" }
   ];
 
   return (
     <div className="h-full w-full flex items-center">
       {/* Left side - Visualization */}
-      <div className="hidden md:flex md:w-1/2 h-full bg-slate-50 items-center justify-center p-12">
-        <div className="w-full max-w-lg">
+      <div className="hidden md:flex md:w-1/2 h-full bg-slate-50 items-center justify-center p-6">
+        <div className="w-full max-w-lg flex flex-col">
           {/* Keep tab open notice - Made more prominent */}
           <motion.div 
             className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex items-center shadow-sm mb-6"
@@ -275,8 +275,8 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
       </div>
       
       {/* Right side - Content */}
-      <div className="w-full md:w-1/2 px-8 py-12 flex items-center justify-center">
-        <div className="w-full max-w-md">
+      <div className="w-full md:w-1/2 px-6 py-6 flex items-center justify-center overflow-y-auto">
+        <div className="w-full max-w-md flex flex-col">
           {/* Header */}
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
@@ -285,8 +285,8 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
           </div>
           
           {/* Title and description */}
-          <div className="text-center mb-4">
-            <h1 className="text-2xl font-semibold text-gray-900 mb-3">Ready to analyze your inbox</h1>
+          <div className="text-center mb-3">
+            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Ready to analyze your inbox</h1>
             <p className="text-gray-600">
               {!isLoading && stats?.emailAddress ? (
                 <>Analyzing {stats.emailAddress} with {stats.totalEmails?.toLocaleString()} emails</>
@@ -297,8 +297,8 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
           </div>
           
           {/* Analysis Options */}
-          <div className="bg-white-50 rounded-xl mb-8">
-            <div className="py-5 px-6 space-y-5">
+          <div className="bg-white-50 rounded-xl mb-4">
+            <div className="py-3 px-6 space-y-4">
               
               <div className="space-y-3">
                 <label className="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer transition-colors hover:border-blue-200 hover:bg-blue-50">
@@ -408,7 +408,7 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
               </div>
             </div>
             <p className="text-xs text-gray-500">
-              Your analysis will be ready in {getTimeEstimate()}
+              Your analysis will be ready in {getTimeEstimate()}. Do not close this tab.
             </p>
           </div>
         </div>

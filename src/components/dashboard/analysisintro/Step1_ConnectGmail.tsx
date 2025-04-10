@@ -72,8 +72,8 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
   return (
     <div className="h-full w-full flex items-center">
       {/* Left side - Content (was previously on right) */}
-      <div className="w-full md:w-1/2 px-6 sm:px-8 py-8 sm:py-10 lg:py-12 flex items-center justify-center overflow-y-auto">
-        <div className="w-full max-w-md flex flex-col justify-between min-h-[500px] lg:min-h-[550px]">
+      <div className="w-full md:w-1/2 px-6 sm:px-8 py-6 flex items-center justify-center overflow-y-auto">
+        <div className="w-full max-w-md flex flex-col justify-between h-full">
           {/* Google Logo */}
           <div className="flex-shrink-0">
             <div className="flex justify-center mb-4">
@@ -88,16 +88,16 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
             </div>
             
             {/* Title and description */}
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-semibold text-gray-900 mb-3">Securely Connect Your Inbox</h1>
+            <div className="text-center mb-4">
+              <h1 className="text-2xl font-semibold text-gray-900 mb-2">Securely Connect Your Inbox</h1>
               <p className="text-gray-600">
               MailMop analyzes email metadata to identify who's cluttering your inbox and help you take action, all within your browser.
               </p>
             </div>
             
             {/* Benefits - now with hover functionality to control animations */}
-            <div className="bg-white-50 rounded-xl mb-6">
-              <div className="py-5 px-6 space-y-5">
+            <div className="bg-white-50 rounded-xl mb-4">
+              <div className="py-3 px-6 space-y-4">
                 <div 
                   className="flex cursor-pointer hover:bg-gray-100 p-2 rounded-lg transition-colors"
                   onMouseEnter={() => {
@@ -197,11 +197,11 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
       
       {/* Right side - Rotating animations (was previously on left) */}
       <div 
-        className="hidden md:flex md:w-1/2 h-full bg-slate-50 items-center justify-center p-12"
+        className="hidden md:flex md:w-1/2 h-full bg-slate-50 items-center justify-center p-6 relative"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
-        <div className="w-full max-w-lg relative">
+        <div className="w-full max-w-lg relative h-full flex flex-col justify-center">
           <AnimatePresence mode="wait">
             {/* Connect Animation */}
             {currentAnimation === 0 && (
@@ -211,7 +211,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.5 }}
-                className="absolute top-0 left-0 right-0"
+                className="w-full"
               >
                 <div className="mb-8 text-center">
                   <div className="inline-flex items-center px-4 py-1.5 bg-blue-100 text-blue-800 rounded-full mb-4">
@@ -288,7 +288,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.5 }}
-                className="absolute top-0 left-0 right-0"
+                className="w-full"
               >
                 <div className="mb-8 text-center">
                   <div className="inline-flex items-center px-4 py-1.5 bg-indigo-100 text-indigo-800 rounded-full mb-4">
@@ -397,7 +397,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.5 }}
-                className="absolute top-0 left-0 right-0"
+                className="w-full"
               >
                 <div className="mb-8 text-center">
                   <div className="inline-flex items-center px-4 py-1.5 bg-emerald-100 text-emerald-800 rounded-full mb-4">
@@ -553,7 +553,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
           </AnimatePresence>
           
           {/* Dots indicator */}
-          <div className="flex justify-center mt-[520px] space-x-2">
+          <div className="flex justify-center mt-4 space-x-2">
             {[0, 1, 2].map((i) => (
               <button
                 key={i}

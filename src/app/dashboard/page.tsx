@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Overview from '@/components/dashboard/Overview'
 import InboxAnalysisContainer from '@/components/dashboard/InboxAnalysisContainer'
+import Footer from '@/components/dashboard/Footer'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -33,9 +34,12 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container mx-auto px-4 space-y-8">
-      <Overview />
-      <InboxAnalysisContainer />
+    <div className="container mx-auto px-4 space-y-2">
+      <div className="space-y-0.5">
+        <Overview />
+        <InboxAnalysisContainer />
+      </div>
+      <Footer />
     </div>
   )
 }
