@@ -20,6 +20,8 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence, Transition } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { clearSenderAnalysis } from '@/lib/storage/senderAnalysis'
+import { useAnalysisOperations } from '@/hooks/useAnalysisOperations'
 
 // BorderTrail component for the magical button effect
 function BorderTrail({
@@ -63,7 +65,7 @@ function BorderTrail({
 }
 
 interface Step2Props {
-  onStart: () => void;
+  onStart: (step: number) => Promise<void>;
 }
 
 export default function Step2_RunAnalysis({ onStart }: Step2Props) {
@@ -71,6 +73,8 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
   const [stats, setStats] = useState<GmailStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [unsubscribeOnly, setUnsubscribeOnly] = useState(false) // Default to full analysis
+  
+  const { progress, startAnalysis } = useAnalysisOperations();
   
   // Get stored stats on component mount
   useEffect(() => {
@@ -156,6 +160,16 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
     { name: "Spotify", email: "hi@spotify.com", count: 780, lastEmail: "Mar 5" },
     { name: "LinkedIn", email: "news@linkedin.com", count: 420, lastEmail: "3 days ago" }
   ];
+
+  const handleStartAnalysis = async () => {
+    try {
+      await startAnalysis();
+      await onStart(2);
+    } catch (error) {
+      console.error('Failed to start analysis:', error);
+      // TODO: Show error toast
+    }
+  };
 
   return (
     <div className="h-full w-full flex items-center">
@@ -356,7 +370,7 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
             <button
-              onClick={onStart}
+              onClick={handleStartAnalysis}
               disabled={isLoading}
               className="relative w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-4 px-6 text-white font-medium shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed group"
             >

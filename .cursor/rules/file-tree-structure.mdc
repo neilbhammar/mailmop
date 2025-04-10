@@ -3,131 +3,130 @@ description:
 globs: 
 alwaysApply: true
 ---
-This file structure reflects the draft-end architecture for MailMop v2 — a scalable, privacy-preserving Gmail analysis tool that helps users identify bulk senders, take action, and declutter their inboxes.
+This structure reflects MailMop v2 — a client-heavy, privacy-focused Gmail inbox decluttering tool built on Next.js App Router, Supabase, and Gmail API metadata scope (read-only). It’s designed to support inboxes with 50k–500k+ emails using progressive batching, real-time updates, and efficient local storage.
 
-MailMop uses a client-heavy architecture, storing Gmail tokens in localStorage (not the backend), and fetching metadata-only content from Gmail (subject, sender, unsubscribe links — no body content).
+🔒 Architectural Principles
 
-Key design principles:
+Client-First: Gmail API calls are made in the browser using gapi, never server-side. Tokens are stored in localStorage (auth) and some data in IndexedDB (heavy metadata).
 
-Client-first architecture: All Gmail API calls are made client-side, reducing server complexity and improving trust.
+Context-Driven State: AuthProvider, GmailPermissionsProvider, AnalysisProvider provide scoped state for the app.
 
-Context-driven state: We use React Contexts (Auth, Gmail, Analysis) to handle user auth/session state, Gmail token, and inbox analysis data.
+Progressive Analysis: We analyze inboxes in batches (e.g., 100 messages at a time) and incrementally update results.
 
-Progressive analysis: Inbox scanning happens in batches, with partial results updating the UI in real-time.
+Supabase Usage:
 
-Supabase minimal backend: Used only for auth (Google OAuth), whitelisting beta users, and logging actions (analysis, delete, unsubscribe).
+Auth (OAuth with Google)
 
-Modular hooks and lib structure: All API calls, parsing, and token handling are cleanly abstracted for maintainability and reuse.
+Beta Whitelist
 
-The current codebase is designed to support:
+Logging actions (delete, unsubscribe, etc.) soley for analytics purposes
 
-✅ Gmail inbox analysis (metadata scope only)
+Plan management (for paywall logic)
 
-✅ Sender-level insights and actions (delete, block, unsubscribe)
 
-✅ Beta whitelist gating
-
-✅ Paywall readiness (via plan field in Supabase)
-
-✅ Offline-safe localStorage caching for inbox scans
-
-🚫 No server-side Gmail access or email storage for privacy and quota efficiency
-
-In scope soon:
-
-- Bulk action toolbar for multiple senders
-- Stripe billing + Upgrade modal
-
-Use this structure to stay modular and scale features rapidly. New features should plug into the hooks/ and lib/ architecture, while UI remains in components/ and state in context/. Actions should always log to Supabase for potential analytics/paywall tracking.
-
-Here's what the rough file tree should look like: 
+🧱 Directory Structure (current + planned)
 
 MailMop/
-├── public/                     # Static assets (logo, Open Graph, etc.)
+├── public/                  # Static assets (logo, icons)
+│
 ├── src/
-│   ├── app/
-│   │   ├── layout.tsx          # Wraps app in Auth, Gmail, and Analysis contexts
-│   │   ├── page.tsx            # Public landing page (CTA to sign in)
+│   ├── app/                 # Next.js App Router structure
+│   │   ├── layout.tsx       # Root layout (wraps providers)
+│   │   ├── page.tsx         # Landing page
 │   │   └── dashboard/
-│   │       ├── layout.tsx      # Auth + whitelist protected dashboard wrapper
-│   │       └── page.tsx        # Main inbox analysis experience
+│   │       ├── layout.tsx   # Dashboard shell (auth + whitelist enforced)
+│   │       └── page.tsx     # Main analysis experience
+│   │       ├── privacy/     # Static privacy page
+│   │       └── terms/       # Static terms page
 │
 │   ├── components/
+│   │   ├── TopBar/                          # Dashboard header
+│   │   │   ├── GmailConnectionStatus.tsx
+│   │   │   ├── TopBar.tsx
+│   │   │   └── UserDropdown.tsx
 │   │   ├── auth/
-│   │   │   └── SignInButton.tsx        # Supabase + Google OAuth
+│   │   │   └── SignInButton.tsx
 │   │   ├── dashboard/
-│   │   │   ├── TopBar.tsx              # Logo, Gmail status, plan, sign out
-│   │   │   ├── AnalysisControls.tsx    # Filter checkboxes + Analyze button
-│   │   │   ├── SenderTable.tsx         # Sender frequency table (paginated)
-│   │   │   └── ActionDropdown.tsx      # Row-level actions (delete, block, etc.)
+│   │   │   ├── Footer.tsx
+│   │   │   ├── Overview.tsx                # Includes stats + reanalyze button (planned)
+│   │   │   ├── InboxAnalysisContainer.tsx  # Wraps analysis table + controls
+│   │   │   ├── overview/
+│   │   │   │   └── InboxStats.tsx
+│   │   │   ├── analysis/
+│   │   │   │   ├── AnalysisView.tsx        # Includes table + controls
+│   │   │   │   └── SenderTable.tsx         # PLANNED
+│   │   │   │   ├── SenderHeader.tsx        # PLANNED: Bulk toolbar
+│   │   │   │   ├── SenderRow.tsx           # PLANNED: Row rendering
+│   │   │   │   └── SenderActions.tsx       # PLANNED: Row-level actions (delete, block, etc.)
+│   │   │   └── analysisintro/
+│   │   │       ├── IntroStepper.tsx
+│   │   │       ├── Step1_ConnectGmail.tsx
+│   │   │       └── Step2_RunAnalysis.tsx
 │   │   ├── modals/
-│   │   │   ├── BetaWaitlistModal.tsx   # Not whitelisted modal
-│   │   │   ├── GrantPermissionsModal.tsx # No token yet
-│   │   │   └── RegrantPermissionsModal.tsx # Token expired
-│   │   └── feedback/
-│   │       └── Toast.tsx               # Reusable toast system (success/fail)
+│   │   │   ├── BetaWaitlistModal.tsx
+│   │   │   ├── GrantPermissionsModal.tsx
+│   │   │   ├── RevokeAccessDialog.tsx
+│   │   │   └── SignOutDialog.tsx
+│   │   └── ui/                              # Shared UI components (ShadCN base)
+│   │       ├── bento-grid.tsx
+│   │       ├── button.tsx
+│   │       ├── card.tsx
+│   │       ├── dialog.tsx
+│   │       └── tooltip.tsx
 │
 │   ├── context/
-│   │   ├── AuthProvider.tsx            # Supabase session + user profile
-│   │   ├── GmailProvider.tsx           # Gmail token + profile
-│   │   └── AnalysisProvider.tsx        # Tracks inbox analysis state
+│   │   ├── AuthProvider.tsx
+│   │   ├── GmailPermissionsProvider.tsx
+│   │   └── AnalysisProvider.tsx
 │
 │   ├── hooks/
-│   │   ├── useAuthListener.ts          # Syncs Supabase session
-│   │   ├── useUserProfile.ts           # CRUD for Supabase profile
-│   │   ├── useWhitelist.ts             # Beta access check
-│   │   ├── usePlan.ts                  # Pulls free/pro tier
-│   │   ├── useGmailAuth.ts             # Gmail OAuth (gapi)
-│   │   ├── useGmailProfile.ts          # Fetch total messages, threads
-│   │   ├── useAnalysis.ts              # Inbox batch scan logic
-│   │   ├── useDeleteEmails.ts          # Deletes Gmail messages
-│   │   ├── useBlockSender.ts           # (Optional) Gmail filter to block sender
-│   │   ├── useUnsubscribe.ts           # Opens unsubscribe links
-│   │   ├── useCopyQuery.ts             # Copies Gmail query string
-│   │   └── useViewInGmail.ts           # Opens Gmail search URL
+│   │   ├── useActionStats.ts
+│   │   ├── useAnalysisOperations.ts        # Central hook for inbox analysis logic
+│   │   ├── useGmailStats.ts
+│   │   ├── useUserProfile.ts
+│   │   ├── useWhitelist.ts
+│   │   ├── useDelete.ts                    # PLANNED
+│   │   ├── useBlock.ts                     # PLANNED
+│   │   ├── useUnsubscribe.ts               # PLANNED
+│   │   ├── useCopyQuery.ts                 # PLANNED
+│   │   ├── useViewInGmail.ts               # PLANNED
+│   │   └── useExport.ts                    # PLANNED
 │
 │   ├── lib/
 │   │   ├── gmail/
-│   │   │   ├── initClient.ts           # gapi init with correct scope
-│   │   │   ├── fetchMessageIds.ts      # Gmail query -> message IDs
-│   │   │   ├── fetchMetadata.ts        # Fetch headers for messages
-│   │   │   ├── parseHeaders.ts         # Extract name, email, unsub, subject
-│   │   │   ├── batchDelete.ts          # Gmail batch delete API
-│   │   │   ├── createFilter.ts         # Optional: Gmail block sender
-│   │   │   ├── buildQuery.ts           # Converts filters to Gmail search
-│   │   │   └── backoff.ts              # Exponential retry handler
-│   │   └── localStorage.ts             # Save/load CachedAnalysis from localStorage
+│   │   │   ├── fetchGmailStats.ts
+│   │   │   ├── fetchProfile.ts
+│   │   │   ├── fetchMessageIds.ts          # PLANNED
+│   │   │   ├── fetchMetadata.ts            # PLANNED
+│   │   │   ├── parseHeaders.ts             # PLANNED
+│   │   │   ├── buildQuery.ts               # PLANNED
+│   │   │   ├── backoff.ts                  # PLANNED
+│   │   │   └── tokenStorage.ts
+│   │   ├── storage/
+│   │   │   ├── actionStorage.ts
+│   │   │   └── senderAnalysis.ts
+│   │   └── utils.ts
 │
 │   ├── supabase/
-│   │   ├── client.ts                   # Supabase browser client
-│   │   ├── profile.ts
-│   │   │   ├── getProfile.ts           # Load from `profiles`
-│   │   │   └── upsertProfile.ts        # Create/update
+│   │   ├── client.ts
+│   │   ├── profile/
+│   │   │   ├── getProfile.ts
+│   │   │   └── upsertProfile.ts
 │   │   ├── whitelist.ts
-│   │   │   └── isWhitelisted.ts        # Checks `whitelisted_users`
-│   │   └── actions.ts
-│   │       └── logAction.ts            # Logs analysis, delete, unsub, etc.
+│   │   └── actions.ts                      # PLANNED: logAction per user + action
 │
 │   ├── types/
-│   │   ├── gmail.ts                    # Message, sender, GmailProfile
-│   │   ├── user.ts                     # SupabaseProfile, Plan, etc.
-│   │   ├── analysis.ts                 # SenderResult, CachedAnalysis, Progress
-│   │   ├── context.ts                  # Auth/Gmail/Analysis context types
-│   │   └── actions.ts                  # ActionType enum for logging
+│   │   ├── gmail.ts
+│   │   ├── user.ts
+│   │   ├── analysis.ts                     # PLANNED: SenderResult, AnalysisMetadata
+│   │   └── actions.ts                      # PLANNED: ActionType enum
 │
-│   ├── styles/
-│   │   ├── globals.css                 # Tailwind base styles and resets
-│   │   └── theme.css                   # Optional: theme tokens (light/dark)
+│   └── middleware.ts                       # Auth gate for /dashboard
 │
-│   └── middleware.ts                   # Protects `/dashboard` via Supabase session
-│
-├── .env.local                          # Your private dev keys (never commit)
-├── .env.example                        # Shared reference for contributors
-├── LICENSE.md                          # MIT license or other
-├── README.md                           # Setup, architecture, usage, privacy model
-├── next.config.js                      # Next.js config
-├── tailwind.config.ts                  # Tailwind setup
-├── tsconfig.json                       # TypeScript config
-├── .gitignore
-
-
+├── .env.local
+├── .env.example
+├── README.md
+├── next.config.mjs
+├── tailwind.config.js
+├── tsconfig.json
+├── postcss.config.mjs

@@ -2,10 +2,11 @@
 
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { GmailPermissionState, GoogleTokenResponse, GoogleTokenClient, GoogleTokenClientConfig } from '@/types/gmail';
-import { getStoredToken, isTokenValid, hasStoredAnalysis, storeGmailToken, clearToken as clearStoredToken } from '@/lib/gmail/tokenStorage';
+import { getStoredToken, isTokenValid, storeGmailToken, clearToken as clearStoredToken } from '@/lib/gmail/tokenStorage';
 import { fetchGmailProfile } from '@/lib/gmail/fetchProfile';
 import { fetchGmailStats } from '@/lib/gmail/fetchGmailStats';
 import { useAuth } from './AuthProvider';
+import { ANALYSIS_CHANGE_EVENT, hasSenderAnalysis } from '@/lib/storage/senderAnalysis';
 
 const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.modify';
 const GOOGLE_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
@@ -59,10 +60,10 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
   }, []);
 
   // Check initial state on mount and after permissions granted
-  const checkPermissionState = useCallback(() => {
+  const checkPermissionState = useCallback(async () => {
     const token = getStoredToken();
     const tokenValid = isTokenValid();
-    const hasData = hasStoredAnalysis();
+    const hasData = await hasSenderAnalysis();
 
     const newState = {
       hasToken: !!token,
@@ -85,17 +86,23 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
     checkPermissionState();
   }, [checkPermissionState]);
 
-  // Listen for localStorage changes and window focus
+  // Listen for storage changes and window focus
   useEffect(() => {
     // Function to handle storage changes
     const handleStorageChange = (e: Event) => {
       if (e instanceof CustomEvent) {
         const { key } = e.detail as { key: string };
-        if (key === 'email_analysis' || key === 'gmail_token' || key === 'email_data') {
+        if (key === 'gmail_token' || key === 'email_data') {
           console.log('[Gmail] Storage changed, rechecking state');
           checkPermissionState();
         }
       }
+    };
+
+    // Function to handle analysis changes
+    const handleAnalysisChange = () => {
+      console.log('[Gmail] Analysis changed, rechecking state');
+      checkPermissionState();
     };
 
     // Function to handle window focus
@@ -106,6 +113,7 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
 
     // Add listeners
     window.addEventListener('mailmop:storage-change', handleStorageChange);
+    window.addEventListener(ANALYSIS_CHANGE_EVENT, handleAnalysisChange);
     window.addEventListener('focus', handleFocus);
 
     // Initial check
@@ -114,6 +122,7 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
     // Cleanup
     return () => {
       window.removeEventListener('mailmop:storage-change', handleStorageChange);
+      window.removeEventListener(ANALYSIS_CHANGE_EVENT, handleAnalysisChange);
       window.removeEventListener('focus', handleFocus);
     };
   }, [checkPermissionState]);

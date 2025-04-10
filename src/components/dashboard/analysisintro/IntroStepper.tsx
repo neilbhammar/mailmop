@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
 import Step1_ConnectGmail from './Step1_ConnectGmail'
 import Step2_RunAnalysis from './Step2_RunAnalysis'
-import { storeDummyAnalysis } from '@/lib/gmail/tokenStorage'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
+import { useAnalysisOperations } from '@/hooks/useAnalysisOperations'
 
 interface IntroStepperProps {
   onComplete: () => void;
@@ -20,31 +20,34 @@ export default function IntroStepper({
   onCancel, 
   isReanalysis = false 
 }: IntroStepperProps) {
-  const [step, setStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState(1)
   const [animationDirection, setAnimationDirection] = useState(0) // 0 for initial, 1 for forward
   const { isTokenValid } = useGmailPermissions()
+  const { startAnalysis } = useAnalysisOperations()
   
   // Always start at step 1 if we don't have a valid token
   // The isReanalysis flag only controls the cancel button visibility
   useEffect(() => {
     if (isTokenValid) {
-      setStep(2)
+      setCurrentStep(2)
       setAnimationDirection(1)
     } else {
-      setStep(1)
+      setCurrentStep(1)
     }
   }, [isTokenValid])
 
   const goToNextStep = () => {
     setAnimationDirection(1)
-    setStep(2)
+    setCurrentStep(2)
   }
 
-  const handleComplete = () => {
-    // Store dummy analysis data first
-    storeDummyAnalysis()
-    // Then trigger the view switch
-    onComplete()
+  const handleStepComplete = async (step: number) => {
+    if (step === 1) {
+      setCurrentStep(2)
+    } else if (step === 2) {
+      await startAnalysis()
+      onComplete()
+    }
   }
 
   const totalSteps = 2
@@ -74,16 +77,16 @@ export default function IntroStepper({
                 <div className="h-0.5 w-12 bg-gray-200 relative overflow-hidden mx-2">
                   <div className={cn(
                     "h-full absolute inset-0 transition-all duration-500 ease-in-out",
-                    step > i ? "w-full bg-blue-600" : "w-0 bg-blue-600"
+                    currentStep > i ? "w-full bg-blue-600" : "w-0 bg-blue-600"
                   )} />
                 </div>
               )}
               <div 
                 className={cn(
                   "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all",
-                  step > i 
+                  currentStep > i 
                     ? "bg-blue-600 text-white" 
-                    : step === i + 1
+                    : currentStep === i + 1
                       ? "bg-blue-600 text-white ring-4 ring-blue-100" 
                       : "bg-gray-200 text-gray-500"
                 )}
@@ -95,7 +98,7 @@ export default function IntroStepper({
         </div>
         
         <div className="absolute right-4 text-sm font-medium text-gray-500">
-          Step {step} of {totalSteps}
+          Step {currentStep} of {totalSteps}
         </div>
       </div>
 
@@ -103,7 +106,7 @@ export default function IntroStepper({
       <div className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
-            key={step}
+            key={currentStep}
             initial={{ 
               opacity: 0,
               x: animationDirection === 1 ? 20 : -20
@@ -122,12 +125,12 @@ export default function IntroStepper({
             }}
             className="h-full w-full"
           >
-            {step === 1 && (
+            {currentStep === 1 && (
               <Step1_ConnectGmail onNext={goToNextStep} />
             )}
             
-            {step === 2 && (
-              <Step2_RunAnalysis onStart={handleComplete} />
+            {currentStep === 2 && (
+              <Step2_RunAnalysis onStart={handleStepComplete} />
             )}
           </motion.div>
         </AnimatePresence>

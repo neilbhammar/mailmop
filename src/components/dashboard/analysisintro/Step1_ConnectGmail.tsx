@@ -201,317 +201,333 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
-        <div className="w-full max-w-lg relative h-full flex flex-col justify-center">
-          <AnimatePresence mode="wait">
-            {/* Connect Animation */}
-            {currentAnimation === 0 && (
-              <motion.div 
-                key="connect"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5 }}
-                className="w-full"
-              >
-                <div className="mb-8 text-center">
-                  <div className="inline-flex items-center px-4 py-1.5 bg-blue-100 text-blue-800 rounded-full mb-4">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center mr-2 text-xs font-bold">1</span>
-                    <span className="font-medium">Connect</span>
-                    <RefreshCw className="h-4 w-4 text-blue-800 ml-1.5" />
-                  </div>
-                </div>
-                
-                <div className="rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden">
-                  {/* Gmail OAuth animation */}
-                  <div className="p-6 flex flex-col items-center">
-                    <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-5">
-                      <svg width="32" height="32" viewBox="0 0 24 24">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                      </svg>
+        <div className="w-full max-w-lg h-full flex flex-col">
+          {/* Main content area with fixed spacing from top */}
+          <div className="pt-20">
+            <AnimatePresence mode="wait">
+              {/* Connect Animation */}
+              {currentAnimation === 0 && (
+                <motion.div 
+                  key="connect"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.5 }}
+                  className="w-full"
+                >
+                  <div className="mb-10 text-center">
+                    <div className="inline-flex items-center px-4 py-1.5 bg-blue-100 text-blue-800 rounded-full">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center mr-2 text-xs font-bold">1</span>
+                      <span className="font-medium">Connect</span>
+                      <RefreshCw className="h-4 w-4 text-blue-800 ml-1.5" />
                     </div>
-                    
-                    <motion.div 
-                      animate={{ 
-                        boxShadow: ["0px 0px 0px rgba(59, 130, 246, 0)", "0px 0px 20px rgba(59, 130, 246, 0.3)", "0px 0px 0px rgba(59, 130, 246, 0)"]
-                      }}
-                      transition={{ 
-                        duration: 2, 
-                        repeat: Infinity, 
-                        repeatType: "loop" 
-                      }}
-                      className="rounded-xl border border-blue-200 bg-blue-50 p-5 mb-6 relative"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-full bg-blue-100 p-2">
-                          <ShieldIcon className="h-5 w-5 text-blue-700" />
-                        </div>
-                        <div className="text-left">
-                          <h3 className="font-medium text-blue-900">Secure Connection</h3>
-                          <p className="text-sm text-blue-700">Encrypted connection and client-side processing</p>
-                        </div>
+                  </div>
+                  
+                  <div className="mt-10 rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden">
+                    {/* Gmail OAuth animation */}
+                    <div className="p-6 flex flex-col items-center">
+                      <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-5">
+                        <svg width="32" height="32" viewBox="0 0 24 24">
+                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
                       </div>
                       
                       <motion.div 
-                        className="absolute inset-0"
                         animate={{ 
-                          borderColor: ["rgba(59, 130, 246, 0)", "rgba(59, 130, 246, 0.5)", "rgba(59, 130, 246, 0)"] 
+                          boxShadow: ["0px 0px 0px rgba(59, 130, 246, 0)", "0px 0px 20px rgba(59, 130, 246, 0.3)", "0px 0px 0px rgba(59, 130, 246, 0)"]
                         }}
                         transition={{ 
                           duration: 2, 
-                          repeat: Infinity,
+                          repeat: Infinity, 
                           repeatType: "loop" 
                         }}
-                        style={{ borderRadius: "0.75rem", border: "2px solid rgba(59, 130, 246, 0)" }}
-                      />
-                    </motion.div>
-                    
-                    <div className="flex flex-col items-center gap-3 text-center mt-0">
-                      <p className="text-gray-600 font-medium">MailMop connects securely to Gmail</p>
-                      <div className="inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-2 py-1 rounded-full mt-2">
-                        <CheckIcon size={12} />
-                        <span>Your data stays private</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-            
-            {/* Analyze Animation */}
-            {currentAnimation === 1 && (
-              <motion.div 
-                key="analyze"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5 }}
-                className="w-full"
-              >
-                <div className="mb-8 text-center">
-                  <div className="inline-flex items-center px-4 py-1.5 bg-indigo-100 text-indigo-800 rounded-full mb-4">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center mr-2 text-xs font-bold">2</span>
-                    <span className="font-medium">Analyze</span>
-                    <SparklesIcon className="h-4 w-4 text-indigo-600 ml-1.5" />
-                  </div>
-                </div>
-                
-                <div className="rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden">
-                  <div className="p-6">
-                    {/* Browser animation with email analysis */}
-                    <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-                      <div className="h-8 bg-gray-100 border-b border-gray-200 flex items-center px-4">
-                        <div className="flex space-x-1.5 mr-4">
-                          <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
-                          <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
-                          <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
-                        </div>
-                        <div className="flex-1 text-center text-xs text-gray-500">
-                          Local Analysis
-                        </div>
-                      </div>
-                      
-                      <div className="p-4">
-                        <div className="space-y-2">
-                          <motion.div 
-                            className="h-2.5 bg-indigo-200 rounded-full"
-                            initial={{ width: "0%" }}
-                            animate={{ 
-                              width: ["0%", "95%", "95%", "0%"]
-                            }}
-                            transition={{ 
-                              duration: 4,
-                              times: [0, 0.7, 0.9, 1],
-                              repeat: Infinity,
-                              ease: "easeInOut"
-                            }}
-                          />
-                          <motion.div 
-                            className="h-2.5 bg-indigo-100 rounded-full"
-                            initial={{ width: "0%" }}
-                            animate={{ 
-                              width: ["0%", "85%", "85%", "0%"]
-                            }}
-                            transition={{ 
-                              duration: 4,
-                              times: [0, 0.7, 0.9, 1],
-                              repeat: Infinity,
-                              ease: "easeInOut",
-                              delay: 0.2
-                            }}
-                          />
-                          <motion.div 
-                            className="h-2.5 bg-indigo-200 rounded-full"
-                            initial={{ width: "0%" }}
-                            animate={{ 
-                              width: ["0%", "70%", "70%", "0%"]
-                            }}
-                            transition={{ 
-                              duration: 4,
-                              times: [0, 0.7, 0.9, 1],
-                              repeat: Infinity,
-                              ease: "easeInOut",
-                              delay: 0.4
-                            }}
-                          />
+                        className="rounded-xl border border-blue-200 bg-blue-50 p-5 mb-6 relative"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="rounded-full bg-blue-100 p-2">
+                            <ShieldIcon className="h-5 w-5 text-blue-700" />
+                          </div>
+                          <div className="text-left">
+                            <h3 className="font-medium text-blue-900">Secure Connection</h3>
+                            <p className="text-sm text-blue-700">Encrypted connection and client-side processing</p>
+                          </div>
                         </div>
                         
-                        <div className="mt-4 flex items-center justify-between">
-                          <div className="text-xs text-gray-500">Analyzing emails...</div>
-                          <motion.div 
-                            initial={{ opacity: 0.5 }}
-                            animate={{ opacity: [0.5, 1, 1, 0.5] }}
+                        <motion.div 
+                          className="absolute inset-0"
+                          animate={{ 
+                            borderColor: ["rgba(59, 130, 246, 0)", "rgba(59, 130, 246, 0.5)", "rgba(59, 130, 246, 0)"] 
+                          }}
+                          transition={{ 
+                            duration: 2, 
+                            repeat: Infinity,
+                            repeatType: "loop" 
+                          }}
+                          style={{ borderRadius: "0.75rem", border: "2px solid rgba(59, 130, 246, 0)" }}
+                        />
+                      </motion.div>
+                      
+                      <div className="flex flex-col items-center gap-3 text-center mt-0">
+                        <p className="text-gray-600 font-medium">MailMop connects securely to Gmail</p>
+                        <div className="inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-2 py-1 rounded-full mt-2">
+                          <CheckIcon size={12} />
+                          <span>Your data stays private</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              
+              {/* Analyze Animation */}
+              {currentAnimation === 1 && (
+                <motion.div 
+                  key="analyze"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.5 }}
+                  className="w-full"
+                >
+                  <div className="mb-10 text-center">
+                    <div className="inline-flex items-center px-4 py-1.5 bg-indigo-100 text-indigo-800 rounded-full">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center mr-2 text-xs font-bold">2</span>
+                      <span className="font-medium">Analyze</span>
+                      <SparklesIcon className="h-4 w-4 text-indigo-600 ml-1.5" />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-10 rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden">
+                    <div className="p-6">
+                      {/* Browser animation with email analysis */}
+                      <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                        <div className="h-8 bg-gray-100 border-b border-gray-200 flex items-center px-4">
+                          <div className="flex space-x-1.5 mr-4">
+                            <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
+                            <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
+                            <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
+                          </div>
+                          <div className="flex-1 text-center text-xs text-gray-500">
+                            Local Analysis
+                          </div>
+                        </div>
+                        
+                        <div className="p-4">
+                          <div className="space-y-2">
+                            <motion.div 
+                              className="h-2.5 bg-indigo-200 rounded-full"
+                              initial={{ width: "0%" }}
+                              animate={{ 
+                                width: ["0%", "95%", "95%", "0%"]
+                              }}
+                              transition={{ 
+                                duration: 4,
+                                times: [0, 0.7, 0.9, 1],
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                              }}
+                            />
+                            <motion.div 
+                              className="h-2.5 bg-indigo-100 rounded-full"
+                              initial={{ width: "0%" }}
+                              animate={{ 
+                                width: ["0%", "85%", "85%", "0%"]
+                              }}
+                              transition={{ 
+                                duration: 4,
+                                times: [0, 0.7, 0.9, 1],
+                                repeat: Infinity,
+                                ease: "easeInOut",
+                                delay: 0.2
+                              }}
+                            />
+                            <motion.div 
+                              className="h-2.5 bg-indigo-200 rounded-full"
+                              initial={{ width: "0%" }}
+                              animate={{ 
+                                width: ["0%", "70%", "70%", "0%"]
+                              }}
+                              transition={{ 
+                                duration: 4,
+                                times: [0, 0.7, 0.9, 1],
+                                repeat: Infinity,
+                                ease: "easeInOut",
+                                delay: 0.4
+                              }}
+                            />
+                          </div>
+                          
+                          <div className="mt-4 flex items-center justify-between">
+                            <div className="text-xs text-gray-500">Analyzing emails...</div>
+                            <motion.div 
+                              initial={{ opacity: 0.5 }}
+                              animate={{ opacity: [0.5, 1, 1, 0.5] }}
+                              transition={{ 
+                                duration: 4,
+                                times: [0, 0.7, 0.9, 1],
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                              }}
+                              className="text-xs font-medium text-indigo-700"
+                            >
+                              Browser only
+                            </motion.div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="text-center mt-6">
+                        <p className="text-gray-600 font-medium">Fast analysis in your browser</p>
+                        <div className="inline-flex items-center gap-1.5 text-xs text-indigo-700 bg-indigo-50 px-2 py-1 rounded-full mt-2">
+                          <ShieldIcon size={12} />
+                          <span>No server processing</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              
+              {/* Clean Animation */}
+              {currentAnimation === 2 && (
+                <motion.div 
+                  key="clean"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.5 }}
+                  className="w-full"
+                >
+                  <div className="mb-10 text-center">
+                    <div className="inline-flex items-center px-4 py-1.5 bg-emerald-100 text-emerald-800 rounded-full">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center mr-2 text-xs font-bold">3</span>
+                      <span className="font-medium">Clean</span>
+                      <TrashIcon className="h-4 w-4 text-emerald-600 ml-1.5" />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-10 rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden">
+                    <div className="p-6">
+                      {/* Enhanced email cleanup animation with multiple action types */}
+                      <div className="space-y-3">
+                        {/* Email 1 - Delete */}
+                        <motion.div 
+                          className="flex items-center bg-gray-50 rounded-lg p-3 border border-gray-200"
+                          initial={{ x: 0, opacity: 1 }}
+                          animate={{ 
+                            x: ["0%", "0%", "-100%", "-100%", "0%"],
+                            opacity: [1, 1, 0, 0, 1]
+                          }}
+                          transition={{ 
+                            duration: 4,
+                            times: [0, 0.2, 0.3, 0.9, 1],
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        >
+                          <div className="w-8 h-8 rounded-full bg-gray-200 mr-3"></div>
+                          <div className="flex-1">
+                            <div className="h-2.5 bg-gray-200 rounded w-2/3 mb-1.5"></div>
+                            <div className="h-2 bg-gray-100 rounded w-1/3"></div>
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <div className="px-2 py-0.5 bg-red-50 rounded-md text-xs font-medium text-red-600">Delete</div>
+                            <div className="bg-red-100 h-7 w-7 rounded-full flex items-center justify-center">
+                              <TrashIcon className="h-3.5 w-3.5 text-red-500" />
+                            </div>
+                          </div>
+                        </motion.div>
+                        
+                        {/* Email 2 - Unsubscribe */}
+                        <motion.div 
+                          className="flex items-center bg-gray-50 rounded-lg p-3 border border-gray-200"
+                          initial={{ x: 0, opacity: 1 }}
+                          animate={{ 
+                            x: ["0%", "0%", "0%", "-100%", "-100%", "0%"],
+                            opacity: [1, 1, 1, 0, 0, 1]
+                          }}
+                          transition={{ 
+                            duration: 4,
+                            times: [0, 0.3, 0.35, 0.45, 0.9, 1],
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        >
+                          <div className="w-8 h-8 rounded-full bg-gray-200 mr-3"></div>
+                          <div className="flex-1">
+                            <div className="h-2.5 bg-gray-200 rounded w-1/2 mb-1.5"></div>
+                            <div className="h-2 bg-gray-100 rounded w-1/4"></div>
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <div className="px-2 py-0.5 bg-blue-50 rounded-md text-xs font-medium text-blue-600">Unsubscribe</div>
+                            <div className="bg-blue-100 h-7 w-7 rounded-full flex items-center justify-center">
+                              <ExternalLinkIcon className="h-3.5 w-3.5 text-blue-500" />
+                            </div>
+                          </div>
+                        </motion.div>
+                        
+                        {/* Email 3 - Block */}
+                        <motion.div 
+                          className="flex items-center bg-gray-50 rounded-lg p-3 border border-gray-200"
+                          initial={{ x: 0, opacity: 1 }}
+                          animate={{ 
+                            x: ["0%", "0%", "0%", "0%", "-100%", "-100%", "0%"],
+                            opacity: [1, 1, 1, 1, 0, 0, 1]
+                          }}
+                          transition={{ 
+                            duration: 4,
+                            times: [0, 0.45, 0.5, 0.55, 0.65, 0.9, 1],
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        >
+                          <div className="w-8 h-8 rounded-full bg-gray-200 mr-3"></div>
+                          <div className="flex-1">
+                            <div className="h-2.5 bg-gray-200 rounded w-3/5 mb-1.5"></div>
+                            <div className="h-2 bg-gray-100 rounded w-2/5"></div>
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <div className="px-2 py-0.5 bg-orange-50 rounded-md text-xs font-medium text-orange-600">Block</div>
+                            <div className="bg-orange-100 h-7 w-7 rounded-full flex items-center justify-center">
+                              <BanIcon className="h-3.5 w-3.5 text-orange-500" />
+                            </div>
+                          </div>
+                        </motion.div>
+                      </div>
+                      
+                      <motion.div 
+                        className="mt-6 bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex items-center justify-between"
+                        animate={{ 
+                          boxShadow: ["0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 12px rgba(16, 185, 129, 0.3)", "0px 0px 12px rgba(16, 185, 129, 0.3)", "0px 0px 0px rgba(16, 185, 129, 0)"]
+                        }}
+                        transition={{ 
+                          duration: 4,
+                          times: [0, 0.65, 0.75, 0.85, 1],
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <div className="flex items-center">
+                          <CheckIcon className="h-5 w-5 text-emerald-500 mr-2" />
+                          <motion.span 
+                            className="text-sm font-medium text-emerald-800"
+                            animate={{
+                              opacity: [0.5, 0.5, 1, 1, 0.5]
+                            }}
                             transition={{ 
                               duration: 4,
-                              times: [0, 0.7, 0.9, 1],
-                              repeat: Infinity,
-                              ease: "easeInOut"
+                              times: [0, 0.65, 0.75, 0.85, 1],
+                              repeat: Infinity
                             }}
-                            className="text-xs font-medium text-indigo-700"
                           >
-                            Browser only
-                          </motion.div>
+                            3,240 emails cleaned
+                          </motion.span>
                         </div>
-                      </div>
-                    </div>
-                    
-                    <div className="text-center mt-6">
-                      <p className="text-gray-600 font-medium">Fast analysis in your browser</p>
-                      <div className="inline-flex items-center gap-1.5 text-xs text-indigo-700 bg-indigo-50 px-2 py-1 rounded-full mt-2">
-                        <ShieldIcon size={12} />
-                        <span>No server processing</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-            
-            {/* Clean Animation - Enhanced with more actions */}
-            {currentAnimation === 2 && (
-              <motion.div 
-                key="clean"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5 }}
-                className="w-full"
-              >
-                <div className="mb-8 text-center">
-                  <div className="inline-flex items-center px-4 py-1.5 bg-emerald-100 text-emerald-800 rounded-full mb-4">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center mr-2 text-xs font-bold">3</span>
-                    <span className="font-medium">Clean</span>
-                    <TrashIcon className="h-4 w-4 text-emerald-600 ml-1.5" />
-                  </div>
-                </div>
-                
-                <div className="rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden">
-                  <div className="p-6">
-                    {/* Enhanced email cleanup animation with multiple action types */}
-                    <div className="space-y-3">
-                      {/* Email 1 - Delete */}
-                      <motion.div 
-                        className="flex items-center bg-gray-50 rounded-lg p-3 border border-gray-200"
-                        initial={{ x: 0, opacity: 1 }}
-                        animate={{ 
-                          x: ["0%", "0%", "-100%", "-100%", "0%"],
-                          opacity: [1, 1, 0, 0, 1]
-                        }}
-                        transition={{ 
-                          duration: 4,
-                          times: [0, 0.2, 0.3, 0.9, 1],
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                      >
-                        <div className="w-8 h-8 rounded-full bg-gray-200 mr-3"></div>
-                        <div className="flex-1">
-                          <div className="h-2.5 bg-gray-200 rounded w-2/3 mb-1.5"></div>
-                          <div className="h-2 bg-gray-100 rounded w-1/3"></div>
-                        </div>
-                        <div className="flex gap-2 items-center">
-                          <div className="px-2 py-0.5 bg-red-50 rounded-md text-xs font-medium text-red-600">Delete</div>
-                          <div className="bg-red-100 h-7 w-7 rounded-full flex items-center justify-center">
-                            <TrashIcon className="h-3.5 w-3.5 text-red-500" />
-                          </div>
-                        </div>
-                      </motion.div>
-                      
-                      {/* Email 2 - Unsubscribe */}
-                      <motion.div 
-                        className="flex items-center bg-gray-50 rounded-lg p-3 border border-gray-200"
-                        initial={{ x: 0, opacity: 1 }}
-                        animate={{ 
-                          x: ["0%", "0%", "0%", "-100%", "-100%", "0%"],
-                          opacity: [1, 1, 1, 0, 0, 1]
-                        }}
-                        transition={{ 
-                          duration: 4,
-                          times: [0, 0.3, 0.35, 0.45, 0.9, 1],
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                      >
-                        <div className="w-8 h-8 rounded-full bg-gray-200 mr-3"></div>
-                        <div className="flex-1">
-                          <div className="h-2.5 bg-gray-200 rounded w-1/2 mb-1.5"></div>
-                          <div className="h-2 bg-gray-100 rounded w-1/4"></div>
-                        </div>
-                        <div className="flex gap-2 items-center">
-                          <div className="px-2 py-0.5 bg-blue-50 rounded-md text-xs font-medium text-blue-600">Unsubscribe</div>
-                          <div className="bg-blue-100 h-7 w-7 rounded-full flex items-center justify-center">
-                            <ExternalLinkIcon className="h-3.5 w-3.5 text-blue-500" />
-                          </div>
-                        </div>
-                      </motion.div>
-                      
-                      {/* Email 3 - Block */}
-                      <motion.div 
-                        className="flex items-center bg-gray-50 rounded-lg p-3 border border-gray-200"
-                        initial={{ x: 0, opacity: 1 }}
-                        animate={{ 
-                          x: ["0%", "0%", "0%", "0%", "-100%", "-100%", "0%"],
-                          opacity: [1, 1, 1, 1, 0, 0, 1]
-                        }}
-                        transition={{ 
-                          duration: 4,
-                          times: [0, 0.45, 0.5, 0.55, 0.65, 0.9, 1],
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                      >
-                        <div className="w-8 h-8 rounded-full bg-gray-200 mr-3"></div>
-                        <div className="flex-1">
-                          <div className="h-2.5 bg-gray-200 rounded w-3/5 mb-1.5"></div>
-                          <div className="h-2 bg-gray-100 rounded w-2/5"></div>
-                        </div>
-                        <div className="flex gap-2 items-center">
-                          <div className="px-2 py-0.5 bg-orange-50 rounded-md text-xs font-medium text-orange-600">Block</div>
-                          <div className="bg-orange-100 h-7 w-7 rounded-full flex items-center justify-center">
-                            <BanIcon className="h-3.5 w-3.5 text-orange-500" />
-                          </div>
-                        </div>
-                      </motion.div>
-                    </div>
-                    
-                    <motion.div 
-                      className="mt-6 bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex items-center justify-between"
-                      animate={{ 
-                        boxShadow: ["0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 12px rgba(16, 185, 129, 0.3)", "0px 0px 12px rgba(16, 185, 129, 0.3)", "0px 0px 0px rgba(16, 185, 129, 0)"]
-                      }}
-                      transition={{ 
-                        duration: 4,
-                        times: [0, 0.65, 0.75, 0.85, 1],
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                    >
-                      <div className="flex items-center">
-                        <CheckIcon className="h-5 w-5 text-emerald-500 mr-2" />
                         <motion.span 
-                          className="text-sm font-medium text-emerald-800"
+                          className="text-xs text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full"
                           animate={{
                             opacity: [0.5, 0.5, 1, 1, 0.5]
                           }}
@@ -521,39 +537,26 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                             repeat: Infinity
                           }}
                         >
-                          3,240 emails cleaned
+                          94% space freed
                         </motion.span>
-                      </div>
-                      <motion.span 
-                        className="text-xs text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full"
-                        animate={{
-                          opacity: [0.5, 0.5, 1, 1, 0.5]
-                        }}
-                        transition={{ 
-                          duration: 4,
-                          times: [0, 0.65, 0.75, 0.85, 1],
-                          repeat: Infinity
-                        }}
-                      >
-                        94% space freed
-                      </motion.span>
-                    </motion.div>
-                    
-                    <div className="text-center mt-6">
-                      <p className="text-gray-600 font-medium">Clean up your inbox</p>
-                      <div className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full mt-2">
-                        <CheckIcon size={12} />
-                        <span>Save hours of manual work</span>
+                      </motion.div>
+                      
+                      <div className="text-center mt-6">
+                        <p className="text-gray-600 font-medium">Clean up your inbox</p>
+                        <div className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full mt-2">
+                          <CheckIcon size={12} />
+                          <span>Save hours of manual work</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          
-          {/* Dots indicator */}
-          <div className="flex justify-center mt-4 space-x-2">
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Dots indicator fixed at bottom */}
+          <div className="mt-auto mb-12 flex justify-center space-x-2">
             {[0, 1, 2].map((i) => (
               <button
                 key={i}

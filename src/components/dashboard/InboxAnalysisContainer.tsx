@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { useAnalysis } from '@/context/AnalysisProvider'
 import IntroStepper from './analysisintro/IntroStepper'
@@ -8,13 +8,31 @@ import AnalysisTable from './analysis/AnalysisView'
 
 export default function InboxAnalysisContainer() {
   // Get state from analysis context
-  const { hasAnalysis } = useAnalysis()
+  const { hasAnalysis, checkAnalysisState } = useAnalysis()
   
   // Local state for tracking reanalysis requests
   const [reanalyzeRequested, setReanalyzeRequested] = useState(false)
 
   // Show stepper if reanalyzing or no analysis data yet
   const showingStepper = reanalyzeRequested || !hasAnalysis
+
+  // Check analysis state on mount and window focus
+  useEffect(() => {
+    // Initial check
+    checkAnalysisState();
+
+    // Handle window focus
+    const handleFocus = () => {
+      console.log('[InboxAnalysis] Window focused, checking analysis state');
+      checkAnalysisState();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [checkAnalysisState]);
 
   // Handle canceling reanalysis
   const handleCancel = () => {

@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { useAuth } from '@/context/AuthProvider'
 import { toast } from 'sonner'
+import { clearSenderAnalysis } from '@/lib/storage/senderAnalysis'
 
 interface SignOutDialogProps {
   open: boolean
@@ -20,6 +21,7 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
 
   const handleSignOutWithClear = async () => {
     localStorage.clear()
+    await clearSenderAnalysis()
     await signOut()
     toast.success("Signed out successfully", {
       description: "Your local data has been cleared for security."
@@ -33,8 +35,9 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
     onOpenChange(false)
   }
 
-  const handleClearOnly = () => {
+  const handleClearOnly = async () => {
     localStorage.clear()
+    await clearSenderAnalysis()
     toast.success("Local data cleared", {
       description: "All browser data has been cleared while keeping you signed in."
     })

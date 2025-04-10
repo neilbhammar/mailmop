@@ -52,4 +52,21 @@ export interface SenderSummary {
   messageCount: number;
   lastMessageDate: string;
   // Add other summary fields as needed
+}
+
+export interface SenderResult {
+  senderEmail: string;        // Primary Key
+  senderName: string;
+  count: number;
+  lastDate: string;
+  analysisId: string;         // Associates sender with a specific analysis
+
+  sampleSubjects?: string[];
+  messageIds?: string[];
+  hasUnsubscribe?: boolean;
+  unsubscribe?: {
+    mailto?: string;
+    url?: string;
+    requiresPost?: boolean;
+  };
 } 
