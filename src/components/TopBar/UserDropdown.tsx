@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
-import { ChevronDown, Settings, CreditCard, HelpCircle, LogOut, RefreshCwOff, RefreshCcw } from 'lucide-react'
+import { ChevronDown, MessageSquare, Settings, CreditCard, HelpCircle, LogOut, RefreshCwOff, RefreshCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthProvider'
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
@@ -158,8 +158,8 @@ export function UserDropdown({ user }: UserDropdownProps) {
                 onClick={handleContactSupport}
                 className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
-                <HelpCircle className="w-4 h-4 mr-3" />
-                Contact Support
+                <MessageSquare className="w-4 h-4 mr-3" />
+                Share Feedback
               </button>
 
               {/* Divider */}

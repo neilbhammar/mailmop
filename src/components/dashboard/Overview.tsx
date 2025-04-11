@@ -1,5 +1,6 @@
 import React from 'react';
 import InboxStats from './overview/InboxStats';
+import ReanalyzeButton from './overview/ReanalyzeButton';
 
 export default function Overview() {
   return (
@@ -9,6 +10,7 @@ export default function Overview() {
           <h1 className="text-3xl font-bold text-slate-800">Clean Up Your Inbox</h1>
           <p className="text-slate-500 mt-1">Analyze senders, find clutter, and take control.</p>
         </div>
+        <ReanalyzeButton />
       </div>
 
       {/* Stats Section */}

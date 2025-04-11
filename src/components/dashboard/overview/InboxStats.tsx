@@ -9,55 +9,57 @@ import { GMAIL_STATS_UPDATED_EVENT, GmailStats, getStoredGmailStats } from '@/li
 
 export default function InboxStats() {
   const token = getStoredToken();
+  const { isTokenValid } = useGmailPermissions();
   const { stats: gmailStats, isLoading: gmailLoading, refreshStats, error } = useGmailStats(token?.accessToken);
   const [forceUpdate, setForceUpdate] = useState(0);
   const user = useUser();
   const { stats: actionStats, isLoading: actionsLoading } = useActionStats(user?.id);
 
-  // Force refresh stats if there was an error or if we don't have stats yet
+  // Only refresh stats if we have a valid token and either:
+  // 1. There was an error
+  // 2. We don't have stats yet
+  // 3. Force update was triggered
   useEffect(() => {
-    if (token?.accessToken && (!gmailStats || error)) {
+    if (token?.accessToken && isTokenValid && (!gmailStats || error)) {
       refreshStats(token.accessToken);
     }
-  }, [token?.accessToken, gmailStats, error, refreshStats, forceUpdate]);
+  }, [token?.accessToken, isTokenValid, gmailStats, error, refreshStats, forceUpdate]);
 
   // Listen for Gmail stats updates
   useEffect(() => {
     const handleStatsUpdated = (event: Event) => {
       if (event instanceof CustomEvent) {
         console.log('[InboxStats] Received Gmail stats update event');
-        // Force a re-render by updating state
         setForceUpdate(prev => prev + 1);
       }
     };
 
-    // Add event listener
     window.addEventListener(GMAIL_STATS_UPDATED_EVENT, handleStatsUpdated);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener(GMAIL_STATS_UPDATED_EVENT, handleStatsUpdated);
-    };
+    return () => window.removeEventListener(GMAIL_STATS_UPDATED_EVENT, handleStatsUpdated);
   }, []);
 
   // Consider the whole component loading if either data source is loading
   const isLoading = gmailLoading || actionsLoading;
 
   // Only show action stats if we have non-zero values
-  const showAnalyzed = !isLoading && actionStats?.analyzed > 0;
-  const showDeleted = !isLoading && actionStats?.deleted > 0;
+  const showAnalyzed = actionStats?.analyzed > 0;
+  const showDeleted = actionStats?.deleted > 0;
+
+  // Helper to format numbers or show placeholder
+  const formatNumber = (value: number | undefined) => {
+    if (isLoading) return '—';
+    if (value === undefined) return '—';
+    return value.toLocaleString();
+  };
 
   return (
     <div className="mt-4 h-[42px]">
-      <div className={cn(
-        "flex items-center gap-8 text-sm transition-all duration-300",
-        isLoading ? "opacity-0" : "opacity-100"
-      )}>
+      <div className="flex items-center gap-8 text-sm transition-all duration-300">
         {/* Total Emails - Always show */}
         <div>
           <span className="text-slate-500">Total Emails</span>
           <p className="font-medium text-slate-800 h-6 flex items-center">
-            {gmailStats?.totalEmails.toLocaleString() || '0'}
+            {formatNumber(gmailStats?.totalEmails)}
           </p>
         </div>
 
@@ -65,7 +67,7 @@ export default function InboxStats() {
         <div>
           <span className="text-slate-500">Threads</span>
           <p className="font-medium text-slate-800 h-6 flex items-center">
-            {gmailStats?.totalThreads.toLocaleString() || '0'}
+            {formatNumber(gmailStats?.totalThreads)}
           </p>
         </div>
 
@@ -74,7 +76,7 @@ export default function InboxStats() {
           <div>
             <span className="text-slate-500">Analyzed</span>
             <p className="font-medium text-slate-800 h-6 flex items-center">
-              {actionStats.analyzed.toLocaleString()}
+              {formatNumber(actionStats?.analyzed)}
             </p>
           </div>
         )}
@@ -84,7 +86,7 @@ export default function InboxStats() {
           <div>
             <span className="text-slate-500">Deleted</span>
             <p className="font-medium text-slate-800 h-6 flex items-center">
-              {actionStats.deleted.toLocaleString()}
+              {formatNumber(actionStats?.deleted)}
             </p>
           </div>
         )}

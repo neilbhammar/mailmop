@@ -27,16 +27,26 @@ export default function InboxAnalysisContainer() {
       checkAnalysisState();
     };
 
+    // Handle reanalyze requests
+    const handleReanalyzeRequest = () => {
+      console.log('[InboxAnalysis] Reanalyze requested');
+      setReanalyzeRequested(true);
+    };
+
     window.addEventListener('focus', handleFocus);
+    window.addEventListener('mailmop:reanalyze-requested', handleReanalyzeRequest);
     
     return () => {
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('mailmop:reanalyze-requested', handleReanalyzeRequest);
     };
   }, [checkAnalysisState]);
 
   // Handle canceling reanalysis
   const handleCancel = () => {
     setReanalyzeRequested(false)
+    // Dispatch cancel event for other components
+    window.dispatchEvent(new Event('mailmop:reanalyze-cancelled'))
   }
 
   return (
@@ -48,9 +58,7 @@ export default function InboxAnalysisContainer() {
           isReanalysis={hasAnalysis}
         />
       ) : (
-        <AnalysisTable 
-          onReanalyze={() => setReanalyzeRequested(true)}
-        />
+        <AnalysisTable />
       )}
     </Card>
   )
