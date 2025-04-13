@@ -41,11 +41,11 @@ export default function IntroStepper({
     setCurrentStep(2)
   }
 
-  const handleStepComplete = async (step: number) => {
+  const handleStepComplete = async (step: number, analysisType?: 'full' | 'quick') => {
     if (step === 1) {
       setCurrentStep(2)
     } else if (step === 2) {
-      await startAnalysis()
+      await startAnalysis({ type: analysisType || 'full' })
       onComplete()
     }
   }

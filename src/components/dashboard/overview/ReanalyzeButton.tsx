@@ -35,9 +35,11 @@ export default function ReanalyzeButton() {
   
   // Only show if:
   // 1. We have analysis data
-  // 2. No analysis is in progress
+  // 2. Analysis is either idle or completed
   // 3. Not currently reanalyzing
-  const shouldShow = hasAnalysis && progress.status === 'idle' && !isReanalyzing
+  const shouldShow = hasAnalysis && 
+    (progress.status === 'idle' || progress.status === 'completed') && 
+    !isReanalyzing
 
   // Get reanalyze function from parent container
   const handleReanalyze = () => {

@@ -13,16 +13,26 @@ interface AnalysisProgress {
   error?: string;
 }
 
+interface AnalysisOptions {
+  type: 'full' | 'quick';
+}
+
 export function useAnalysisOperations() {
   const [progress, setProgress] = useState<AnalysisProgress>({
     status: 'idle',
     progress: 0
   });
 
-  const startAnalysis = useCallback(async () => {
+  const startAnalysis = useCallback(async (options: AnalysisOptions) => {
     try {
       // 1. Update status to preparing
       setProgress({ status: 'preparing', progress: 0 });
+
+      // TODO: Call buildQuery() here to convert analysis type to Gmail query string
+      // - Full Analysis: "-from:me"
+      // - Quick Analysis: "-from:me unsubscribe"
+      const query = options.type === 'full' ? '-from:me' : '-from:me unsubscribe';
+      console.log(`Starting ${options.type} analysis with query: ${query}`);
 
       // 2. Initialize/check database
       await getDB(); // This will create the DB if it doesn't exist

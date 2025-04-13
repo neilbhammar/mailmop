@@ -65,7 +65,7 @@ function BorderTrail({
 }
 
 interface Step2Props {
-  onStart: (step: number) => Promise<void>;
+  onStart: (step: number, analysisType: 'full' | 'quick') => Promise<void>;
 }
 
 export default function Step2_RunAnalysis({ onStart }: Step2Props) {
@@ -163,8 +163,10 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
 
   const handleStartAnalysis = async () => {
     try {
-      await startAnalysis();
-      await onStart(2);
+      // Reset any existing reanalysis state
+      window.dispatchEvent(new Event('mailmop:reanalyze-cancelled'))
+      
+      await onStart(2, unsubscribeOnly ? 'quick' : 'full');
     } catch (error) {
       console.error('Failed to start analysis:', error);
       // TODO: Show error toast
