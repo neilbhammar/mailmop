@@ -21,6 +21,7 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
 
   const handleSignOutWithClear = async () => {
     localStorage.clear()
+    sessionStorage.clear()
     await clearSenderAnalysis()
     await signOut()
     toast.success("Signed out successfully", {
@@ -37,6 +38,7 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
 
   const handleClearOnly = async () => {
     localStorage.clear()
+    sessionStorage.clear()
     await clearSenderAnalysis()
     toast.success("Local data cleared", {
       description: "All browser data has been cleared while keeping you signed in."

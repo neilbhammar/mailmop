@@ -17,12 +17,12 @@ function notifyStorageChange(key: string) {
 }
 
 /**
- * Gets the stored Gmail token if it exists
+ * Gets the stored Gmail token if it exists from sessionStorage
  */
 export function getStoredToken(): GmailToken | null {
   if (typeof window === 'undefined') return null;
 
-  const stored = localStorage.getItem(TOKEN_KEY);
+  const stored = sessionStorage.getItem(TOKEN_KEY);
   if (!stored) return null;
 
   try {
@@ -33,7 +33,7 @@ export function getStoredToken(): GmailToken | null {
 }
 
 /**
- * Stores a new Gmail token with expiry
+ * Stores a new Gmail token with expiry in sessionStorage
  */
 export function storeGmailToken(accessToken: string, expiresIn: number): void {
   if (typeof window === 'undefined') return;
@@ -43,7 +43,7 @@ export function storeGmailToken(accessToken: string, expiresIn: number): void {
     expiresAt: Date.now() + (expiresIn * 1000)
   };
 
-  localStorage.setItem(TOKEN_KEY, JSON.stringify(token));
+  sessionStorage.setItem(TOKEN_KEY, JSON.stringify(token));
   notifyStorageChange(TOKEN_KEY);
 }
 
@@ -58,11 +58,35 @@ export function isTokenValid(): boolean {
 }
 
 /**
- * Clears the stored Gmail token
+ * Revokes the token with Google's servers and removes it from storage
  */
-export function clearToken(): void {
+export async function clearToken(): Promise<void> {
   if (typeof window === 'undefined') return;
 
-  localStorage.removeItem(TOKEN_KEY);
+  // Get the current token before clearing storage
+  const token = getStoredToken();
+  if (token?.accessToken) {
+    try {
+      // Tell Google to revoke the token
+      console.log('[Gmail] Revoking access token with Google...');
+      const response = await fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token.accessToken}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+
+      if (response.ok) {
+        console.log('[Gmail] Token successfully revoked with Google');
+      } else {
+        console.error('[Gmail] Failed to revoke token with Google:', await response.text());
+      }
+    } catch (error) {
+      console.error('[Gmail] Error revoking token with Google:', error);
+    }
+  }
+
+  // Remove from storage regardless of revoke success
+  sessionStorage.removeItem(TOKEN_KEY);
   notifyStorageChange(TOKEN_KEY);
 } 
