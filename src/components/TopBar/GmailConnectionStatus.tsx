@@ -72,7 +72,7 @@ export function GmailConnectionStatus() {
         return "Gmail Connected"
       case 'expiring_soon': {
         const minutesLeft = Math.ceil(tokenStatus.timeRemaining / (60 * 1000))
-        return `Expires in ${minutesLeft}m`
+        return `Gmail Connection Expires in ${minutesLeft}m`
       }
       case 'expired':
         return "Reconnect Gmail"
@@ -120,7 +120,7 @@ export function GmailConnectionStatus() {
               {tokenStatus.state === 'valid' 
                 ? `MailMop has the right access to help clean your inbox. Click on your profile to revoke access. Token expires in ${formatTimeRemaining(localTimeRemaining)}.`
                 : tokenStatus.state === 'expiring_soon'
-                  ? "Your Gmail access will expire soon. Click to refresh access."
+                  ? `Your Gmail access will expire in ${formatTimeRemaining(localTimeRemaining)}. Click to refresh access.`
                   : "Authorizing is required for analyzing, deleting, and unsubscribing"
               }
             </div>

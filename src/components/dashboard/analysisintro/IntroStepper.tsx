@@ -7,7 +7,7 @@ import Step2_RunAnalysis from './Step2_RunAnalysis'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
-import { useAnalysisOperations } from '@/hooks/useAnalysisOperations'
+import { useAnalysisOperations } from '@/hooks/useAnalysisOperation'
 
 interface IntroStepperProps {
   onComplete: () => void;
@@ -28,7 +28,7 @@ export default function IntroStepper({
   // Always start at step 1 if we don't have a valid token
   // The isReanalysis flag only controls the cancel button visibility
   useEffect(() => {
-    if (tokenStatus.state === 'valid') {
+    if (tokenStatus.state === 'valid' || tokenStatus.state === 'expiring_soon') {
       setCurrentStep(2)
       setAnimationDirection(1)
     } else {
@@ -43,10 +43,14 @@ export default function IntroStepper({
 
   const handleStepComplete = async (step: number, analysisType?: 'full' | 'quick') => {
     if (step === 1) {
-      setCurrentStep(2)
-    } else if (step === 2) {
-      await startAnalysis({ type: analysisType || 'full' })
-      onComplete()
+      setCurrentStep(2);
+    } else if (step === 2 && analysisType) {
+      const started = await startAnalysis({ type: analysisType });
+      // Only complete if analysis actually started
+      if (started) {
+        onComplete();
+      }
+      // If not started, stay on current step (modal will be shown by Step2_RunAnalysis)
     }
   }
 

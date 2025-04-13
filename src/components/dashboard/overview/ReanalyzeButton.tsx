@@ -1,7 +1,7 @@
 'use client'
 
 import { useAnalysis } from '@/context/AnalysisProvider'
-import { useAnalysisOperations } from '@/hooks/useAnalysisOperations'
+import { useAnalysisOperations } from '@/hooks/useAnalysisOperation'
 import { Button } from '@/components/ui/button'
 import { RefreshCw } from 'lucide-react'
 import { useState, useEffect } from 'react'
