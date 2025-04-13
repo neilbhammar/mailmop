@@ -17,8 +17,8 @@ interface RevokeAccessDialogProps {
 export function RevokeAccessDialog({ open, onOpenChange }: RevokeAccessDialogProps) {
   const { clearToken } = useGmailPermissions()
 
-  const handleRevoke = () => {
-    clearToken()
+  const handleRevoke = async () => {
+    await clearToken()
     onOpenChange(false)
   }
 
@@ -28,7 +28,7 @@ export function RevokeAccessDialog({ open, onOpenChange }: RevokeAccessDialogPro
         <DialogHeader className="gap-3">
           <DialogTitle className="text-xl">Revoke Gmail Access</DialogTitle>
           <DialogDescription className="text-gray-600 text-sm leading-normal">
-            Revoking access means you won't be able to run analysis or use actions that interact with your inbox. You'll still be able to see old sender that are stored in your browser.
+            This will remove MailMop's access to your Gmail account. You'll need to reconnect to continue using MailMop.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-row justify-end gap-2">

@@ -5,15 +5,14 @@ const TOKEN_KEY = 'gmail_token';
 // Custom event for state changes
 export const STORAGE_CHANGE_EVENT = 'mailmop:storage-change';
 
-// Helper to notify components of changes
+// Helper to dispatch storage change events
 function notifyStorageChange(key: string) {
   if (typeof window === 'undefined') return;
   
-  window.dispatchEvent(
-    new CustomEvent(STORAGE_CHANGE_EVENT, { 
-      detail: { key } 
-    })
-  );
+  const event = new CustomEvent(STORAGE_CHANGE_EVENT, { 
+    detail: { key } 
+  });
+  window.dispatchEvent(event);
 }
 
 /**
@@ -45,16 +44,6 @@ export function storeGmailToken(accessToken: string, expiresIn: number): void {
 
   sessionStorage.setItem(TOKEN_KEY, JSON.stringify(token));
   notifyStorageChange(TOKEN_KEY);
-}
-
-/**
- * Checks if the stored token is still valid
- */
-export function isTokenValid(): boolean {
-  const token = getStoredToken();
-  if (!token) return false;
-
-  return Date.now() < token.expiresAt;
 }
 
 /**

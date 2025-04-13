@@ -9,7 +9,7 @@ import { GMAIL_STATS_UPDATED_EVENT, GmailStats, getStoredGmailStats } from '@/li
 
 export default function InboxStats() {
   const token = getStoredToken();
-  const { isTokenValid } = useGmailPermissions();
+  const { tokenStatus } = useGmailPermissions();
   const { stats: gmailStats, isLoading: gmailLoading, refreshStats, error } = useGmailStats(token?.accessToken);
   const [forceUpdate, setForceUpdate] = useState(0);
   const user = useUser();
@@ -20,10 +20,10 @@ export default function InboxStats() {
   // 2. We don't have stats yet
   // 3. Force update was triggered
   useEffect(() => {
-    if (token?.accessToken && isTokenValid && (!gmailStats || error)) {
+    if (token?.accessToken && tokenStatus.state === 'valid' && (!gmailStats || error)) {
       refreshStats(token.accessToken);
     }
-  }, [token?.accessToken, isTokenValid, gmailStats, error, refreshStats, forceUpdate]);
+  }, [token?.accessToken, tokenStatus.state, gmailStats, error, refreshStats, forceUpdate]);
 
   // Listen for Gmail stats updates
   useEffect(() => {

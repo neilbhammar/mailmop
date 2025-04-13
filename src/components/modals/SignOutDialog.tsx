@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from '@/context/AuthProvider'
 import { toast } from 'sonner'
 import { clearSenderAnalysis } from '@/lib/storage/senderAnalysis'
+import { STORAGE_CHANGE_EVENT } from '@/lib/gmail/tokenStorage'
 
 interface SignOutDialogProps {
   open: boolean
@@ -22,6 +23,8 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
   const handleSignOutWithClear = async () => {
     localStorage.clear()
     sessionStorage.clear()
+    // Dispatch storage change event
+    window.dispatchEvent(new CustomEvent(STORAGE_CHANGE_EVENT, { detail: { key: 'gmail_token' } }))
     await clearSenderAnalysis()
     await signOut()
     toast.success("Signed out successfully", {
@@ -39,6 +42,8 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
   const handleClearOnly = async () => {
     localStorage.clear()
     sessionStorage.clear()
+    // Dispatch storage change event
+    window.dispatchEvent(new CustomEvent(STORAGE_CHANGE_EVENT, { detail: { key: 'gmail_token' } }))
     await clearSenderAnalysis()
     toast.success("Local data cleared", {
       description: "All browser data has been cleared while keeping you signed in."

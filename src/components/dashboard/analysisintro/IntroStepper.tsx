@@ -22,19 +22,19 @@ export default function IntroStepper({
 }: IntroStepperProps) {
   const [currentStep, setCurrentStep] = useState(1)
   const [animationDirection, setAnimationDirection] = useState(0) // 0 for initial, 1 for forward
-  const { isTokenValid } = useGmailPermissions()
+  const { tokenStatus } = useGmailPermissions()
   const { startAnalysis } = useAnalysisOperations()
   
   // Always start at step 1 if we don't have a valid token
   // The isReanalysis flag only controls the cancel button visibility
   useEffect(() => {
-    if (isTokenValid) {
+    if (tokenStatus.state === 'valid') {
       setCurrentStep(2)
       setAnimationDirection(1)
     } else {
       setCurrentStep(1)
     }
-  }, [isTokenValid])
+  }, [tokenStatus.state])
 
   const goToNextStep = () => {
     setAnimationDirection(1)

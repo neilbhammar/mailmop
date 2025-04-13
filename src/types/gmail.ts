@@ -3,9 +3,23 @@ export interface GmailToken {
   expiresAt: number;  // Unix timestamp in milliseconds
 }
 
+export interface TokenStatus {
+  isValid: boolean;
+  expiresAt: number | null;
+  timeRemaining: number;
+  state: 'valid' | 'expiring_soon' | 'expired';
+}
+
+// Runtime status for token operations
+export type TokenRunStatus = 'will_survive' | 'will_expire' | 'expired';
+
+export interface TokenStatusOptions {
+  durationMs?: number;           // How long the token needs to remain valid
+  expiringSoonThresholdMs?: number;  // Threshold for "expiring soon" state
+}
+
 export interface GmailPermissionState {
   hasToken: boolean;
-  isTokenValid: boolean;
   hasEmailData: boolean;
 }
 

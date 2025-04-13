@@ -1,8 +1,8 @@
 'use client'
 
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
-import { GmailPermissionState, GoogleTokenResponse, GoogleTokenClient, GoogleTokenClientConfig } from '@/types/gmail';
-import { getStoredToken, isTokenValid, storeGmailToken, clearToken as clearStoredToken } from '@/lib/gmail/tokenStorage';
+import { GmailPermissionState, GoogleTokenResponse, GoogleTokenClient, GoogleTokenClientConfig, TokenStatus, TokenStatusOptions, TokenRunStatus } from '@/types/gmail';
+import { getStoredToken, storeGmailToken, clearToken as clearStoredToken, STORAGE_CHANGE_EVENT } from '@/lib/gmail/tokenStorage';
 import { fetchGmailProfile } from '@/lib/gmail/fetchProfile';
 import { fetchGmailStats } from '@/lib/gmail/fetchGmailStats';
 import { useAuth } from './AuthProvider';
@@ -10,6 +10,9 @@ import { ANALYSIS_CHANGE_EVENT, hasSenderAnalysis } from '@/lib/storage/senderAn
 
 const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.modify';
 const GOOGLE_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
+
+// Default expiring soon threshold (5 minutes)
+const DEFAULT_EXPIRING_SOON_MS = 5 * 60 * 1000;
 
 interface GmailPermissionsContextType extends GmailPermissionState {
   isLoading: boolean;
@@ -19,17 +22,33 @@ interface GmailPermissionsContextType extends GmailPermissionState {
   shouldShowMismatchModal: boolean;
   gmailEmail: string | null;
   clearToken: () => void;
+  tokenStatus: TokenStatus;
+  canTokenSurvive: (durationMs: number) => boolean;
+  getTokenRunStatus: (durationMs: number) => TokenRunStatus;
 }
 
 const GmailPermissionsContext = createContext<GmailPermissionsContextType | null>(null);
 
-export function GmailPermissionsProvider({ children }: { children: ReactNode }) {
+export function GmailPermissionsProvider({ 
+  children,
+  expiringSoonThresholdMs = DEFAULT_EXPIRING_SOON_MS 
+}: { 
+  children: ReactNode;
+  expiringSoonThresholdMs?: number;
+}) {
   const { user } = useAuth();
   const [permissionState, setPermissionState] = useState<GmailPermissionState>({
     hasToken: false,
-    isTokenValid: false,
     hasEmailData: false,
   });
+  
+  const [tokenStatus, setTokenStatus] = useState<TokenStatus>({
+    isValid: false,
+    expiresAt: null,
+    timeRemaining: 0,
+    state: 'expired'
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const [isClientLoaded, setIsClientLoaded] = useState(false);
   const [shouldShowMismatchModal, setShouldShowMismatchModal] = useState(false);
@@ -62,18 +81,15 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
   // Check initial state on mount and after permissions granted
   const checkPermissionState = useCallback(async () => {
     const token = getStoredToken();
-    const tokenValid = isTokenValid();
     const hasData = await hasSenderAnalysis();
 
     const newState = {
       hasToken: !!token,
-      isTokenValid: tokenValid,
       hasEmailData: hasData,
     };
 
     console.log('[Gmail] Permission state check:', {
       hasData,
-      tokenValid
     });
 
     setPermissionState(newState);
@@ -153,6 +169,94 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
     }
   }, [user?.email]);
 
+  // Function to update token status
+  const updateTokenStatus = useCallback(() => {
+    console.log('[Gmail] Updating token status');
+    const token = getStoredToken();
+    const now = Date.now();
+    
+    if (!token?.expiresAt) {
+      setTokenStatus({
+        isValid: false,
+        expiresAt: null,
+        timeRemaining: 0,
+        state: 'expired'
+      });
+      
+      setPermissionState(prev => ({
+        ...prev,
+        hasToken: false
+      }));
+      return;
+    }
+
+    const timeRemaining = token.expiresAt - now;
+    const isValid = timeRemaining > 0;
+    
+    const state = !isValid ? 'expired' 
+                 : timeRemaining < expiringSoonThresholdMs ? 'expiring_soon'
+                 : 'valid';
+
+    setTokenStatus({
+      isValid,
+      expiresAt: token.expiresAt,
+      timeRemaining,
+      state
+    });
+    
+    setPermissionState(prev => ({
+      ...prev,
+      hasToken: true
+    }));
+  }, [expiringSoonThresholdMs]);
+
+  // Update token status in various scenarios
+  useEffect(() => {
+    // Initial update
+    updateTokenStatus();
+
+    // Set up periodic check (backup)
+    const interval = setInterval(updateTokenStatus, 30000);
+
+    // Handle storage changes
+    const handleStorageChange = (e: Event) => {
+      if (e instanceof CustomEvent) {
+        const { key } = e.detail as { key: string };
+        if (key === 'gmail_token') {
+          console.log('[Gmail] Token storage changed, updating status');
+          updateTokenStatus();
+        }
+      }
+    };
+
+    // Handle visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[Gmail] Page became visible, updating token status');
+        updateTokenStatus();
+      }
+    };
+
+    // Handle focus
+    const handleFocus = () => {
+      console.log('[Gmail] Window focused, updating token status');
+      updateTokenStatus();
+    };
+
+    // Add all listeners
+    window.addEventListener(STORAGE_CHANGE_EVENT, handleStorageChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    // Cleanup
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener(STORAGE_CHANGE_EVENT, handleStorageChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [updateTokenStatus]);
+
   // Request Gmail permissions
   const requestPermissions = useCallback(async () => {
     if (!isClientLoaded) {
@@ -168,18 +272,13 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
     console.log('[Gmail] Requesting permissions...');
     setIsLoading(true);
     try {
-      // Initialize Google client with login_hint
       const tokenResponse = await new Promise<GoogleTokenResponse>((resolve, reject) => {
         console.log('[Gmail] Initializing OAuth client...');
         const client = window.google.accounts.oauth2.initTokenClient({
           client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
           scope: GMAIL_SCOPE,
-          login_hint: user.email, // Pre-fill with Supabase user's email
+          login_hint: user.email,
           callback: (response: GoogleTokenResponse) => {
-            console.log('[Gmail] Received OAuth response:', { 
-              hasError: !!response.error,
-              hasToken: !!response.access_token 
-            });
             if (response.error) {
               reject(response);
             } else {
@@ -190,30 +289,22 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
         client.requestAccessToken();
       });
 
-      // Verify email matches before storing token
       const emailVerified = await verifyEmailMatch(tokenResponse.access_token);
       if (!emailVerified) {
         return false;
       }
 
       console.log('[Gmail] Permissions granted successfully, storing token...');
-      
-      // Store the new token
       storeGmailToken(tokenResponse.access_token, tokenResponse.expires_in);
       
-      // Fetch Gmail stats immediately after successful authentication
+      // Immediately update token status
+      updateTokenStatus();
+
       try {
-        console.log('[Gmail] Fetching Gmail stats after authentication...');
         await fetchGmailStats(tokenResponse.access_token);
-        console.log('[Gmail] Gmail stats fetched and stored successfully');
       } catch (statsError) {
-        // Don't fail the auth process if stats fetching fails
         console.error('[Gmail] Failed to fetch Gmail stats after authentication:', statsError);
       }
-      
-      // Force an immediate state check
-      const newState = checkPermissionState();
-      console.log('[Gmail] State after permission grant:', newState);
 
       return true;
     } catch (error) {
@@ -222,7 +313,7 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
     } finally {
       setIsLoading(false);
     }
-  }, [isClientLoaded, checkPermissionState, verifyEmailMatch, user?.email]);
+  }, [isClientLoaded, updateTokenStatus, verifyEmailMatch, user?.email]);
 
   // Determine if we need to show the permissions modal
   const shouldShowPermissionsModal = false; // Disabled - permissions now handled in IntroStepper - old logic was: !permissionState.isTokenValid && !permissionState.hasEmailData && !shouldShowMismatchModal;
@@ -237,13 +328,25 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
 
   const clearToken = useCallback(() => {
     clearStoredToken();
-    // Force an immediate state check to update UI
+    // Immediately update token status
+    updateTokenStatus();
+    // Also update permission state
     setPermissionState(prev => ({
       ...prev,
-      hasToken: false,
-      isTokenValid: false
+      hasToken: false
     }));
-  }, []);
+  }, [updateTokenStatus]);
+
+  // Check if token can survive a given duration
+  const canTokenSurvive = useCallback((durationMs: number): boolean => {
+    return tokenStatus.timeRemaining > durationMs;
+  }, [tokenStatus.timeRemaining]);
+
+  // Get detailed token run status
+  const getTokenRunStatus = useCallback((durationMs: number): TokenRunStatus => {
+    if (!tokenStatus.isValid) return 'expired';
+    return canTokenSurvive(durationMs) ? 'will_survive' : 'will_expire';
+  }, [tokenStatus.isValid, canTokenSurvive]);
 
   const value = {
     ...permissionState,
@@ -254,6 +357,9 @@ export function GmailPermissionsProvider({ children }: { children: ReactNode }) 
     shouldShowMismatchModal,
     gmailEmail,
     clearToken,
+    tokenStatus,
+    canTokenSurvive,
+    getTokenRunStatus,
   };
 
   return (
