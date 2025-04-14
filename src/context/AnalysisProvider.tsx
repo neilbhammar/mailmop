@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { hasSenderAnalysis, ANALYSIS_CHANGE_EVENT } from '@/lib/storage/senderAnalysis';
-import { getCurrentAnalysis } from '@/lib/storage/actionLog';
+import { getCurrentAnalysis, completeAnalysis } from '@/lib/storage/actionLog';
+import { ActionEndType } from '@/types/actions';
 
 interface AnalysisContextType {
   hasAnalysis: boolean;
@@ -42,6 +43,23 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         currentAnalysis?.status === 'started' || 
         currentAnalysis?.status === 'analyzing'
       );
+      
+      // Check for interrupted analysis on page refresh/load
+      if (currentAnalysis?.status === 'started' || currentAnalysis?.status === 'analyzing') {
+        const lastUpdated = new Date(currentAnalysis.start_time);
+        const now = new Date();
+        const timeSinceStart = now.getTime() - lastUpdated.getTime();
+        
+        // If analysis was started more than 1 minute ago, consider it interrupted
+        if (timeSinceStart > 60000) {
+          console.log('[AnalysisProvider] Detected interrupted analysis, marking as errored');
+          completeAnalysis('error' as ActionEndType, 'Analysis was interrupted by page refresh');
+          setIsAnalyzing(false);
+          
+          // Dispatch event to notify other components
+          window.dispatchEvent(new Event('mailmop:analysis-status-change'));
+        }
+      }
     } catch (error) {
       console.error('[AnalysisProvider] Error checking state:', error);
     }

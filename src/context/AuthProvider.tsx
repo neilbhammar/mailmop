@@ -6,6 +6,7 @@ import { supabase } from '@/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { SessionContextProvider } from '@supabase/auth-helpers-react'
+import { checkUserMismatch, clearAllUserData } from '@/lib/storage/userStorage'
 
 type AuthContextType = {
   session: Session | null
@@ -61,6 +62,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         console.log(`[Auth] Processing ${event || 'Initial'} auth`)
+
+        // Check for user mismatch on SIGNED_IN event
+        if (event === 'SIGNED_IN' && session.user.email) {
+          console.log('[Auth] Checking for user mismatch...')
+          const isMismatch = checkUserMismatch(session.user.email)
+          
+          if (isMismatch) {
+            console.log('[Auth] User mismatch detected, clearing previous data')
+            await clearAllUserData()
+          } else {
+            console.log('[Auth] No user mismatch detected, preserving data')
+          }
+        }
+
         if (mounted) setSession(session)
 
         // Only update profile if this is a new session

@@ -25,7 +25,15 @@ export function getStoredToken(): GmailToken | null {
   if (!stored) return null;
 
   try {
-    return JSON.parse(stored) as GmailToken;
+    const token = JSON.parse(stored) as GmailToken;
+    // Check if token is expired
+    if (token.expiresAt < Date.now()) {
+      // Just remove the token but don't clear other data
+      sessionStorage.removeItem(TOKEN_KEY);
+      notifyStorageChange(TOKEN_KEY);
+      return null;
+    }
+    return token;
   } catch {
     return null;
   }
@@ -48,6 +56,7 @@ export function storeGmailToken(accessToken: string, expiresIn: number): void {
 
 /**
  * Revokes the token with Google's servers and removes it from storage
+ * Does not clear other user data
  */
 export async function clearToken(): Promise<void> {
   if (typeof window === 'undefined') return;
@@ -75,7 +84,7 @@ export async function clearToken(): Promise<void> {
     }
   }
 
-  // Remove from storage regardless of revoke success
+  // Only remove the token, preserve other data
   sessionStorage.removeItem(TOKEN_KEY);
   notifyStorageChange(TOKEN_KEY);
 } 

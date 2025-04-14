@@ -9,8 +9,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { useAuth } from '@/context/AuthProvider'
 import { toast } from 'sonner'
-import { clearSenderAnalysis } from '@/lib/storage/senderAnalysis'
-import { STORAGE_CHANGE_EVENT } from '@/lib/gmail/tokenStorage'
+import { clearAllUserData } from '@/lib/storage/userStorage'
 
 interface SignOutDialogProps {
   open: boolean
@@ -21,34 +20,42 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
   const { signOut } = useAuth()
 
   const handleSignOutWithClear = async () => {
-    localStorage.clear()
-    sessionStorage.clear()
-    // Dispatch storage change event
-    window.dispatchEvent(new CustomEvent(STORAGE_CHANGE_EVENT, { detail: { key: 'gmail_token' } }))
-    await clearSenderAnalysis()
-    await signOut()
-    toast.success("Signed out successfully", {
-      description: "Your local data has been cleared for security."
-    })
-    onOpenChange(false)
+    try {
+      // Clear all data first
+      await clearAllUserData()
+      
+      // Then sign out
+      await signOut()
+      
+      toast.success("Signed out successfully", {
+        description: "Your local data has been cleared for security."
+      })
+    } catch (error) {
+      console.error('[SignOut] Error:', error)
+      toast.error("Error signing out", {
+        description: "Please try again or contact support if the problem persists."
+      })
+    } finally {
+      onOpenChange(false)
+    }
   }
 
-  const handleSignOutOnly = async () => {
-    await signOut()
-    toast.success("Signed out successfully")
-    onOpenChange(false)
-  }
-
-  const handleClearOnly = async () => {
-    localStorage.clear()
-    sessionStorage.clear()
-    // Dispatch storage change event
-    window.dispatchEvent(new CustomEvent(STORAGE_CHANGE_EVENT, { detail: { key: 'gmail_token' } }))
-    await clearSenderAnalysis()
-    toast.success("Local data cleared", {
-      description: "All browser data has been cleared while keeping you signed in."
-    })
-    onOpenChange(false)
+  const handleSignOutPreserve = async () => {
+    try {
+      // Just sign out, preserve data
+      await signOut()
+      
+      toast.success("Signed out successfully", {
+        description: "Your local data has been preserved for your next sign in."
+      })
+    } catch (error) {
+      console.error('[SignOut] Error:', error)
+      toast.error("Error signing out", {
+        description: "Please try again or contact support if the problem persists."
+      })
+    } finally {
+      onOpenChange(false)
+    }
   }
 
   return (
@@ -57,7 +64,7 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
         <DialogHeader className="gap-3">
           <DialogTitle className="text-xl">Sign Out</DialogTitle>
           <DialogDescription className="text-gray-600 text-sm leading-normal">
-            Would you like to clear your local data while signing out? This is recommended if you're using a shared device.
+            Choose how to handle your local data when signing out. Clearing data is recommended on shared devices.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-col gap-2 sm:flex-col">
@@ -69,22 +76,11 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
           </Button>
           <Button
             variant="outline"
-            onClick={handleSignOutOnly}
+            onClick={handleSignOutPreserve}
             className="w-full"
           >
-            Sign Out Only
+            Sign Out & Preserve Data
           </Button>
-          
-          {/* Development-only option */}
-          <div className="pt-2 border-t border-gray-100">
-            <Button
-              variant="outline"
-              onClick={handleClearOnly}
-              className="w-full border-dashed border-yellow-500 text-yellow-600 hover:bg-yellow-50"
-            >
-              [DEV] Clear Data Only
-            </Button>
-          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

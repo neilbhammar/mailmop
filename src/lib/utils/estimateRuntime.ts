@@ -1,12 +1,12 @@
 // Constants for runtime estimation
 export const OPERATION_RATES = {
-  analysis: 750, // emails per minute
+  analysis: 2250, // emails per minute
   deletion: 300, // emails per minute (example rate)
   markUnread: 500, // emails per minute (example rate)
   // Add other operations as needed
 } as const;
 
-export const QUICK_OPERATION_MULTIPLIER = 0.6; // 60% of emails for quick operations
+export const QUICK_OPERATION_MULTIPLIER = 0.5; // 60% of emails for quick operations
 
 export type OperationType = keyof typeof OPERATION_RATES;
 export type OperationMode = 'full' | 'quick';
@@ -25,14 +25,14 @@ export function getEffectiveEmailCount(
   mode: OperationMode = 'full',
   operationType: OperationType = 'analysis'
 ): number {
-  // Calculate effective email count based on mode
+  // First apply quick mode multiplier if applicable
   let effectiveCount = mode === 'quick' 
     ? Math.ceil(totalEmails * QUICK_OPERATION_MULTIPLIER)
     : totalEmails;
     
-  // For analysis operations in full mode, round down to nearest 1000
-  if (operationType === 'analysis' && mode === 'full') {
-    effectiveCount = Math.floor(effectiveCount / 1000) * 1000;
+  // For analysis operations, round down to nearest 100 for better granularity
+  if (operationType === 'analysis') {
+    effectiveCount = Math.max(100, Math.floor(effectiveCount / 100) * 100);
   }
   
   return effectiveCount;
@@ -56,8 +56,8 @@ export function estimateRuntimeMs({
   // Get effective email count using our helper
   const effectiveEmailCount = getEffectiveEmailCount(emailCount, mode, operationType);
 
-  // Convert emails/minute to milliseconds
-  const minutesToProcess = effectiveEmailCount / ratePerMinute;
+  // Calculate minutes with 1-minute minimum
+  const minutesToProcess = Math.max(1, effectiveEmailCount / ratePerMinute);
   return minutesToProcess * 60 * 1000;
 }
 
