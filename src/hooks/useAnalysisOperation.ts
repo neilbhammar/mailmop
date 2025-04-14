@@ -7,10 +7,10 @@ import {
   getDB 
 } from '@/lib/storage/senderAnalysis';
 import { buildQuery } from '@/lib/gmail/buildQuery';
-import { SenderResult } from '@/types/gmail';
+import { SenderResult, GmailPermissionState, TokenStatus, TokenRunStatus } from '@/types/gmail';
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
 import { useGmailStats } from '@/hooks/useGmailStats';
-import { estimateRuntimeMs, formatDuration, OperationType, OperationMode } from '@/lib/utils/estimateRuntime';
+import { estimateRuntimeMs, formatDuration, OperationType, OperationMode, getEffectiveEmailCount } from '@/lib/utils/estimateRuntime';
 import { toast } from 'sonner';
 import { ReauthDialog } from '@/components/modals/ReauthDialog';
 import { useUser } from '@supabase/auth-helpers-react';
@@ -24,6 +24,9 @@ import {
   getCurrentAnalysis 
 } from '@/lib/storage/actionLog';
 import { ActionEndType } from '@/types/actions';
+import { fetchMessageIds } from '@/lib/gmail/fetchMessageIds';
+import { fetchMetadata } from '@/lib/gmail/fetchMetadata';
+import { parseMetadataBatch } from '@/lib/gmail/parseHeaders';
 
 // Analysis status types - used for UI state and progress tracking
 type AnalysisStatus = 
@@ -47,11 +50,34 @@ interface AnalysisOptions {
 
 // Constants
 const FIFTY_FIVE_MINUTES_MS = 55 * 60 * 1000;
+const TWO_MINUTES_MS = 2 * 60 * 1000;
+const BATCH_SIZE = 45;
 
 interface ReauthModalState {
   isOpen: boolean;
   type: 'expired' | 'will_expire_during_operation';
   eta?: string;
+}
+
+interface GmailPermissionsContextType extends GmailPermissionState {
+  isLoading: boolean;
+  isClientLoaded: boolean;
+  requestPermissions: () => Promise<boolean>;
+  shouldShowPermissionsModal: boolean;
+  shouldShowMismatchModal: boolean;
+  gmailEmail: string | null;
+  clearToken: () => void;
+  tokenStatus: TokenStatus;
+  canTokenSurvive: (durationMs: number) => boolean;
+  getTokenRunStatus: (durationMs: number) => TokenRunStatus;
+  getAccessToken: () => Promise<string>;
+}
+
+// Update the filters type to include effectiveEmailCount
+interface AnalysisFilters {
+  type: 'full' | 'quick';
+  query: string;
+  effectiveEmailCount: number;
 }
 
 export function useAnalysisOperations() {
@@ -65,7 +91,7 @@ export function useAnalysisOperations() {
     type: 'expired'
   });
 
-  const { tokenStatus } = useGmailPermissions();
+  const { tokenStatus, getAccessToken } = useGmailPermissions();
   const { stats } = useGmailStats();
   const user = useUser();
 
@@ -77,9 +103,11 @@ export function useAnalysisOperations() {
     try {
       // 1. Update status to preparing (pre-flight phase)
       setProgress({ status: 'preparing', progress: 0 });
+      console.log('[Analysis] Starting analysis...');
 
       // 2. Initial token validity check (before any estimation)
       if (tokenStatus.state === 'expired') {
+        console.log('[Analysis] Token expired, requesting reauth');
         setReauthModal({
           isOpen: true,
           type: 'expired'
@@ -96,6 +124,15 @@ export function useAnalysisOperations() {
         throw new Error('User not authenticated');
       }
 
+      // Calculate effective email count for this analysis
+      const effectiveEmailCount = getEffectiveEmailCount(
+        stats.totalEmails,
+        options.type,
+        'analysis'
+      );
+
+      console.log(`[Analysis] Processing ${effectiveEmailCount.toLocaleString()} out of ${stats.totalEmails.toLocaleString()} total emails`);
+
       // 4. Calculate estimated runtime
       const estimatedRuntimeMs = estimateRuntimeMs({
         operationType: 'analysis' as OperationType,
@@ -104,19 +141,14 @@ export function useAnalysisOperations() {
       });
 
       const formattedEta = formatDuration(estimatedRuntimeMs);
+      console.log(`[Analysis] Estimated runtime: ${formattedEta}`);
       setProgress(prev => ({ ...prev, eta: formattedEta }));
 
       // 5. Check token expiration against operation duration
       if (estimatedRuntimeMs < FIFTY_FIVE_MINUTES_MS) {
-        // For shorter operations (<55min), check if token will last
-        console.log('Token validation:', {
-          timeRemaining: tokenStatus.timeRemaining,
-          estimatedRuntime: estimatedRuntimeMs,
-          willExpire: tokenStatus.timeRemaining < estimatedRuntimeMs
-        });
-
+        console.log('[Analysis] Validating token duration...');
         if (tokenStatus.timeRemaining < estimatedRuntimeMs) {
-          // Token won't last the full operation
+          console.log('[Analysis] Token will expire during operation, requesting reauth');
           setReauthModal({
             isOpen: true,
             type: 'will_expire_during_operation',
@@ -125,7 +157,6 @@ export function useAnalysisOperations() {
           return { success: false };
         }
       } else {
-        // For long operations (>55min), show warning toast but continue
         toast.warning(
           "Long Operation Detected",
           {
@@ -133,15 +164,14 @@ export function useAnalysisOperations() {
             duration: 6000
           }
         );
-        // Don't return here - continue with the analysis
       }
 
       // 6. Clear existing analysis data before starting new one
       const hasExisting = await hasSenderAnalysis();
       if (hasExisting) {
-        console.log('Clearing previous analysis data...');
+        console.log('[Analysis] Clearing previous analysis data...');
         await clearSenderAnalysis();
-        clearCurrentAnalysis(); // Clear localStorage analysis state
+        clearCurrentAnalysis();
       }
 
       // 7. Build Gmail query using our utility
@@ -149,81 +179,159 @@ export function useAnalysisOperations() {
         type: 'analysis', 
         mode: options.type 
       });
-      console.log(`Starting ${options.type} analysis with query: ${query}`);
+      console.log(`[Analysis] Using query: ${query}`);
 
       // 8. Generate client_action_id and start logging
       const clientActionId = uuidv4();
-      
-      // Create localStorage log
+      const analysisId = new Date().toISOString();
+
+      // Calculate batch estimates
+      const emailsPerBatch = BATCH_SIZE;
+      const totalEstimatedBatches = Math.ceil(effectiveEmailCount / emailsPerBatch);
+
+      // Create localStorage log with estimates
       createLocalActionLog({
         clientActionId,
         type: options.type,
         estimatedRuntimeMs,
-        totalEmails: stats.totalEmails,
+        totalEmails: effectiveEmailCount,
+        totalEstimatedBatches,
         query
       });
 
-      // Create Supabase log (only when actually starting analysis)
+      // Create Supabase log with estimates
       const actionLog = await createActionLog({
         user_id: user.id,
         type: 'analysis',
         status: 'started',
         filters: {
           type: options.type,
-          query
-        }
+          query,
+          effectiveEmailCount
+        } as AnalysisFilters,
+        estimated_emails: effectiveEmailCount
       });
 
       // Update localStorage with Supabase ID
       updateAnalysisId(actionLog.id!);
 
       // 9. Initialize/check IndexedDB
+      console.log('[Analysis] Initializing IndexedDB...');
       await getDB();
 
       // 10. Update status to analyzing (active operation phase)
       setProgress({ status: 'analyzing', progress: 0 });
       await updateActionLog(actionLog.id!, { status: 'analyzing' });
 
-      // TODO: Implement actual batch processing here
-      // For now, using dummy data
-      const analysisId = new Date().toISOString();
-      const dummyData: SenderResult[] = [
-        {
-          senderEmail: 'newsletter@example.com',
-          senderName: 'Daily Newsletter',
-          count: 150,
-          lastDate: new Date().toISOString(),
-          analysisId,
-          hasUnsubscribe: true,
-          sampleSubjects: ['Your Daily Update', 'Breaking News'],
-          messageIds: ['msg1', 'msg2'],
-          unsubscribe: {
-            url: 'https://example.com/unsubscribe'
-          }
-        },
-        {
-          senderEmail: 'marketing@company.com',
-          senderName: 'Marketing Team',
-          count: 75,
-          lastDate: new Date().toISOString(),
-          analysisId,
-          hasUnsubscribe: true,
-          sampleSubjects: ['Special Offer', 'Don\'t Miss Out'],
-          messageIds: ['msg3', 'msg4']
+      // 11. Initialize batch processing state
+      let nextPageToken: string | undefined;
+      let batchIndex = 0;
+      let totalProcessed = 0;
+      const senderMap = new Map<string, SenderResult>();
+
+      // 12. Start batch processing loop
+      do {
+        const batchNumber = batchIndex + 1;
+        console.log(`\n[Analysis] Starting Batch ${batchNumber}`);
+
+        // Check token expiration before each batch
+        console.log(`[Analysis] Checking token for batch ${batchNumber}...`);
+        if (tokenStatus.timeRemaining < TWO_MINUTES_MS) {
+          console.warn('[Analysis] Token expiring soon, pausing for reauth');
+          setReauthModal({
+            isOpen: true,
+            type: 'will_expire_during_operation',
+            eta: formatDuration(estimatedRuntimeMs - (totalProcessed / stats.totalEmails) * estimatedRuntimeMs)
+          });
+          return { success: false };
         }
-      ];
 
-      await storeSenderResults(dummyData);
+        // Fetch message IDs for this batch
+        console.log(`[Analysis] Fetching IDs for batch ${batchNumber}...`);
+        const accessToken = await getAccessToken();
+        const { messageIds, nextPageToken: newPageToken } = await fetchMessageIds(
+          accessToken,
+          query,
+          nextPageToken
+        );
 
-      // 11. Complete with success
+        // Update nextPageToken for next iteration
+        nextPageToken = newPageToken;
+
+        if (messageIds.length > 0) {
+          console.log(`[Analysis] Fetching metadata for batch ${batchNumber} (${messageIds.length} messages)...`);
+          // Fetch metadata for messages
+          const metadata = await fetchMetadata(accessToken, messageIds);
+          
+          console.log(`[Analysis] Parsing headers for batch ${batchNumber}...`);
+          // Parse headers into sender information
+          const parsedSenders = parseMetadataBatch(metadata);
+
+          console.log(`[Analysis] Aggregating sender stats for batch ${batchNumber}...`);
+          // Aggregate sender statistics
+          for (const sender of parsedSenders) {
+            const existing = senderMap.get(sender.email);
+            if (existing) {
+              // Update existing sender stats
+              existing.count++;
+              if (new Date(sender.date) > new Date(existing.lastDate)) {
+                existing.lastDate = sender.date;
+              }
+              existing.hasUnsubscribe = existing.hasUnsubscribe || sender.hasUnsubscribe;
+              if (sender.unsubscribe) {
+                existing.unsubscribe = { ...existing.unsubscribe, ...sender.unsubscribe };
+              }
+            } else {
+              // Add new sender
+              senderMap.set(sender.email, {
+                senderEmail: sender.email,
+                senderName: sender.name,
+                count: 1,
+                lastDate: sender.date,
+                analysisId,
+                hasUnsubscribe: sender.hasUnsubscribe,
+                unsubscribe: sender.unsubscribe
+              });
+            }
+          }
+
+          console.log(`[Analysis] Storing results for batch ${batchNumber}...`);
+          // Store current results
+          await storeSenderResults(Array.from(senderMap.values()));
+
+          // Update progress based on effective email count
+          totalProcessed += messageIds.length;
+          const progressPercent = Math.min(100, Math.round((totalProcessed / effectiveEmailCount) * 100));
+          
+          console.log(`[Analysis] Batch ${batchNumber} complete. Progress: ${progressPercent}% (${totalProcessed.toLocaleString()}/${effectiveEmailCount.toLocaleString()} emails)`);
+          
+          setProgress(prev => ({ 
+            ...prev,
+            progress: progressPercent
+          }));
+
+          // Update localStorage progress only during batches
+          updateAnalysisProgress(
+            batchIndex,
+            totalProcessed
+          );
+
+          batchIndex++;
+        }
+
+      } while (nextPageToken && progress.status !== 'cancelled');
+
+      console.log('\n[Analysis] Analysis complete!');
+
+      // 13. Complete with success
       setProgress({ status: 'completed', progress: 100 });
-      await completeActionLog(actionLog.id!, 'success', dummyData.length);
+      await completeActionLog(actionLog.id!, 'success', totalProcessed);
       completeAnalysis('success');
 
       return { success: true };
 
     } catch (error) {
-      console.error('Analysis failed:', error);
+      console.error('[Analysis] Analysis failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Analysis failed';
       
       setProgress({ 
@@ -238,7 +346,7 @@ export function useAnalysisOperations() {
         await completeActionLog(
           current.analysis_id,
           'runtime_error',
-          undefined,
+          current.processed_email_count,
           errorMessage
         );
         completeAnalysis('runtime_error', errorMessage);
@@ -246,7 +354,7 @@ export function useAnalysisOperations() {
 
       return { success: false };
     }
-  }, [stats?.totalEmails, tokenStatus.state, tokenStatus.timeRemaining, user?.id]);
+  }, [stats?.totalEmails, tokenStatus.state, tokenStatus.timeRemaining, user?.id, getAccessToken, progress.status]);
 
   const cancelAnalysis = useCallback(async () => {
     const current = getCurrentAnalysis();

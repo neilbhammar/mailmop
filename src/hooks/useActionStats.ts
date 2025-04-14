@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getActionStats } from '@/supabase/actions';
+import { ACTION_STATS_UPDATED_EVENT } from '@/lib/storage/actionLog';
 
 export function useActionStats(userId?: string) {
   const [stats, setStats] = useState<{
@@ -13,28 +14,40 @@ export function useActionStats(userId?: string) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    async function fetchStats() {
-      if (!userId) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const actionStats = await getActionStats(userId);
-        setStats({
-          analyzed: actionStats.analysis || 0,
-          deleted: actionStats.delete || 0
-        });
-      } catch (err) {
-        setError(err as Error);
-      } finally {
-        setIsLoading(false);
-      }
+  const fetchStats = useCallback(async () => {
+    if (!userId) {
+      setIsLoading(false);
+      return;
     }
 
-    fetchStats();
+    try {
+      const actionStats = await getActionStats(userId);
+      setStats({
+        analyzed: actionStats.analysis || 0,
+        deleted: actionStats.delete || 0
+      });
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [userId]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  // Listen for action stats updates
+  useEffect(() => {
+    const handleStatsUpdated = () => {
+      console.log('[useActionStats] Received stats update event');
+      fetchStats();
+    };
+
+    window.addEventListener(ACTION_STATS_UPDATED_EVENT, handleStatsUpdated);
+    return () => window.removeEventListener(ACTION_STATS_UPDATED_EVENT, handleStatsUpdated);
+  }, [fetchStats]);
 
   return { stats, isLoading, error };
 } 

@@ -1,6 +1,13 @@
 import { LocalActionLog, AnalysisType, ActionEndType } from '@/types/actions';
 
 const CURRENT_ANALYSIS_KEY = 'mailmop_current_analysis';
+export const ACTION_STATS_UPDATED_EVENT = 'mailmop:action-stats-updated';
+
+// Helper to notify components of action stats changes
+function notifyActionStatsChange() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(ACTION_STATS_UPDATED_EVENT));
+}
 
 /**
  * Creates and stores a new analysis action log in localStorage
@@ -10,23 +17,19 @@ export function createLocalActionLog({
   type,
   estimatedRuntimeMs,
   totalEmails,
+  totalEstimatedBatches,
   query
 }: {
   clientActionId: string;
   type: AnalysisType;
   estimatedRuntimeMs: number;
   totalEmails: number;
+  totalEstimatedBatches: number;
   query: string;
 }): LocalActionLog {
-  // Calculate total batches based on analysis type
-  const emailsPerBatch = 45;
-  const estimatedEmailsToProcess = type === 'quick' 
-    ? Math.ceil(totalEmails * 0.6) // Quick analysis processes ~60% of emails
-    : totalEmails;
-  
   const actionLog: LocalActionLog = {
     client_action_id: clientActionId,
-    analysis_id: null, // Will be updated once we get Supabase ID
+    analysis_id: null,
     type: 'analysis',
     status: 'started',
     filters: {
@@ -37,8 +40,8 @@ export function createLocalActionLog({
     start_time: new Date().toISOString(),
     estimated_runtime_ms: estimatedRuntimeMs,
     current_batch_index: 0,
-    total_estimated_batches: Math.ceil(estimatedEmailsToProcess / emailsPerBatch),
-    total_estimated_emails: estimatedEmailsToProcess,
+    total_estimated_batches: totalEstimatedBatches,
+    total_estimated_emails: totalEmails,
     processed_email_count: 0,
     completed_at: null,
     end_type: null,
@@ -96,6 +99,9 @@ export function completeAnalysis(
     completion_reason: reason || null
   };
   localStorage.setItem(CURRENT_ANALYSIS_KEY, JSON.stringify(updated));
+  
+  // Notify components that action stats have changed
+  notifyActionStatsChange();
 }
 
 /**

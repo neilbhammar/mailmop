@@ -25,6 +25,7 @@ interface GmailPermissionsContextType extends GmailPermissionState {
   tokenStatus: TokenStatus;
   canTokenSurvive: (durationMs: number) => boolean;
   getTokenRunStatus: (durationMs: number) => TokenRunStatus;
+  getAccessToken: () => Promise<string>;
 }
 
 const GmailPermissionsContext = createContext<GmailPermissionsContextType | null>(null);
@@ -348,6 +349,15 @@ export function GmailPermissionsProvider({
     return canTokenSurvive(durationMs) ? 'will_survive' : 'will_expire';
   }, [tokenStatus.isValid, canTokenSurvive]);
 
+  // Get access token for API calls
+  const getAccessToken = useCallback(async (): Promise<string> => {
+    const token = getStoredToken();
+    if (!token?.accessToken) {
+      throw new Error('No access token available');
+    }
+    return token.accessToken;
+  }, []);
+
   const value = {
     ...permissionState,
     isLoading,
@@ -360,6 +370,7 @@ export function GmailPermissionsProvider({
     tokenStatus,
     canTokenSurvive,
     getTokenRunStatus,
+    getAccessToken
   };
 
   return (

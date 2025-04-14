@@ -18,6 +18,27 @@ interface EstimateRuntimeParams {
 }
 
 /**
+ * Calculates the effective number of emails to process based on operation type and mode
+ */
+export function getEffectiveEmailCount(
+  totalEmails: number,
+  mode: OperationMode = 'full',
+  operationType: OperationType = 'analysis'
+): number {
+  // Calculate effective email count based on mode
+  let effectiveCount = mode === 'quick' 
+    ? Math.ceil(totalEmails * QUICK_OPERATION_MULTIPLIER)
+    : totalEmails;
+    
+  // For analysis operations in full mode, round down to nearest 1000
+  if (operationType === 'analysis' && mode === 'full') {
+    effectiveCount = Math.floor(effectiveCount / 1000) * 1000;
+  }
+  
+  return effectiveCount;
+}
+
+/**
  * Estimates the runtime in milliseconds for a Gmail operation
  * @param operationType - Type of operation (analysis, deletion, etc.)
  * @param emailCount - Number of emails to process (total inbox for analysis, selected emails for other ops)
@@ -32,18 +53,8 @@ export function estimateRuntimeMs({
   // Get the rate for this operation type
   const ratePerMinute = OPERATION_RATES[operationType];
   
-  // Calculate effective email count
-  let effectiveEmailCount = emailCount;
-  
-  if (mode === 'quick') {
-    // For any quick operation, use the multiplier
-    effectiveEmailCount = Math.ceil(emailCount * QUICK_OPERATION_MULTIPLIER);
-  }
-  
-  // For analysis operations, round down to nearest 1000
-  if (operationType === 'analysis' && mode === 'full') {
-    effectiveEmailCount = Math.floor(emailCount / 1000) * 1000;
-  }
+  // Get effective email count using our helper
+  const effectiveEmailCount = getEffectiveEmailCount(emailCount, mode, operationType);
 
   // Convert emails/minute to milliseconds
   const minutesToProcess = effectiveEmailCount / ratePerMinute;
