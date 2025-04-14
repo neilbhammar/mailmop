@@ -124,6 +124,7 @@ export function useAnalysisOperations() {
   const user = useUser();
 
   const closeReauthModal = useCallback(() => {
+    console.log('[Analysis] Closing reauth modal');
     setReauthModal(prev => ({ ...prev, isOpen: false }));
   }, []);
 
@@ -420,11 +421,7 @@ export function useAnalysisOperations() {
     progress,
     startAnalysis,
     cancelAnalysis,
-    reauthModal: {
-      isOpen: reauthModal.isOpen,
-      onOpenChange: closeReauthModal,
-      type: reauthModal.type,
-      eta: reauthModal.eta
-    }
+    reauthModal,
+    closeReauthModal
   };
 } 

@@ -76,7 +76,14 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
   const [unsubscribeOnly, setUnsubscribeOnly] = useState(false) // Default to full analysis
   const [buttonState, setButtonState] = useState<'idle' | 'preparing'>('idle')
   
-  const { progress, startAnalysis, reauthModal } = useAnalysisOperations();
+  const { progress, startAnalysis, reauthModal, closeReauthModal } = useAnalysisOperations();
+  
+  // Update the function to use the proper setter
+  const handleReauthModalChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      closeReauthModal();
+    }
+  };
   
   // Get stored stats on component mount
   useEffect(() => {
@@ -201,6 +208,14 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
 
   return (
     <div className="relative h-full">
+      {/* ReauthDialog component - Add proper connection to state */}
+      <ReauthDialog
+        open={reauthModal.isOpen}
+        onOpenChange={handleReauthModalChange}
+        type={reauthModal.type}
+        eta={reauthModal.eta}
+      />
+      
       <div className="h-full w-full flex items-center">
         {/* Left side - Visualization */}
         <div className="hidden md:flex md:w-1/2 h-full bg-slate-50 items-center justify-center p-6">
@@ -377,7 +392,7 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
                         <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Faster</span>
                       </div>
                       <p className="text-sm text-gray-500 mt-0.5">
-                        Focus on emails with unsubscribe links for quicker results
+                        Focus on emails with the word "unsubscribe"
                       </p>
                     </div>
                   </label>
@@ -469,14 +484,6 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
           </div>
         </div>
       </div>
-
-      {/* Move ReauthDialog outside main content and add debug info */}
-      <ReauthDialog
-        open={reauthModal.isOpen}
-        onOpenChange={reauthModal.onOpenChange}
-        type={reauthModal.type}
-        eta={reauthModal.eta}
-      />
     </div>
   )
 } 
