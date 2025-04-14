@@ -6,6 +6,7 @@ import {
   hasSenderAnalysis,
   getDB 
 } from '@/lib/storage/senderAnalysis';
+import { buildQuery } from '@/lib/gmail/buildQuery';
 import { SenderResult } from '@/types/gmail';
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
 import { useGmailStats } from '@/hooks/useGmailStats';
@@ -24,8 +25,17 @@ import {
 } from '@/lib/storage/actionLog';
 import { ActionEndType } from '@/types/actions';
 
+// Analysis status types - used for UI state and progress tracking
+type AnalysisStatus = 
+  | 'idle'        // Initial state
+  | 'preparing'   // Pre-flight checks (time estimates, token validation)
+  | 'analyzing'   // Active Gmail API operations
+  | 'completed'   // Successfully finished
+  | 'error'       // Failed with error
+  | 'cancelled';  // User stopped operation
+
 interface AnalysisProgress {
-  status: 'idle' | 'preparing' | 'analyzing' | 'completed' | 'error';
+  status: AnalysisStatus;
   progress: number;
   error?: string;
   eta?: string;
@@ -65,7 +75,7 @@ export function useAnalysisOperations() {
 
   const startAnalysis = useCallback(async (options: AnalysisOptions) => {
     try {
-      // 1. Update status to preparing
+      // 1. Update status to preparing (pre-flight phase)
       setProgress({ status: 'preparing', progress: 0 });
 
       // 2. Initial token validity check (before any estimation)
@@ -119,18 +129,29 @@ export function useAnalysisOperations() {
         toast.warning(
           "Long Operation Detected",
           {
-            description: `This is going to take ${formattedEta}. You may need to re-authenticate your email after an hour. We'll let you know when that's needed.`,
+            description: `This will take ${formattedEta}. You may need to re-authenticate after an hour. We'll let you know when needed.`,
             duration: 6000
           }
         );
         // Don't return here - continue with the analysis
       }
 
-      // 6. Build Gmail query
-      const query = options.type === 'full' ? '-from:me' : '-from:me unsubscribe';
+      // 6. Clear existing analysis data before starting new one
+      const hasExisting = await hasSenderAnalysis();
+      if (hasExisting) {
+        console.log('Clearing previous analysis data...');
+        await clearSenderAnalysis();
+        clearCurrentAnalysis(); // Clear localStorage analysis state
+      }
+
+      // 7. Build Gmail query using our utility
+      const query = buildQuery({ 
+        type: 'analysis', 
+        mode: options.type 
+      });
       console.log(`Starting ${options.type} analysis with query: ${query}`);
 
-      // 7. Generate client_action_id and start logging
+      // 8. Generate client_action_id and start logging
       const clientActionId = uuidv4();
       
       // Create localStorage log
@@ -142,7 +163,7 @@ export function useAnalysisOperations() {
         query
       });
 
-      // Create Supabase log
+      // Create Supabase log (only when actually starting analysis)
       const actionLog = await createActionLog({
         user_id: user.id,
         type: 'analysis',
@@ -156,19 +177,15 @@ export function useAnalysisOperations() {
       // Update localStorage with Supabase ID
       updateAnalysisId(actionLog.id!);
 
-      // 8. Initialize/check database
+      // 9. Initialize/check IndexedDB
       await getDB();
 
-      // 9. Clear existing data
-      const hasExisting = await hasSenderAnalysis();
-      if (hasExisting) {
-        await clearSenderAnalysis();
-      }
-
-      // 10. Start analysis (for now, just insert dummy data)
-      setProgress({ status: 'analyzing', progress: 50 });
+      // 10. Update status to analyzing (active operation phase)
+      setProgress({ status: 'analyzing', progress: 0 });
       await updateActionLog(actionLog.id!, { status: 'analyzing' });
 
+      // TODO: Implement actual batch processing here
+      // For now, using dummy data
       const analysisId = new Date().toISOString();
       const dummyData: SenderResult[] = [
         {
@@ -242,7 +259,7 @@ export function useAnalysisOperations() {
       completeAnalysis('user_stopped', 'User cancelled the analysis');
     }
 
-    setProgress({ status: 'idle', progress: 0 });
+    setProgress({ status: 'cancelled', progress: 0 });
     setReauthModal({ isOpen: false, type: 'expired' });
   }, []);
 
