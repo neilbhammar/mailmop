@@ -67,7 +67,7 @@ function BorderTrail({
 }
 
 interface Step2Props {
-  onStart: (step: number, analysisType: 'full' | 'quick') => Promise<void>;
+  onStart: (step: number) => Promise<void>;
 }
 
 export default function Step2_RunAnalysis({ onStart }: Step2Props) {
@@ -180,9 +180,9 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
         type: unsubscribeOnly ? 'quick' : 'full'
       });
 
-      // Proceed with onStart if analysis was successful
+      // Just call onStart with step number if successful
       if (result.success) {
-        await onStart(2, unsubscribeOnly ? 'quick' : 'full');
+        await onStart(2);
       } else {
         console.log('Analysis start was cancelled or needs reauth');
       }

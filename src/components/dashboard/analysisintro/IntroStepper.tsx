@@ -41,16 +41,11 @@ export default function IntroStepper({
     setCurrentStep(2)
   }
 
-  const handleStepComplete = async (step: number, analysisType?: 'full' | 'quick') => {
+  const handleStepComplete = async (step: number) => {
     if (step === 1) {
       setCurrentStep(2);
-    } else if (step === 2 && analysisType) {
-      const started = await startAnalysis({ type: analysisType });
-      // Only complete if analysis actually started
-      if (started) {
-        onComplete();
-      }
-      // If not started, stay on current step (modal will be shown by Step2_RunAnalysis)
+    } else if (step === 2) {
+      onComplete();
     }
   }
 

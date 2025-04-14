@@ -25,7 +25,7 @@ export function GmailConnectionStatus() {
 
   // Continuous timer that runs regardless of tooltip visibility
   useEffect(() => {
-    if (tokenStatus.state !== 'valid') return
+    if (tokenStatus.state !== 'valid' && tokenStatus.state !== 'expiring_soon') return
 
     const interval = setInterval(() => {
       const now = Date.now()
