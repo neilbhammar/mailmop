@@ -80,11 +80,39 @@ interface AnalysisFilters {
   effectiveEmailCount: number;
 }
 
+// Helper to dispatch status change event
+function dispatchStatusChange() {
+  console.log('[Analysis] Dispatching status change event');
+  
+  // Use setTimeout to ensure the event is dispatched after state updates
+  setTimeout(() => {
+    window.dispatchEvent(new Event('mailmop:analysis-status-change'));
+  }, 0);
+}
+
 export function useAnalysisOperations() {
   const [progress, setProgress] = useState<AnalysisProgress>({
     status: 'idle',
     progress: 0
   });
+
+  // Wrap setProgress to also dispatch status change event
+  const updateProgress = useCallback((newProgress: AnalysisProgress | ((prev: AnalysisProgress) => AnalysisProgress)) => {
+    setProgress(prevProgress => {
+      // Calculate the new state
+      const nextProgress = typeof newProgress === 'function' 
+        ? newProgress(prevProgress) 
+        : newProgress;
+      
+      // Only dispatch event if status changed
+      if (prevProgress.status !== nextProgress.status) {
+        console.log(`[Analysis] Status changing from ${prevProgress.status} to ${nextProgress.status}`);
+        dispatchStatusChange();
+      }
+      
+      return nextProgress;
+    });
+  }, []);
 
   const [reauthModal, setReauthModal] = useState<ReauthModalState>({
     isOpen: false,
@@ -102,7 +130,7 @@ export function useAnalysisOperations() {
   const startAnalysis = useCallback(async (options: AnalysisOptions) => {
     try {
       // 1. Update status to preparing (pre-flight phase)
-      setProgress({ status: 'preparing', progress: 0 });
+      updateProgress({ status: 'preparing', progress: 0 });
       console.log('[Analysis] Starting analysis...');
 
       // 2. Initial token validity check (before any estimation)
@@ -142,7 +170,7 @@ export function useAnalysisOperations() {
 
       const formattedEta = formatDuration(estimatedRuntimeMs);
       console.log(`[Analysis] Estimated runtime: ${formattedEta}`);
-      setProgress(prev => ({ ...prev, eta: formattedEta }));
+      updateProgress(prev => ({ ...prev, eta: formattedEta }));
 
       // 5. Check token expiration against operation duration
       if (estimatedRuntimeMs < FIFTY_FIVE_MINUTES_MS) {
@@ -220,7 +248,7 @@ export function useAnalysisOperations() {
       await getDB();
 
       // 10. Update status to analyzing (active operation phase)
-      setProgress({ status: 'analyzing', progress: 0 });
+      updateProgress({ status: 'analyzing', progress: 0 });
       await updateActionLog(actionLog.id!, { status: 'analyzing' });
 
       // 11. Initialize batch processing state
@@ -305,7 +333,7 @@ export function useAnalysisOperations() {
           
           console.log(`[Analysis] Batch ${batchNumber} complete. Progress: ${progressPercent}% (${totalProcessed.toLocaleString()}/${effectiveEmailCount.toLocaleString()} emails)`);
           
-          setProgress(prev => ({ 
+          updateProgress(prev => ({ 
             ...prev,
             progress: progressPercent
           }));
@@ -323,10 +351,17 @@ export function useAnalysisOperations() {
 
       console.log('\n[Analysis] Analysis complete!');
 
-      // 13. Complete with success
-      setProgress({ status: 'completed', progress: 100 });
+      // 13. Complete with success - ensure localStorage is updated BEFORE state
       await completeActionLog(actionLog.id!, 'success', totalProcessed);
       completeAnalysis('success');
+      
+      // Now update progress state and trigger UI updates
+      updateProgress({ status: 'completed', progress: 100 });
+
+      // Force an additional dispatch with delay to ensure UI components update
+      setTimeout(() => {
+        dispatchStatusChange();
+      }, 100);
 
       return { success: true };
 
@@ -334,13 +369,7 @@ export function useAnalysisOperations() {
       console.error('[Analysis] Analysis failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Analysis failed';
       
-      setProgress({ 
-        status: 'error', 
-        progress: 0,
-        error: errorMessage
-      });
-
-      // Update both logs with error status
+      // For errors, update localStorage first, then progress state
       const current = getCurrentAnalysis();
       if (current?.analysis_id) {
         await completeActionLog(
@@ -352,9 +381,20 @@ export function useAnalysisOperations() {
         completeAnalysis('runtime_error', errorMessage);
       }
 
+      updateProgress({ 
+        status: 'error', 
+        progress: 0,
+        error: errorMessage
+      });
+      
+      // Force an additional dispatch for reliability
+      setTimeout(() => {
+        dispatchStatusChange();
+      }, 100);
+
       return { success: false };
     }
-  }, [stats?.totalEmails, tokenStatus.state, tokenStatus.timeRemaining, user?.id, getAccessToken, progress.status]);
+  }, [stats?.totalEmails, tokenStatus.state, tokenStatus.timeRemaining, user?.id, getAccessToken, updateProgress]);
 
   const cancelAnalysis = useCallback(async () => {
     const current = getCurrentAnalysis();
@@ -367,9 +407,14 @@ export function useAnalysisOperations() {
       completeAnalysis('user_stopped', 'User cancelled the analysis');
     }
 
-    setProgress({ status: 'cancelled', progress: 0 });
+    updateProgress({ status: 'cancelled', progress: 0 });
     setReauthModal({ isOpen: false, type: 'expired' });
-  }, []);
+    
+    // Force a status change event
+    setTimeout(() => {
+      dispatchStatusChange();
+    }, 100);
+  }, [updateProgress]);
 
   return {
     progress,

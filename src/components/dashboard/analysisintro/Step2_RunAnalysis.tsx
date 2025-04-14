@@ -74,6 +74,7 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
   const [stats, setStats] = useState<GmailStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [unsubscribeOnly, setUnsubscribeOnly] = useState(false) // Default to full analysis
+  const [buttonState, setButtonState] = useState<'idle' | 'preparing'>('idle')
   
   const { progress, startAnalysis, reauthModal } = useAnalysisOperations();
   
@@ -172,6 +173,9 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
   
   const handleStartAnalysis = async () => {
     try {
+      // Set button to preparing state immediately for visual feedback
+      setButtonState('preparing');
+      
       // Reset any existing reanalysis state
       window.dispatchEvent(new Event('mailmop:reanalyze-cancelled'))
       
@@ -185,9 +189,13 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
         await onStart(2);
       } else {
         console.log('Analysis start was cancelled or needs reauth');
+        // Reset button state if not successful
+        setButtonState('idle');
       }
     } catch (error) {
       console.error('Failed to start analysis:', error);
+      // Reset button state on error
+      setButtonState('idle');
     }
   };
 
@@ -387,12 +395,12 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
             {/* Start Button - With focus-grabbing animation and design */}
             <motion.div
               className="relative"
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: buttonState === 'idle' ? 1.02 : 1 }}
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
               <button
                 onClick={handleStartAnalysis}
-                disabled={isLoading}
+                disabled={isLoading || buttonState === 'preparing'}
                 className="relative w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-4 px-6 text-white font-medium shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed group"
               >
                 {isLoading ? (
@@ -403,6 +411,14 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
                     </svg>
                     <span>Loading...</span>
                   </div>
+                ) : buttonState === 'preparing' ? (
+                  <div className="flex items-center justify-center">
+                    <svg className="animate-spin mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Preparing Analysis...</span>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center">
                     <SparklesIcon size={18} className="text-white mr-2" />
@@ -410,16 +426,20 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
                   </div>
                 )}
                 
-                {/* Border trail animation */}
-                <BorderTrail 
-                  className="bg-white bg-opacity-30" 
-                  size={10}
-                />
-                <BorderTrail 
-                  className="bg-white bg-opacity-60" 
-                  size={10}
-                  delay={1.75}
-                />
+                {/* Border trail animation - only show in idle state */}
+                {buttonState === 'idle' && (
+                  <>
+                    <BorderTrail 
+                      className="bg-white bg-opacity-30" 
+                      size={10}
+                    />
+                    <BorderTrail 
+                      className="bg-white bg-opacity-60" 
+                      size={10}
+                      delay={1.75}
+                    />
+                  </>
+                )}
               </button>
             </motion.div>
             

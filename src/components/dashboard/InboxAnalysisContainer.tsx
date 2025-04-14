@@ -5,47 +5,61 @@ import { Card } from '@/components/ui/card'
 import { useAnalysis } from '@/context/AnalysisProvider'
 import IntroStepper from './analysisintro/IntroStepper'
 import AnalysisTable from './analysis/AnalysisView'
+import { useAnalysisOperations } from '@/hooks/useAnalysisOperation'
 
 export default function InboxAnalysisContainer() {
-  // Get state from analysis context
-  const { hasAnalysis, checkAnalysisState } = useAnalysis()
+  // Get state from analysis context and operations
+  const { hasAnalysis, isAnalyzing } = useAnalysis()
+  const { progress } = useAnalysisOperations()
   
   // Local state for tracking reanalysis requests
   const [reanalyzeRequested, setReanalyzeRequested] = useState(false)
 
-  // Show stepper if reanalyzing or no analysis data yet
-  const showingStepper = reanalyzeRequested || !hasAnalysis
+  // Show stepper ONLY when:
+  // 1. Explicitly requested reanalysis OR
+  // 2. No analysis exists AND not analyzing AND in idle state
+  const showingStepper = reanalyzeRequested || 
+    (!hasAnalysis && !isAnalyzing && progress.status === 'idle')
 
-  // Check analysis state on mount and window focus
+  // Show analysis table when:
+  // 1. Analysis exists OR
+  // 2. Currently analyzing OR
+  // 3. Analysis operation is active (preparing/analyzing)
+  const showingAnalysisTable = hasAnalysis || 
+    isAnalyzing || 
+    ['preparing', 'analyzing'].includes(progress.status)
+
+  // Effect to handle analysis completion
   useEffect(() => {
-    // Initial check
-    checkAnalysisState();
+    if (progress.status === 'completed' || progress.status === 'error') {
+      setReanalyzeRequested(false)
+    }
+  }, [progress.status])
 
-    // Handle window focus
-    const handleFocus = () => {
-      console.log('[InboxAnalysis] Window focused, checking analysis state');
-      checkAnalysisState();
-    };
-
-    // Handle reanalyze requests
+  // Handle reanalyze requests
+  useEffect(() => {
     const handleReanalyzeRequest = () => {
-      console.log('[InboxAnalysis] Reanalyze requested');
-      setReanalyzeRequested(true);
-    };
+      console.log('[InboxAnalysis] Reanalyze requested')
+      setReanalyzeRequested(true)
+    }
 
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('mailmop:reanalyze-requested', handleReanalyzeRequest);
+    const handleReanalyzeCancel = () => {
+      console.log('[InboxAnalysis] Reanalyze cancelled')
+      setReanalyzeRequested(false)
+    }
+
+    window.addEventListener('mailmop:reanalyze-requested', handleReanalyzeRequest)
+    window.addEventListener('mailmop:reanalyze-cancelled', handleReanalyzeCancel)
     
     return () => {
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('mailmop:reanalyze-requested', handleReanalyzeRequest);
-    };
-  }, [checkAnalysisState]);
+      window.removeEventListener('mailmop:reanalyze-requested', handleReanalyzeRequest)
+      window.removeEventListener('mailmop:reanalyze-cancelled', handleReanalyzeCancel)
+    }
+  }, [])
 
   // Handle canceling reanalysis
   const handleCancel = () => {
     setReanalyzeRequested(false)
-    // Dispatch cancel event for other components
     window.dispatchEvent(new Event('mailmop:reanalyze-cancelled'))
   }
 
@@ -57,9 +71,9 @@ export default function InboxAnalysisContainer() {
           onCancel={hasAnalysis ? handleCancel : undefined}
           isReanalysis={hasAnalysis}
         />
-      ) : (
+      ) : showingAnalysisTable ? (
         <AnalysisTable />
-      )}
+      ) : null}
     </Card>
   )
 }
