@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { MinusSquare, ArrowUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Sender, mockSenders } from "./mockData"
+import { RowActions } from "./RowActions"
 
 const COLUMN_WIDTHS = {
   checkbox: "w-[3%]",
@@ -134,9 +135,16 @@ const columns: ColumnDef<Sender>[] = [
     id: "actions",
     header: () => <div className="text-right"></div>,
     cell: ({ row }) => (
-      <div className="truncate text-right pr-2">
-        <span className="text-slate-500">[actions]</span>
-      </div>
+      <RowActions
+        sender={row.original}
+        onUnsubscribe={(email) => console.log('Unsubscribe:', email)}
+        onViewInGmail={(email) => console.log('View in Gmail:', email)}
+        onDelete={(email) => console.log('Delete:', email)}
+        onMarkUnread={(email) => console.log('Mark Unread:', email)}
+        onDeleteWithExceptions={(email) => console.log('Delete with Exceptions:', email)}
+        onApplyLabel={(email) => console.log('Apply Label:', email)}
+        onBlock={(email) => console.log('Block:', email)}
+      />
     )
   }
 ]
@@ -146,6 +154,7 @@ export function SenderTable() {
   const [data] = useState(() => mockSenders)
   const [rowSelection, setRowSelection] = useState({})
   const [sorting, setSorting] = useState<SortingState>([])
+  const [activeRowId, setActiveRowId] = useState<string | null>(null)
 
   const table = useReactTable({
     data,
@@ -185,15 +194,34 @@ export function SenderTable() {
           {table.getRowModel().rows.map(row => (
             <tr 
               key={row.id} 
-              className="h-14 hover:bg-blue-50/75 transition-colors cursor-pointer group border-b border-slate-100 last:border-none"
-              onClick={() => row.toggleSelected(!row.getIsSelected())}
+              className={cn(
+                "h-14 transition-colors cursor-pointer group border-b border-slate-100 last:border-none",
+                (row.getIsSelected() || activeRowId === row.id) ? "bg-blue-50/75" : "hover:bg-blue-50/75"
+              )}
+              onClick={(e) => {
+                // Only toggle selection if not clicking on actions
+                if (!(e.target as HTMLElement).closest('.actions-container')) {
+                  row.toggleSelected(!row.getIsSelected())
+                }
+              }}
+              onMouseEnter={() => setActiveRowId(row.id)}
+              onMouseLeave={(e) => {
+                // Only clear active row if not hovering over a dropdown
+                if (!document.querySelector('[data-state="open"]')) {
+                  setActiveRowId(null)
+                }
+              }}
             >
               {row.getVisibleCells().map(cell => {
                 const width = COLUMN_WIDTHS[cell.column.id as keyof typeof COLUMN_WIDTHS]
                 return (
                   <td 
                     key={cell.id} 
-                    className={cn("px-4", width)}
+                    className={cn(
+                      "px-4",
+                      width,
+                      cell.column.id === 'actions' && 'actions-container'
+                    )}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
