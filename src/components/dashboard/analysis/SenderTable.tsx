@@ -5,17 +5,25 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
-  RowSelectionState,
   SortingState,
-  getSortedRowModel
+  getSortedRowModel,
+  Row
 } from "@tanstack/react-table"
-import { useState } from "react"
+import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { MinusSquare, ArrowUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Sender, mockSenders } from "./mockData"
 import { RowActions } from "./RowActions"
+import { toast } from "sonner"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
+// Define column widths for consistent layout
 const COLUMN_WIDTHS = {
   checkbox: "w-[3%]",
   name: "w-[20%]",
@@ -25,137 +33,485 @@ const COLUMN_WIDTHS = {
   actions: "w-[24%]"
 } as const
 
-const columns: ColumnDef<Sender>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <div className="h-4 w-4 flex items-center">
-        {table.getIsSomeRowsSelected() && (
-          <button
-            onClick={() => table.toggleAllRowsSelected(false)}
-            className="text-slate-400 hover:text-slate-500 -ml-0.5 -mt-0.5"
+// Maximum number of rows that can be selected at once
+const MAX_SELECTED_ROWS = 25
+
+/**
+ * Memoized row component to prevent unnecessary re-renders
+ * Only re-renders when selection state or active state changes
+ */
+const SenderRow = memo(({ 
+  row, 
+  isSelected, 
+  isActive,
+  onRowClick, 
+  onRowMouseLeave,
+  cells,
+  columnWidths
+}: { 
+  row: Row<Sender>
+  isSelected: boolean
+  isActive: boolean
+  onRowClick: (e: React.MouseEvent, row: Row<Sender>) => void
+  onRowMouseLeave: () => void
+  cells: any[]
+  columnWidths: typeof COLUMN_WIDTHS
+}) => {
+  return (
+    <tr 
+      key={row.id} 
+      className={cn(
+        "h-14 cursor-pointer group border-b border-slate-100 last:border-none transition-colors duration-75",
+        "hover:bg-blue-50/75 select-none", // Added select-none to prevent text selection
+        (isSelected || isActive) && "bg-blue-50/75"
+      )}
+      onClick={(e) => onRowClick(e, row)}
+      onMouseLeave={onRowMouseLeave}
+    >
+      {cells.map(cell => {
+        const width = columnWidths[cell.column.id as keyof typeof columnWidths]
+        return (
+          <td 
+            key={cell.id} 
+            className={cn(
+              "px-4",
+              width,
+              cell.column.id === 'actions' && 'actions-container'
+            )}
           >
-            <MinusSquare 
-              className="h-5 w-5" 
-              strokeWidth={1.5} 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-            />
-          </button>
-        )}
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div className="flex items-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={value => row.toggleSelected(!!value)}
-          aria-label="Select row"
-          className="group-hover:border-slate-600"
-        />
-      </div>
-    ),
-    enableSorting: false,
-    enableHiding: false
-  },
-  {
-    accessorKey: "name",
-    header: ({ column }) => (
-      <button
-        onClick={() => column.toggleSorting()}
-        className="w-full text-left group"
-      >
-        <span className="text-slate-600 font-normal group-hover:text-slate-900">
-          Name
-        </span>
-      </button>
-    ),
-    cell: ({ row }) => (
-      <div className="truncate">
-        <span>{row.getValue("name")}</span>
-      </div>
-    )
-  },
-  {
-    accessorKey: "email",
-    header: ({ column }) => (
-      <button
-        onClick={() => column.toggleSorting()}
-        className="w-full text-left group"
-      >
-        <span className="text-slate-600 font-normal group-hover:text-slate-900">
-          Email
-        </span>
-      </button>
-    ),
-    cell: ({ row }) => (
-      <div className="truncate">
-        <span className="text-slate-800 opacity-80">{row.getValue("email")}</span>
-      </div>
-    )
-  },
-  {
-    accessorKey: "lastEmail",
-    header: ({ column }) => (
-      <button
-        onClick={() => column.toggleSorting()}
-        className="w-full text-left group"
-      >
-        <span className="text-slate-600 font-normal group-hover:text-slate-900">
-          Last Email
-        </span>
-      </button>
-    ),
-    cell: ({ row }) => (
-      <div className="truncate">
-        <span className="text-slate-600">{row.getValue("lastEmail")}</span>
-      </div>
-    )
-  },
-  {
-    accessorKey: "count",
-    header: ({ column }) => (
-      <button
-        onClick={() => column.toggleSorting()}
-        className="w-full text-right group"
-      >
-        <span className="inline-flex items-center gap-1 text-slate-600 font-normal group-hover:text-slate-900">
-          Count
-          <ArrowUpDown className="h-3.5 w-3.5 text-slate-500" />
-        </span>
-      </button>
-    ),
-    cell: ({ row }) => (
-      <div className="truncate text-right pr-2">
-        <span className="text-blue-700">{row.getValue("count")}</span>
-      </div>
-    )
-  },
-  {
-    id: "actions",
-    header: () => <div className="text-right"></div>,
-    cell: ({ row }) => (
-      <RowActions
-        sender={row.original}
-        onUnsubscribe={(email) => console.log('Unsubscribe:', email)}
-        onViewInGmail={(email) => console.log('View in Gmail:', email)}
-        onDelete={(email) => console.log('Delete:', email)}
-        onMarkUnread={(email) => console.log('Mark Unread:', email)}
-        onDeleteWithExceptions={(email) => console.log('Delete with Exceptions:', email)}
-        onApplyLabel={(email) => console.log('Apply Label:', email)}
-        onBlock={(email) => console.log('Block:', email)}
-      />
-    )
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </td>
+        )
+      })}
+    </tr>
+  )
+}, (prevProps, nextProps) => {
+  // Only re-render if selection or active state changed
+  return (
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isActive === nextProps.isActive
+  )
+})
+
+/**
+ * Memoized checkbox component to prevent unnecessary re-renders
+ * Optimized for performance in tables with many rows
+ */
+const SelectCheckbox = memo(({ 
+  checked, 
+  onChange, 
+  indeterminate = false 
+}: { 
+  checked: boolean
+  onChange: (checked: boolean) => void
+  indeterminate?: boolean
+}) => {
+  return (
+    <Checkbox
+      checked={checked}
+      onCheckedChange={onChange}
+      aria-label="Select row"
+      className="group-hover:border-slate-600 transition-opacity duration-75"
+    />
+  )
+})
+
+interface SenderTableProps {
+  /** Callback function when selected count changes */
+  onSelectedCountChange: (count: number) => void 
+}
+
+/**
+ * TruncatedCell - A reusable component for handling text truncation with tooltips
+ * Only shows tooltip if content is actually truncated
+ */
+const TruncatedCell = memo(({ 
+  content,
+  className
+}: { 
+  content: string
+  className?: string
+}) => {
+  const textRef = useRef<HTMLDivElement>(null)
+  const [isTextTruncated, setIsTextTruncated] = useState(false)
+
+  // Check if text is truncated on mount and resize
+  useEffect(() => {
+    const checkTruncation = () => {
+      if (textRef.current) {
+        setIsTextTruncated(
+          textRef.current.scrollWidth > textRef.current.clientWidth
+        )
+      }
+    }
+
+    checkTruncation()
+    window.addEventListener('resize', checkTruncation)
+    return () => window.removeEventListener('resize', checkTruncation)
+  }, [content])
+
+  const innerContent = (
+    <div 
+      ref={textRef}
+      className={cn("truncate", className)}
+    >
+      {content}
+    </div>
+  )
+
+  if (!isTextTruncated) {
+    return innerContent
   }
-]
 
+  return (
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {innerContent}
+        </TooltipTrigger>
+        <TooltipContent 
+          side="top" 
+          className="max-w-[300px] break-words"
+        >
+          {content}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+})
 
-export function SenderTable() {
+/**
+ * SenderTable - A high-performance table component for displaying email senders
+ * Features:
+ * - Fast selection using Set data structure for O(1) lookups
+ * - Shift+click for range selection (both selecting and deselecting)
+ * - Limited to MAX_SELECTED_ROWS selections for performance
+ * - Optimized rendering with memoized components
+ * - Sorting and row actions
+ */
+export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
+  // Initialize data state
   const [data] = useState(() => mockSenders)
-  const [rowSelection, setRowSelection] = useState({})
   const [sorting, setSorting] = useState<SortingState>([])
   const [activeRowId, setActiveRowId] = useState<string | null>(null)
+  
+  // Track selection state with a Set for O(1) lookups
+  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set())
+  
+  // Track the last selected email for shift+click functionality
+  const lastSelectedRef = useRef<string | null>(null)
+  
+  // Store the intended action (select or deselect) for shift+click operations
+  const lastSelectionActionRef = useRef<boolean>(true) // true = select, false = deselect
+  
+  // Update parent component when selection count changes
+  useEffect(() => {
+    onSelectedCountChange(selectedEmails.size)
+  }, [selectedEmails.size, onSelectedCountChange])
+  
+  // Convert our Set-based selection to the format required by the table library
+  const rowSelection = useMemo(() => {
+    const selection: Record<number, boolean> = {}
+    data.forEach((sender, index) => {
+      if (selectedEmails.has(sender.email)) {
+        selection[index] = true
+      }
+    })
+    return selection
+  }, [data, selectedEmails])
 
+  /**
+   * Handle opening of dropdown menus in row actions
+   * Sets the active row to highlight it while the dropdown is open
+   */
+  const handleDropdownOpen = useCallback((email: string) => {
+    setActiveRowId(email)
+  }, [])
+  
+  /**
+   * Handle mouse leave event on rows
+   * Clears the active row state if no dropdowns are open
+   */
+  const handleRowMouseLeave = useCallback(() => {
+    if (!document.querySelector('[data-state="open"]')) {
+      setActiveRowId(null)
+    }
+  }, [])
+
+  /**
+   * Toggle selection for a single email
+   * @param email - The email to toggle
+   * @param isSelected - Whether to select (true) or deselect (false)
+   * @returns boolean - Whether the operation was successful (false if max limit reached)
+   */
+  const toggleEmailSelection = useCallback((email: string, isSelected: boolean): boolean => {
+    let success = true;
+    
+    setSelectedEmails(prev => {
+      const newSet = new Set(prev)
+      
+      // If we're trying to add and we'll exceed the limit, prevent it
+      if (isSelected && !prev.has(email) && prev.size >= MAX_SELECTED_ROWS) {
+        success = false;
+        return prev; // Return unchanged set
+      }
+      
+      // Otherwise proceed with the toggle
+      if (isSelected) {
+        newSet.add(email)
+      } else {
+        newSet.delete(email)
+      }
+      return newSet
+    })
+    
+    // Update last selected email for shift+click functionality
+    lastSelectedRef.current = email
+    // Store whether we were selecting or deselecting for shift+click
+    lastSelectionActionRef.current = isSelected
+    
+    return success;
+  }, [])
+  
+  /**
+   * Select or deselect a range of emails (for shift+click)
+   * @param startEmail - The first email in the range
+   * @param endEmail - The last email in the range
+   * @param isSelecting - Whether to select or deselect the range
+   */
+  const selectEmailRange = useCallback((startEmail: string, endEmail: string, isSelecting: boolean) => {
+    const startIndex = data.findIndex(sender => sender.email === startEmail)
+    const endIndex = data.findIndex(sender => sender.email === endEmail)
+    
+    if (startIndex === -1 || endIndex === -1) return
+    
+    const min = Math.min(startIndex, endIndex)
+    const max = Math.max(startIndex, endIndex)
+    
+    // Calculate how many new rows would be selected
+    let potentialNewSelections = 0;
+    if (isSelecting) {
+      for (let i = min; i <= max; i++) {
+        if (!selectedEmails.has(data[i].email)) {
+          potentialNewSelections++;
+        }
+      }
+      
+      // Check if we would exceed the limit
+      if (selectedEmails.size + potentialNewSelections > MAX_SELECTED_ROWS) {
+        toast.warning(`You can select a maximum of ${MAX_SELECTED_ROWS} rows at once.`);
+        return;
+      }
+    }
+    
+    setSelectedEmails(prev => {
+      const newSet = new Set(prev)
+      for (let i = min; i <= max; i++) {
+        const email = data[i].email
+        if (isSelecting) {
+          newSet.add(email)
+        } else {
+          newSet.delete(email)
+        }
+      }
+      return newSet
+    })
+  }, [data, selectedEmails])
+
+  /**
+   * Handle row click with support for shift+click range selection
+   * Prevents selection when clicking on action buttons or checkboxes
+   */
+  const handleRowClick = useCallback((e: React.MouseEvent, row: Row<Sender>) => {
+    // Ignore clicks on action buttons or checkboxes (they handle their own events)
+    if (
+      (e.target as HTMLElement).closest('.actions-container') ||
+      (e.target as HTMLElement).closest('input[type="checkbox"]')
+    ) {
+      return
+    }
+    
+    const email = row.original.email
+    const isCurrentlySelected = selectedEmails.has(email)
+    
+    // Handle shift+click for range selection
+    if (e.shiftKey && lastSelectedRef.current) {
+      // Determine action based on the clicked row's current state
+      // If we're clicking a selected row, deselect the range
+      // If we're clicking an unselected row, select the range
+      const actionIsSelect = !isCurrentlySelected
+      
+      selectEmailRange(lastSelectedRef.current, email, actionIsSelect)
+      
+      // Update last action ref to match what we just did
+      lastSelectionActionRef.current = actionIsSelect
+      // Update the last selected email
+      lastSelectedRef.current = email
+      return
+    }
+    
+    // Toggle single selection
+    const success = toggleEmailSelection(email, !isCurrentlySelected)
+    
+    // Show warning if max limit reached
+    if (!success) {
+      toast.warning(`You can select a maximum of ${MAX_SELECTED_ROWS} rows at once.`);
+    }
+    
+    e.stopPropagation()
+  }, [selectedEmails, toggleEmailSelection, selectEmailRange])
+
+  /**
+   * Clear all selections
+   */
+  const clearSelections = useCallback(() => {
+    setSelectedEmails(new Set())
+    lastSelectedRef.current = null
+  }, [])
+  
+  /**
+   * Handle checkbox click events
+   */
+  const handleCheckboxChange = useCallback((row: Row<Sender>, checked: boolean) => {
+    const success = toggleEmailSelection(row.original.email, checked)
+    
+    // Show warning if max limit reached
+    if (!success) {
+      toast.warning(`You can select a maximum of ${MAX_SELECTED_ROWS} rows at once.`);
+    }
+  }, [toggleEmailSelection])
+
+  // Define table columns with memoization to prevent unnecessary recalculations
+  const columns = useMemo<ColumnDef<Sender>[]>(() => [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <div className="h-4 w-4 flex items-center">
+          {selectedEmails.size > 0 && (
+            <button
+              onClick={(e) => {
+                clearSelections()
+                e.stopPropagation()
+              }}
+              className="text-slate-400 hover:text-slate-500 -ml-0.5 -mt-0.5"
+            >
+              <MinusSquare 
+                className="h-5 w-5" 
+                strokeWidth={1.5} 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+            </button>
+          )}
+        </div>
+      ),
+      cell: ({ row }) => {
+        const isSelected = selectedEmails.has(row.original.email)
+        return (
+          <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+            <SelectCheckbox
+              checked={isSelected}
+              onChange={(checked) => handleCheckboxChange(row, checked)}
+            />
+          </div>
+        )
+      },
+      enableSorting: false,
+      enableHiding: false
+    },
+    {
+      accessorKey: "name",
+      header: ({ column }) => (
+        <button
+          onClick={() => column.toggleSorting()}
+          className="w-full text-left group"
+        >
+          <span className="text-slate-600 font-normal group-hover:text-slate-900">
+            Name
+          </span>
+        </button>
+      ),
+      cell: ({ row }) => (
+        <TruncatedCell content={row.getValue("name")} />
+      )
+    },
+    {
+      accessorKey: "email",
+      header: ({ column }) => (
+        <button
+          onClick={() => column.toggleSorting()}
+          className="w-full text-left group"
+        >
+          <span className="text-slate-600 font-normal group-hover:text-slate-900">
+            Email
+          </span>
+        </button>
+      ),
+      cell: ({ row }) => (
+        <TruncatedCell 
+          content={row.getValue("email")} 
+          className="text-slate-800 opacity-80"
+        />
+      )
+    },
+    {
+      accessorKey: "lastEmail",
+      header: ({ column }) => (
+        <button
+          onClick={() => column.toggleSorting()}
+          className="w-full text-left group"
+        >
+          <span className="text-slate-600 font-normal group-hover:text-slate-900">
+            Last Email
+          </span>
+        </button>
+      ),
+      cell: ({ row }) => (
+        <TruncatedCell 
+          content={row.getValue("lastEmail")} 
+          className="text-slate-600"
+        />
+      )
+    },
+    {
+      accessorKey: "count",
+      header: ({ column }) => (
+        <button
+          onClick={() => column.toggleSorting()}
+          className="w-full text-right group"
+        >
+          <span className="inline-flex items-center gap-1 text-slate-600 font-normal group-hover:text-slate-900">
+            Count
+            <ArrowUpDown className="h-3.5 w-3.5 text-slate-500" />
+          </span>
+        </button>
+      ),
+      cell: ({ row }) => (
+        <div className="truncate text-right pr-2">
+          <span className="text-blue-700">{row.getValue("count")}</span>
+        </div>
+      )
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right"></div>,
+      cell: ({ row }) => (
+        <RowActions
+          sender={row.original}
+          onDropdownOpen={handleDropdownOpen}
+          onUnsubscribe={(email) => console.log('Unsubscribe:', email)}
+          onViewInGmail={(email) => console.log('View in Gmail:', email)}
+          onDelete={(email) => console.log('Delete:', email)}
+          onMarkUnread={(email) => console.log('Mark Unread:', email)}
+          onDeleteWithExceptions={(email) => console.log('Delete with Exceptions:', email)}
+          onApplyLabel={(email) => console.log('Apply Label:', email)}
+          onBlock={(email) => console.log('Block:', email)}
+        />
+      )
+    }
+  ], [selectedEmails, handleDropdownOpen, handleCheckboxChange, clearSelections])
+
+  // Initialize and configure the table
   const table = useReactTable({
     data,
     columns,
@@ -166,13 +522,13 @@ export function SenderTable() {
       sorting,
     },
     enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
-    onSortingChange: setSorting
+    onSortingChange: setSorting,
+    autoResetPageIndex: false, // Prevent unnecessary resets during operations
   })
 
   return (
-    <div className="w-full h-full overflow-auto border-t border-slate-100 border-b">
-      <table className="w-full text-sm">
+    <div className="w-full h-full overflow-auto border-t border-slate-100 border-b select-none">
+      <table className="w-full text-sm table-fixed">
         <thead className="border-b sticky top-0 bg-white z-10 shadow-sm">
           {table.getHeaderGroups().map(headerGroup => (
             <tr key={headerGroup.id} className="h-11">
@@ -181,7 +537,11 @@ export function SenderTable() {
                 return (
                   <th 
                     key={header.id} 
-                    className={cn("text-left px-4 py-4 font-semibold bg-white", width)}
+                    className={cn(
+                      "text-left px-4 py-4 font-semibold bg-white",
+                      width,
+                      "overflow-hidden"
+                    )}
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
@@ -192,42 +552,16 @@ export function SenderTable() {
         </thead>
         <tbody>
           {table.getRowModel().rows.map(row => (
-            <tr 
-              key={row.id} 
-              className={cn(
-                "h-14 transition-colors cursor-pointer group border-b border-slate-100 last:border-none",
-                (row.getIsSelected() || activeRowId === row.id) ? "bg-blue-50/75" : "hover:bg-blue-50/75"
-              )}
-              onClick={(e) => {
-                // Only toggle selection if not clicking on actions
-                if (!(e.target as HTMLElement).closest('.actions-container')) {
-                  row.toggleSelected(!row.getIsSelected())
-                }
-              }}
-              onMouseEnter={() => setActiveRowId(row.id)}
-              onMouseLeave={(e) => {
-                // Only clear active row if not hovering over a dropdown
-                if (!document.querySelector('[data-state="open"]')) {
-                  setActiveRowId(null)
-                }
-              }}
-            >
-              {row.getVisibleCells().map(cell => {
-                const width = COLUMN_WIDTHS[cell.column.id as keyof typeof COLUMN_WIDTHS]
-                return (
-                  <td 
-                    key={cell.id} 
-                    className={cn(
-                      "px-4",
-                      width,
-                      cell.column.id === 'actions' && 'actions-container'
-                    )}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                )
-              })}
-            </tr>
+            <SenderRow
+              key={row.id}
+              row={row}
+              isSelected={selectedEmails.has(row.original.email)}
+              isActive={activeRowId === row.original.email}
+              onRowClick={handleRowClick}
+              onRowMouseLeave={handleRowMouseLeave}
+              cells={row.getVisibleCells()}
+              columnWidths={COLUMN_WIDTHS}
+            />
           ))}
         </tbody>
       </table>

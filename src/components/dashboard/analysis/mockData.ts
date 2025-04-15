@@ -9,8 +9,8 @@ export type Sender = {
 
 export const mockSenders: Sender[] = [
   {
-    name: "LinkedIn",
-    email: "notifications@linkedin.com",
+    name: "LinkedInLinkedInLinkedInLinkedInLinkedInLinkedIn",
+    email: "notificationsnotificationsnotificationsnotifications@linkedin.com",
     lastEmail: "Apr 15, 2025",
     count: 847,
     hasUnsubscribe: true,

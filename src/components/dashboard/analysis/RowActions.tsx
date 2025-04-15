@@ -21,6 +21,7 @@ interface RowActionsProps {
   onDeleteWithExceptions: (email: string) => void
   onApplyLabel: (email: string) => void
   onBlock: (email: string) => void
+  onDropdownOpen: (email: string) => void
 }
 
 export function RowActions({
@@ -31,7 +32,8 @@ export function RowActions({
   onMarkUnread,
   onDeleteWithExceptions,
   onApplyLabel,
-  onBlock
+  onBlock,
+  onDropdownOpen
 }: RowActionsProps) {
   const isActionTaken = (action: 'unsubscribe' | 'delete' | 'markUnread' | 'block') => {
     return sender.actionsTaken.includes(action)
@@ -154,7 +156,13 @@ export function RowActions({
       </TooltipProvider>
 
       {/* More Actions Dropdown */}
-      <DropdownMenu>
+      <DropdownMenu 
+        onOpenChange={(isOpen) => {
+          if (isOpen) {
+            onDropdownOpen(sender.email)
+          }
+        }}
+      >
         <TooltipProvider delayDuration={100}>
           <Tooltip>
             <TooltipTrigger asChild>
