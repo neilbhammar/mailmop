@@ -1,12 +1,22 @@
-'use client'
+"use client"
 
-export default function AnalysisTable() {
+import { SenderTable } from "./SenderTable"
+import { AnalysisHeader } from "./AnalysisHeader"
+import { AnalysisFooter } from "./AnalysisFooter"
+
+export default function AnalysisView() {
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800">Your Inbox Analysis</h2>
+    <div className="w-full h-full flex flex-col">
+      <AnalysisHeader />
+
+      {/* TABLE CONTAINER */}
+      <div className="flex-1 min-h-0 relative">
+        <div className="absolute inset-0">
+          <SenderTable />
+        </div>
       </div>
-      <p className="text-gray-600">This will be our analysis table view</p>
+
+      <AnalysisFooter />
     </div>
   )
-} 
+}

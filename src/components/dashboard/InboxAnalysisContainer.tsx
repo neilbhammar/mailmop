@@ -64,7 +64,7 @@ export default function InboxAnalysisContainer() {
   }
 
   return (
-    <Card className="!rounded-lg !border !border-slate-200 !p-0 h-[calc(100vh-17rem)] w-full max-w-7xl mx-auto bg-white overflow-hidden !shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all duration-300">
+    <Card className="!rounded-lg !border !border-slate-200 !p-0 h-[calc(100vh-17rem)] w-full max-w-7xl mx-auto bg-white overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.03)] transition-all duration-300">
       {showingStepper ? (
         <IntroStepper 
           onComplete={() => setReanalyzeRequested(false)}

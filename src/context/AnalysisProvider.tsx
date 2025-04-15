@@ -53,7 +53,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         
         // If analysis hasn't been updated in more than 2 minutes, consider it interrupted
         // This allows for browsers throttling background tabs
-        if (timeSinceUpdate > 120000) { // 2 minutes in milliseconds
+        if (timeSinceUpdate > 45000) { // 45 seconds in milliseconds
           console.log(`[AnalysisProvider] Analysis hasn't been updated for ${Math.round(timeSinceUpdate/1000)}s, marking as interrupted`);
           completeAnalysis('error' as ActionEndType, 'Analysis was interrupted by page refresh');
           setIsAnalyzing(false);
