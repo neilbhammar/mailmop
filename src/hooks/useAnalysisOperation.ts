@@ -52,6 +52,7 @@ interface AnalysisOptions {
 const FIFTY_FIVE_MINUTES_MS = 55 * 60 * 1000;
 const TWO_MINUTES_MS = 2 * 60 * 1000;
 const BATCH_SIZE = 45;
+const BATCH_DELAY_MS = 250; // Delay between batches to avoid rate limits
 
 interface ReauthModalState {
   isOpen: boolean;
@@ -89,6 +90,9 @@ function dispatchStatusChange() {
     window.dispatchEvent(new Event('mailmop:analysis-status-change'));
   }, 0);
 }
+
+// Simple sleep function for delays
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export function useAnalysisOperations() {
   const [progress, setProgress] = useState<AnalysisProgress>({
@@ -260,6 +264,12 @@ export function useAnalysisOperations() {
 
       // 12. Start batch processing loop
       do {
+        // Add delay between batches to avoid hitting rate limits
+        if (batchIndex > 0) {
+          console.log(`[Analysis] Adding ${BATCH_DELAY_MS}ms delay between batches...`);
+          await sleep(BATCH_DELAY_MS);
+        }
+        
         const batchNumber = batchIndex + 1;
         console.log(`\n[Analysis] Starting Batch ${batchNumber}`);
 

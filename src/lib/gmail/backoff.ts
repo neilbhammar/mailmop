@@ -47,10 +47,10 @@ export async function withBackoff<T>(
         throw error;
       }
 
-      // Only retry on rate limits (429) or server errors (5xx)
+      // Only retry on rate limits (429), forbidden (403), or server errors (5xx)
       if (error instanceof Error) {
         const status = (error as any).status || (error as any).code;
-        if (status !== 429 && (status < 500 || status > 599)) {
+        if (status !== 429 && status !== 403 && (status < 500 || status > 599)) {
           throw error;
         }
       }

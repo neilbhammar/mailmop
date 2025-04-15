@@ -46,18 +46,22 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
       
       // Check for interrupted analysis on page refresh/load
       if (currentAnalysis?.status === 'started' || currentAnalysis?.status === 'analyzing') {
-        const lastUpdated = new Date(currentAnalysis.start_time);
+        // Use last_update_time instead of start_time to check for activity
+        const lastUpdated = new Date(currentAnalysis.last_update_time || currentAnalysis.start_time);
         const now = new Date();
-        const timeSinceStart = now.getTime() - lastUpdated.getTime();
+        const timeSinceUpdate = now.getTime() - lastUpdated.getTime();
         
-        // If analysis was started more than 1 minute ago, consider it interrupted
-        if (timeSinceStart > 60000) {
-          console.log('[AnalysisProvider] Detected interrupted analysis, marking as errored');
+        // If analysis hasn't been updated in more than 2 minutes, consider it interrupted
+        // This allows for browsers throttling background tabs
+        if (timeSinceUpdate > 120000) { // 2 minutes in milliseconds
+          console.log(`[AnalysisProvider] Analysis hasn't been updated for ${Math.round(timeSinceUpdate/1000)}s, marking as interrupted`);
           completeAnalysis('error' as ActionEndType, 'Analysis was interrupted by page refresh');
           setIsAnalyzing(false);
           
           // Dispatch event to notify other components
           window.dispatchEvent(new Event('mailmop:analysis-status-change'));
+        } else {
+          console.log(`[AnalysisProvider] Analysis still active, last updated ${Math.round(timeSinceUpdate/1000)}s ago`);
         }
       }
     } catch (error) {

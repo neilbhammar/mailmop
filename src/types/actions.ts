@@ -32,6 +32,7 @@ export interface LocalActionLog extends BaseActionLog {
   client_action_id: string;  // Moved here from BaseActionLog
   analysis_id: string | null; // Supabase ID once received
   start_time: string; // ISO timestamp
+  last_update_time: string; // ISO timestamp, tracks when the analysis was last active
   estimated_runtime_ms: number;
   current_batch_index: number;
   total_estimated_batches: number;

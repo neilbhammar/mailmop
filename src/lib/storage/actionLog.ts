@@ -27,6 +27,7 @@ export function createLocalActionLog({
   totalEstimatedBatches: number;
   query: string;
 }): LocalActionLog {
+  const now = new Date().toISOString();
   const actionLog: LocalActionLog = {
     client_action_id: clientActionId,
     analysis_id: null,
@@ -36,8 +37,9 @@ export function createLocalActionLog({
       type,
       query
     },
-    created_at: new Date().toISOString(),
-    start_time: new Date().toISOString(),
+    created_at: now,
+    start_time: now,
+    last_update_time: now,
     estimated_runtime_ms: estimatedRuntimeMs,
     current_batch_index: 0,
     total_estimated_batches: totalEstimatedBatches,
@@ -59,7 +61,11 @@ export function updateAnalysisId(supabaseId: string): void {
   const current = getCurrentAnalysis();
   if (!current) return;
 
-  const updated = { ...current, analysis_id: supabaseId };
+  const updated = { 
+    ...current, 
+    analysis_id: supabaseId,
+    last_update_time: new Date().toISOString()
+  };
   localStorage.setItem(CURRENT_ANALYSIS_KEY, JSON.stringify(updated));
 }
 
@@ -76,7 +82,8 @@ export function updateAnalysisProgress(
   const updated = {
     ...current,
     current_batch_index: batchIndex,
-    processed_email_count: processedEmails
+    processed_email_count: processedEmails,
+    last_update_time: new Date().toISOString()
   };
   localStorage.setItem(CURRENT_ANALYSIS_KEY, JSON.stringify(updated));
 }
@@ -91,10 +98,12 @@ export function completeAnalysis(
   const current = getCurrentAnalysis();
   if (!current) return;
 
+  const now = new Date().toISOString();
   const updated = {
     ...current,
     status: 'completed',
-    completed_at: new Date().toISOString(),
+    completed_at: now,
+    last_update_time: now,
     end_type: endType,
     completion_reason: reason || null
   };
