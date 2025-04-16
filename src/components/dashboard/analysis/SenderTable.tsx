@@ -13,7 +13,7 @@ import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { MinusSquare, ArrowUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Sender, mockSenders } from "./mockData"
+import { useSenderData, TableSender } from '@/hooks/useSenderData'
 import { RowActions } from "./RowActions"
 import { toast } from "sonner"
 import {
@@ -36,9 +36,12 @@ const COLUMN_WIDTHS = {
 // Maximum number of rows that can be selected at once
 const MAX_SELECTED_ROWS = 25
 
+// Update the Sender type to use TableSender
+export type Sender = TableSender;
+
 /**
  * Memoized row component to prevent unnecessary re-renders
- * Only re-renders when selection state or active state changes
+ * Only re-renders when selection state, active state, or row data changes
  */
 const SenderRow = memo(({ 
   row, 
@@ -59,10 +62,10 @@ const SenderRow = memo(({
 }) => {
   return (
     <tr 
-      key={row.id} 
+      key={row.original.email}
       className={cn(
         "h-14 cursor-pointer group border-b border-slate-100 last:border-none transition-colors duration-75",
-        "hover:bg-blue-50/75 select-none", // Added select-none to prevent text selection
+        "hover:bg-blue-50/75 select-none",
         (isSelected || isActive) && "bg-blue-50/75"
       )}
       onClick={(e) => onRowClick(e, row)}
@@ -86,10 +89,13 @@ const SenderRow = memo(({
     </tr>
   )
 }, (prevProps, nextProps) => {
-  // Only re-render if selection or active state changed
+  // Only re-render if selection, active state, or row data changed
   return (
     prevProps.isSelected === nextProps.isSelected &&
-    prevProps.isActive === nextProps.isActive
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.row.original.count === nextProps.row.original.count &&
+    prevProps.row.original.lastEmail === nextProps.row.original.lastEmail &&
+    prevProps.row.original.actionsTaken.length === nextProps.row.original.actionsTaken.length
   )
 })
 
@@ -181,6 +187,17 @@ const TruncatedCell = memo(({
 })
 
 /**
+ * Format a date string to "MMM D, YYYY" format (e.g. "Apr 3, 2025")
+ */
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+/**
  * SenderTable - A high-performance table component for displaying email senders
  * Features:
  * - Fast selection using Set data structure for O(1) lookups
@@ -190,21 +207,21 @@ const TruncatedCell = memo(({
  * - Sorting and row actions
  */
 export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
-  // Initialize data state
-  const [data] = useState(() => mockSenders)
+  // Replace mock data with real data
+  const { senders, isLoading, isAnalyzing } = useSenderData();
   const [sorting, setSorting] = useState<SortingState>([
-    { id: 'count', desc: true } // Start with count sorted in descending order
-  ])
-  const [activeRowId, setActiveRowId] = useState<string | null>(null)
+    { id: 'count', desc: true }
+  ]);
+  const [activeRowId, setActiveRowId] = useState<string | null>(null);
   
   // Track selection state with a Set for O(1) lookups
-  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set())
+  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
   
   // Track the last selected email for shift+click functionality
-  const lastSelectedRef = useRef<string | null>(null)
+  const lastSelectedRef = useRef<string | null>(null);
   
   // Store the intended action (select or deselect) for shift+click operations
-  const lastSelectionActionRef = useRef<boolean>(true) // true = select, false = deselect
+  const lastSelectionActionRef = useRef<boolean>(true);
   
   // Update parent component when selection count changes
   useEffect(() => {
@@ -214,13 +231,13 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
   // Convert our Set-based selection to the format required by the table library
   const rowSelection = useMemo(() => {
     const selection: Record<number, boolean> = {}
-    data.forEach((sender, index) => {
+    senders.forEach((sender, index) => {
       if (selectedEmails.has(sender.email)) {
         selection[index] = true
       }
     })
     return selection
-  }, [data, selectedEmails])
+  }, [senders, selectedEmails])
 
   /**
    * Handle opening of dropdown menus in row actions
@@ -282,8 +299,8 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
    * @param isSelecting - Whether to select or deselect the range
    */
   const selectEmailRange = useCallback((startEmail: string, endEmail: string, isSelecting: boolean) => {
-    const startIndex = data.findIndex(sender => sender.email === startEmail)
-    const endIndex = data.findIndex(sender => sender.email === endEmail)
+    const startIndex = senders.findIndex(sender => sender.email === startEmail)
+    const endIndex = senders.findIndex(sender => sender.email === endEmail)
     
     if (startIndex === -1 || endIndex === -1) return
     
@@ -294,7 +311,7 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
     let potentialNewSelections = 0;
     if (isSelecting) {
       for (let i = min; i <= max; i++) {
-        if (!selectedEmails.has(data[i].email)) {
+        if (!selectedEmails.has(senders[i].email)) {
           potentialNewSelections++;
         }
       }
@@ -309,7 +326,7 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
     setSelectedEmails(prev => {
       const newSet = new Set(prev)
       for (let i = min; i <= max; i++) {
-        const email = data[i].email
+        const email = senders[i].email
         if (isSelecting) {
           newSet.add(email)
         } else {
@@ -318,7 +335,7 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
       }
       return newSet
     })
-  }, [data, selectedEmails])
+  }, [senders, selectedEmails])
 
   /**
    * Handle row click with support for shift+click range selection
@@ -470,7 +487,7 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
       ),
       cell: ({ row }) => (
         <div className="truncate">
-          <span className="text-slate-600">{row.getValue("lastEmail")}</span>
+          <span className="text-slate-600">{formatDate(row.getValue("lastEmail"))}</span>
         </div>
       ),
       sortingFn: (rowA, rowB) => {
@@ -525,7 +542,7 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
 
   // Initialize and configure the table
   const table = useReactTable({
-    data,
+    data: senders,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -565,18 +582,32 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
           ))}
         </thead>
         <tbody>
-          {table.getRowModel().rows.map(row => (
-            <SenderRow
-              key={row.id}
-              row={row}
-              isSelected={selectedEmails.has(row.original.email)}
-              isActive={activeRowId === row.original.email}
-              onRowClick={handleRowClick}
-              onRowMouseLeave={handleRowMouseLeave}
-              cells={row.getVisibleCells()}
-              columnWidths={COLUMN_WIDTHS}
-            />
-          ))}
+          {isLoading && senders.length === 0 ? (
+            <tr>
+              <td colSpan={6} className="text-center py-8 text-slate-500">
+                Loading senders...
+              </td>
+            </tr>
+          ) : senders.length === 0 ? (
+            <tr>
+              <td colSpan={6} className="text-center py-8 text-slate-500">
+                {isAnalyzing ? 'Analyzing your inbox...' : 'No senders found'}
+              </td>
+            </tr>
+          ) : (
+            table.getRowModel().rows.map(row => (
+              <SenderRow
+                key={row.original.email}
+                row={row}
+                isSelected={selectedEmails.has(row.original.email)}
+                isActive={activeRowId === row.original.email}
+                onRowClick={handleRowClick}
+                onRowMouseLeave={handleRowMouseLeave}
+                cells={row.getVisibleCells()}
+                columnWidths={COLUMN_WIDTHS}
+              />
+            ))
+          )}
         </tbody>
       </table>
     </div>

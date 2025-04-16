@@ -74,6 +74,7 @@ export interface SenderResult {
   count: number;
   lastDate: string;
   analysisId: string;         // Associates sender with a specific analysis
+  actionsTaken?: string[];    // Track actions taken on this sender
 
   sampleSubjects?: string[];
   messageIds?: string[];
