@@ -31,7 +31,7 @@ export function AnalysisHeader({
       {/* Header and bulk actions row */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-8">
-          <h1 className="text-xl font-bold">Email Senders</h1>
+          <h1 className="text-xl font-bold">Sender Analysis</h1>
           
           {hasSelection && (
             <BulkActionsBar

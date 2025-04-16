@@ -8,7 +8,7 @@ export function AnalysisTooltip() {
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
           <span className="border-b border-dotted border-slate-300 pb-[1px] cursor-pointer hover:text-slate-700 transition-colors">
-            Last Analyzed: 4/12/2025
+            Last Analyzed: Apr 12, 2025
           </span>
         </TooltipTrigger>
         <TooltipContent 

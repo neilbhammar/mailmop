@@ -7,8 +7,8 @@ export default function Overview() {
     <div className="mt-2 mb-8">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Clean Up Your Inbox</h1>
-          <p className="text-slate-500 mt-1">Analyze senders, find clutter, and take control.</p>
+          <h1 className="text-3xl font-bold text-slate-800">Declutter Your Inbox</h1>
+          <p className="text-slate-500 mt-1">Analyze senders, find clutter, and take back control.</p>
         </div>
         <ReanalyzeButton />
       </div>
