@@ -22,6 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import styles from './SenderTable.module.css'
 
 // Define column widths for consistent layout
 const COLUMN_WIDTHS = {
@@ -558,58 +559,67 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
   })
 
   return (
-    <div className="w-full h-full overflow-auto border-t border-slate-100 border-b select-none">
-      <table className="w-full text-sm table-fixed">
-        <thead className="border-b sticky top-0 bg-white z-10 shadow-sm">
-          {table.getHeaderGroups().map(headerGroup => (
-            <tr key={headerGroup.id} className="h-11">
-              {headerGroup.headers.map(header => {
-                const width = COLUMN_WIDTHS[header.column.id as keyof typeof COLUMN_WIDTHS]
-                return (
-                  <th 
-                    key={header.id} 
-                    className={cn(
-                      "text-left px-4 py-4 font-semibold bg-white",
-                      width,
-                      "overflow-hidden"
-                    )}
-                  >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                  </th>
-                )
-              })}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {isLoading && senders.length === 0 ? (
-            <tr>
-              <td colSpan={6} className="text-center py-8 text-slate-500">
-                Loading senders...
-              </td>
-            </tr>
-          ) : senders.length === 0 ? (
-            <tr>
-              <td colSpan={6} className="text-center py-8 text-slate-500">
-                {isAnalyzing ? 'Analyzing your inbox...' : 'No senders found'}
-              </td>
-            </tr>
-          ) : (
-            table.getRowModel().rows.map(row => (
-              <SenderRow
-                key={row.original.email}
-                row={row}
-                isSelected={selectedEmails.has(row.original.email)}
-                isActive={activeRowId === row.original.email}
-                onRowClick={handleRowClick}
-                onRowMouseLeave={handleRowMouseLeave}
-                cells={row.getVisibleCells()}
-                columnWidths={COLUMN_WIDTHS}
-              />
-            ))
-          )}
-        </tbody>
-      </table>
+    <div className="w-full h-full flex flex-col">
+      {/* Fixed Header */}
+      <div className="border-t border-b border-slate-100">
+        <table className="w-full text-sm table-fixed">
+          <thead className="bg-white">
+            {table.getHeaderGroups().map(headerGroup => (
+              <tr key={headerGroup.id} className="h-11">
+                {headerGroup.headers.map(header => {
+                  const width = COLUMN_WIDTHS[header.column.id as keyof typeof COLUMN_WIDTHS]
+                  return (
+                    <th 
+                      key={header.id} 
+                      className={cn(
+                        "text-left px-4 py-4 font-semibold bg-white",
+                        width,
+                        "overflow-hidden"
+                      )}
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                    </th>
+                  )
+                })}
+              </tr>
+            ))}
+          </thead>
+        </table>
+      </div>
+
+      {/* Scrollable Body */}
+      <div className={cn("flex-1 overflow-auto", styles.scrollbarCustom)}>
+        <table className="w-full text-sm table-fixed">
+          <tbody>
+            {isLoading && senders.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center py-8 text-slate-500">
+                  Loading senders...
+                </td>
+              </tr>
+            ) : senders.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center py-8 text-slate-500">
+                  {isAnalyzing ? 'Analyzing your inbox...' : 'No senders found'}
+                </td>
+              </tr>
+            ) : (
+              table.getRowModel().rows.map(row => (
+                <SenderRow
+                  key={row.original.email}
+                  row={row}
+                  isSelected={selectedEmails.has(row.original.email)}
+                  isActive={activeRowId === row.original.email}
+                  onRowClick={handleRowClick}
+                  onRowMouseLeave={handleRowMouseLeave}
+                  cells={row.getVisibleCells()}
+                  columnWidths={COLUMN_WIDTHS}
+                />
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
