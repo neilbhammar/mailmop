@@ -322,17 +322,21 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                     <div className="p-6">
                       {/* Browser animation with email analysis */}
                       <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-                        <div className="h-8 bg-gray-100 border-b border-gray-200 flex items-center px-4">
-                          <div className="flex space-x-1.5 mr-4">
+                        {/* Header bar */}
+                        <div className="h-8 bg-gray-100 border-b border-gray-200 flex items-center px-4 relative">
+                          {/* Dots on the left */}
+                          <div className="flex space-x-1.5 absolute left-4">
                             <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
                             <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
                             <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
                           </div>
-                          <div className="flex-1 text-center text-xs text-gray-500">
+                          {/* Centered Title - shifted slightly right with padding */}
+                          <div className="flex-1 text-center text-xs text-gray-500 font-medium pl-2">
                             Local Analysis
                           </div>
                         </div>
-                        
+
+                        {/* Progress bars and status text */}
                         <div className="p-4">
                           <div className="space-y-2">
                             <motion.div 
