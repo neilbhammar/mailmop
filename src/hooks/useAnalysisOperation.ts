@@ -199,13 +199,9 @@ export function useAnalysisOperations() {
         );
       }
 
-      // 6. Clear existing analysis data before starting new one
-      const hasExisting = await hasSenderAnalysis();
-      if (hasExisting) {
-        console.log('[Analysis] Clearing previous analysis data...');
-        await clearSenderAnalysis();
-        clearCurrentAnalysis();
-      }
+      // 6. Initialize/check IndexedDB
+      console.log('[Analysis] Initializing IndexedDB...');
+      await getDB();
 
       // 7. Build Gmail query using our utility
       const query = buildQuery({ 
@@ -248,21 +244,17 @@ export function useAnalysisOperations() {
       // Update localStorage with Supabase ID
       updateAnalysisId(actionLog.id!);
 
-      // 9. Initialize/check IndexedDB
-      console.log('[Analysis] Initializing IndexedDB...');
-      await getDB();
-
-      // 10. Update status to analyzing (active operation phase)
+      // 9. Update status to analyzing (active operation phase)
       updateProgress({ status: 'analyzing', progress: 0 });
       await updateActionLog(actionLog.id!, { status: 'analyzing' });
 
-      // 11. Initialize batch processing state
+      // 10. Initialize batch processing state
       let nextPageToken: string | undefined;
       let batchIndex = 0;
       let totalProcessed = 0;
       const senderMap = new Map<string, SenderResult>();
 
-      // 12. Start batch processing loop
+      // 11. Start batch processing loop
       do {
         // Add delay between batches to avoid hitting rate limits
         if (batchIndex > 0) {
@@ -362,7 +354,7 @@ export function useAnalysisOperations() {
 
       console.log('\n[Analysis] Analysis complete!');
 
-      // 13. Complete with success - ensure localStorage is updated BEFORE state
+      // 12. Complete with success - ensure localStorage is updated BEFORE state
       await completeActionLog(actionLog.id!, 'success', totalProcessed);
       completeAnalysis('success');
       

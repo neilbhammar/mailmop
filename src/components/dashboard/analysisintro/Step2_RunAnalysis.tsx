@@ -184,14 +184,17 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
       setButtonState('preparing');
       
       // Reset any existing reanalysis state
-      window.dispatchEvent(new Event('mailmop:reanalyze-cancelled'))
+      window.dispatchEvent(new Event('mailmop:reanalyze-cancelled'));
+      
+      // Clear existing data first
+      await clearSenderAnalysis();
       
       // Start analysis and check the result
       const result = await startAnalysis({
         type: unsubscribeOnly ? 'quick' : 'full'
       });
 
-      // Just call onStart with step number if successful
+      // Only proceed if analysis was successfully initialized
       if (result.success) {
         await onStart(2);
       } else {
