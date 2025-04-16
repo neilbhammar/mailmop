@@ -155,7 +155,7 @@ export const mockSenders: Sender[] = [
   {
     name: "Airbnb",
     email: "automated@airbnb.com",
-    lastEmail: "Mar 2 8, 2025",
+    lastEmail: "Mar 28, 2025",
     count: 165,
     hasUnsubscribe: false,
     actionsTaken: []

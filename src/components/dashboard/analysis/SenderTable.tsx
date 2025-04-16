@@ -192,7 +192,9 @@ const TruncatedCell = memo(({
 export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
   // Initialize data state
   const [data] = useState(() => mockSenders)
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: 'count', desc: true } // Start with count sorted in descending order
+  ])
   const [activeRowId, setActiveRowId] = useState<string | null>(null)
   
   // Track selection state with a Set for O(1) lookups
@@ -423,7 +425,7 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
       accessorKey: "name",
       header: ({ column }) => (
         <button
-          onClick={() => column.toggleSorting()}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="w-full text-left group"
         >
           <span className="text-slate-600 font-normal group-hover:text-slate-900">
@@ -439,7 +441,7 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
       accessorKey: "email",
       header: ({ column }) => (
         <button
-          onClick={() => column.toggleSorting()}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="w-full text-left group"
         >
           <span className="text-slate-600 font-normal group-hover:text-slate-900">
@@ -458,7 +460,7 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
       accessorKey: "lastEmail",
       header: ({ column }) => (
         <button
-          onClick={() => column.toggleSorting()}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="w-full text-left group"
         >
           <span className="text-slate-600 font-normal group-hover:text-slate-900">
@@ -467,17 +469,22 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
         </button>
       ),
       cell: ({ row }) => (
-        <TruncatedCell 
-          content={row.getValue("lastEmail")} 
-          className="text-slate-600"
-        />
-      )
+        <div className="truncate">
+          <span className="text-slate-600">{row.getValue("lastEmail")}</span>
+        </div>
+      ),
+      sortingFn: (rowA, rowB) => {
+        // Convert date strings to Date objects for proper comparison
+        const a = new Date(rowA.getValue("lastEmail"))
+        const b = new Date(rowB.getValue("lastEmail"))
+        return a > b ? 1 : a < b ? -1 : 0
+      }
     },
     {
       accessorKey: "count",
       header: ({ column }) => (
         <button
-          onClick={() => column.toggleSorting()}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="w-full text-right group"
         >
           <span className="inline-flex items-center gap-1 text-slate-600 font-normal group-hover:text-slate-900">
@@ -490,7 +497,12 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
         <div className="truncate text-right pr-2">
           <span className="text-blue-700">{row.getValue("count")}</span>
         </div>
-      )
+      ),
+      sortingFn: (rowA, rowB) => {
+        const a = Number(rowA.getValue("count"))
+        const b = Number(rowB.getValue("count"))
+        return a > b ? 1 : a < b ? -1 : 0
+      }
     },
     {
       id: "actions",
@@ -522,8 +534,10 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
       sorting,
     },
     enableRowSelection: true,
+    enableSorting: true,
+    enableMultiSort: false,
     onSortingChange: setSorting,
-    autoResetPageIndex: false, // Prevent unnecessary resets during operations
+    autoResetPageIndex: false,
   })
 
   return (
