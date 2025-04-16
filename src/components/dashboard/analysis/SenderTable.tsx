@@ -291,96 +291,8 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
     lastSelectionActionRef.current = isSelected
     
     return success;
-  }, [])
+  }, [setSelectedEmails])
   
-  /**
-   * Select or deselect a range of emails (for shift+click)
-   * @param startEmail - The first email in the range
-   * @param endEmail - The last email in the range
-   * @param isSelecting - Whether to select or deselect the range
-   */
-  const selectEmailRange = useCallback((startEmail: string, endEmail: string, isSelecting: boolean) => {
-    const startIndex = senders.findIndex(sender => sender.email === startEmail)
-    const endIndex = senders.findIndex(sender => sender.email === endEmail)
-    
-    if (startIndex === -1 || endIndex === -1) return
-    
-    const min = Math.min(startIndex, endIndex)
-    const max = Math.max(startIndex, endIndex)
-    
-    // Calculate how many new rows would be selected
-    let potentialNewSelections = 0;
-    if (isSelecting) {
-      for (let i = min; i <= max; i++) {
-        if (!selectedEmails.has(senders[i].email)) {
-          potentialNewSelections++;
-        }
-      }
-      
-      // Check if we would exceed the limit
-      if (selectedEmails.size + potentialNewSelections > MAX_SELECTED_ROWS) {
-        toast.warning(`You can select a maximum of ${MAX_SELECTED_ROWS} rows at once.`);
-        return;
-      }
-    }
-    
-    setSelectedEmails(prev => {
-      const newSet = new Set(prev)
-      for (let i = min; i <= max; i++) {
-        const email = senders[i].email
-        if (isSelecting) {
-          newSet.add(email)
-        } else {
-          newSet.delete(email)
-        }
-      }
-      return newSet
-    })
-  }, [senders, selectedEmails])
-
-  /**
-   * Handle row click with support for shift+click range selection
-   * Prevents selection when clicking on action buttons or checkboxes
-   */
-  const handleRowClick = useCallback((e: React.MouseEvent, row: Row<Sender>) => {
-    // Ignore clicks on action buttons or checkboxes (they handle their own events)
-    if (
-      (e.target as HTMLElement).closest('.actions-container') ||
-      (e.target as HTMLElement).closest('input[type="checkbox"]')
-    ) {
-      return
-    }
-    
-    const email = row.original.email
-    const isCurrentlySelected = selectedEmails.has(email)
-    
-    // Handle shift+click for range selection
-    if (e.shiftKey && lastSelectedRef.current) {
-      // Determine action based on the clicked row's current state
-      // If we're clicking a selected row, deselect the range
-      // If we're clicking an unselected row, select the range
-      const actionIsSelect = !isCurrentlySelected
-      
-      selectEmailRange(lastSelectedRef.current, email, actionIsSelect)
-      
-      // Update last action ref to match what we just did
-      lastSelectionActionRef.current = actionIsSelect
-      // Update the last selected email
-      lastSelectedRef.current = email
-      return
-    }
-    
-    // Toggle single selection
-    const success = toggleEmailSelection(email, !isCurrentlySelected)
-    
-    // Show warning if max limit reached
-    if (!success) {
-      toast.warning(`You can select a maximum of ${MAX_SELECTED_ROWS} rows at once.`);
-    }
-    
-    e.stopPropagation()
-  }, [selectedEmails, toggleEmailSelection, selectEmailRange])
-
   /**
    * Clear all selections
    */
@@ -557,6 +469,98 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
     onSortingChange: setSorting,
     autoResetPageIndex: false,
   })
+
+  /**
+   * Select or deselect a range of emails (for shift+click)
+   * @param startEmail - The first email in the range
+   * @param endEmail - The last email in the range
+   * @param isSelecting - Whether to select or deselect the range
+   */
+  const selectEmailRange = useCallback((startEmail: string, endEmail: string, isSelecting: boolean) => {
+    // Get the current sorted rows from the table
+    const sortedRows = table.getRowModel().rows
+    
+    // Find indices in the sorted rows
+    const startIndex = sortedRows.findIndex(row => row.original.email === startEmail)
+    const endIndex = sortedRows.findIndex(row => row.original.email === endEmail)
+    
+    if (startIndex === -1 || endIndex === -1) return
+    
+    const min = Math.min(startIndex, endIndex)
+    const max = Math.max(startIndex, endIndex)
+    
+    // Calculate how many new rows would be selected
+    let potentialNewSelections = 0;
+    if (isSelecting) {
+      for (let i = min; i <= max; i++) {
+        if (!selectedEmails.has(sortedRows[i].original.email)) {
+          potentialNewSelections++;
+        }
+      }
+      
+      // Check if we would exceed the limit
+      if (selectedEmails.size + potentialNewSelections > MAX_SELECTED_ROWS) {
+        toast.warning(`You can select a maximum of ${MAX_SELECTED_ROWS} rows at once.`);
+        return;
+      }
+    }
+    
+    setSelectedEmails(prev => {
+      const newSet = new Set(prev)
+      for (let i = min; i <= max; i++) {
+        const email = sortedRows[i].original.email
+        if (isSelecting) {
+          newSet.add(email)
+        } else {
+          newSet.delete(email)
+        }
+      }
+      return newSet
+    })
+  }, [table, selectedEmails])
+
+  /**
+   * Handle row click with support for shift+click range selection
+   * Prevents selection when clicking on action buttons or checkboxes
+   */
+  const handleRowClick = useCallback((e: React.MouseEvent, row: Row<Sender>) => {
+    // Ignore clicks on action buttons or checkboxes (they handle their own events)
+    if (
+      (e.target as HTMLElement).closest('.actions-container') ||
+      (e.target as HTMLElement).closest('input[type="checkbox"]')
+    ) {
+      return
+    }
+    
+    const email = row.original.email
+    const isCurrentlySelected = selectedEmails.has(email)
+    
+    // Handle shift+click for range selection
+    if (e.shiftKey && lastSelectedRef.current) {
+      // Determine action based on the clicked row's current state
+      // If we're clicking a selected row, deselect the range
+      // If we're clicking an unselected row, select the range
+      const actionIsSelect = !isCurrentlySelected
+      
+      selectEmailRange(lastSelectedRef.current, email, actionIsSelect)
+      
+      // Update last action ref to match what we just did
+      lastSelectionActionRef.current = actionIsSelect
+      // Update the last selected email
+      lastSelectedRef.current = email
+      return
+    }
+    
+    // Toggle single selection
+    const success = toggleEmailSelection(email, !isCurrentlySelected)
+    
+    // Show warning if max limit reached
+    if (!success) {
+      toast.warning(`You can select a maximum of ${MAX_SELECTED_ROWS} rows at once.`);
+    }
+    
+    e.stopPropagation()
+  }, [selectedEmails, toggleEmailSelection, selectEmailRange])
 
   return (
     <div className="w-full h-full flex flex-col">
