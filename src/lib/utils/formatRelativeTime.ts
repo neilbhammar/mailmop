@@ -17,7 +17,7 @@ export function formatRelativeTime(date: Date | string | number): string {
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const diffWeeks = Math.floor(diffDays / 7);
-  const diffMonths = Math.floor(diffDays / 30.44); // Average month length
+  const diffMonths = Math.max(1, Math.floor(diffDays / 30.44)); // Ensure at least 1 month if past 4 weeks
   const diffYears = Math.floor(diffDays / 365.25); // Account for leap years
 
   // Minutes
@@ -44,13 +44,13 @@ export function formatRelativeTime(date: Date | string | number): string {
     return diffWeeks === 1 ? '1 week ago' : `${diffWeeks} weeks ago`;
   }
 
-  // Months
-  if (diffMonths < 12) {
-    return diffMonths === 1 ? '1 month ago' : `${diffMonths} months ago`;
+  // Years
+  if (diffYears >= 1) {
+    return diffYears === 1 ? '1 year ago' : `${diffYears} years ago`;
   }
 
-  // Years
-  return diffYears === 1 ? '1 year ago' : `${diffYears} years ago`;
+  // Months (anything over 4 weeks but less than a year)
+  return diffMonths === 1 ? '1 month ago' : `${diffMonths} months ago`;
 }
 
 /**
