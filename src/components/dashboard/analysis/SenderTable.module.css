@@ -2,7 +2,7 @@
 .scrollbarCustom {
   /* Firefox */
   scrollbar-width: thin;
-  scrollbar-color: #e8ecf1 transparent;
+  scrollbar-color: #ced7e3 transparent;
 }
 
 /* Chrome, Edge, Safari */
@@ -16,7 +16,7 @@
 }
 
 .scrollbarCustom::-webkit-scrollbar-thumb {
-  background-color: #e8ecf1;
+  background-color: #ced7e3;
   border-radius: 4px;
   border: 2px solid transparent;
   background-clip: content-box;
@@ -24,10 +24,10 @@
 }
 
 .scrollbarCustom::-webkit-scrollbar-thumb:hover {
-  background-color: #e8ecf1;
+  background-color: #CBD5E1;
 }
 
 /* When scrolling */
 .scrollbarCustom:active::-webkit-scrollbar-thumb {
-  background-color: #94e8ecf1A3B8;
+  background-color: #94A3B8;
 } 

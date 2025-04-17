@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AnalysisTooltip } from "./AnalysisTooltip"
 import { BulkActionsBar } from "./BulkActionsBar"
+import { useSenderData } from '@/hooks/useSenderData'
 
 interface AnalysisHeaderProps {
   selectedCount?: number
@@ -25,6 +26,16 @@ export function AnalysisHeader({
   onBlockSenders = () => console.log('Block senders bulk action')
 }: AnalysisHeaderProps) {
   const hasSelection = selectedCount > 0;
+  const { senders, isLoading, isAnalyzing } = useSenderData();
+
+  // Calculate total emails from all senders
+  const totalEmails = senders.reduce((sum, sender) => sum + sender.count, 0);
+
+  // Get the status message
+  const getStatusMessage = () => {
+    if (isLoading) return "Loading..."
+    return `${totalEmails.toLocaleString()} emails from ${senders.length.toLocaleString()} senders`
+  }
 
   return (
     <div className="px-4 pt-4 pb-4 flex flex-col gap-3 shrink-0">
@@ -81,7 +92,7 @@ export function AnalysisHeader({
       {/* Analysis info row - always present */}
       <div className="text-sm text-slate-500 flex items-center gap-2">
         <AnalysisTooltip />
-        <span className="pb-[1px]">| 0 emails from 563 senders</span>
+        <span className="pb-[2px]">| {getStatusMessage()}</span>
       </div>
     </div>
   )

@@ -5,7 +5,7 @@ export const ENABLE_GMAIL_DEBUG = false;
 
 // Constants for rate limiting
 const PARALLEL_BATCH_SIZE = 15; // Process 5 messages in parallel
-const BATCH_DELAY_MS = 20; // 50ms delay between batches
+const BATCH_DELAY_MS = 20; // 20ms delay between batches
 
 export interface GmailMessageMetadata {
   id: string;

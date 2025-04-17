@@ -23,6 +23,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import styles from './SenderTable.module.css'
+import { formatRelativeTime } from '@/lib/utils/formatRelativeTime'
 
 // Define column widths for consistent layout
 const COLUMN_WIDTHS = {
@@ -197,6 +198,41 @@ function formatDate(dateString: string) {
     day: 'numeric'
   });
 }
+
+const LastEmailCell = memo(({ date }: { date: string }) => {
+  const [relativeTime, setRelativeTime] = useState(() => formatRelativeTime(date));
+
+  useEffect(() => {
+    // Update relative time every minute
+    const interval = setInterval(() => {
+      setRelativeTime(formatRelativeTime(date));
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [date]);
+
+  return (
+    <div className="truncate">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="text-slate-600 cursor-default">{relativeTime}</span>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={4}>
+            {new Date(date).toLocaleString('en-US', {
+              month: 'numeric',
+              day: 'numeric',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            }).replace(',', '')}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  );
+}, (prev, next) => prev.date === next.date);
 
 /**
  * SenderTable - A high-performance table component for displaying email senders
@@ -399,9 +435,7 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
         </button>
       ),
       cell: ({ row }) => (
-        <div className="truncate">
-          <span className="text-slate-600">{formatDate(row.getValue("lastEmail"))}</span>
-        </div>
+        <LastEmailCell date={row.getValue("lastEmail")} />
       ),
       sortingFn: (rowA, rowB) => {
         // Convert date strings to Date objects for proper comparison
