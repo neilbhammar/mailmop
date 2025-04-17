@@ -22,7 +22,7 @@ import { motion, AnimatePresence, Transition } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { clearSenderAnalysis } from '@/lib/storage/senderAnalysis'
 import { useAnalysisOperations } from '@/hooks/useAnalysisOperation'
-import { estimateRuntimeMs, formatDuration } from '@/lib/utils/estimateRuntime'
+import { estimateRuntimeMs, formatDuration, getEffectiveEmailCount } from '@/lib/utils/estimateRuntime'
 import { ReauthDialog } from '@/components/modals/ReauthDialog'
 
 // BorderTrail component for the magical button effect
@@ -156,14 +156,11 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
   const getRoundedEmailCount = () => {
     if (!stats?.totalEmails) return 0;
     
-    const estimatedMs = estimateRuntimeMs({
-      operationType: 'analysis',
-      emailCount: stats.totalEmails,
-      mode: unsubscribeOnly ? 'quick' : 'full'
-    });
-    
-    // Convert back to email count based on our rate
-    return Math.floor(estimatedMs / (60 * 1000) * 750); // 750 is our emails/minute rate
+    return getEffectiveEmailCount(
+      stats.totalEmails,
+      unsubscribeOnly ? 'quick' : 'full',
+      'analysis'
+    );
   };
 
   // Sample senders for visualization
@@ -181,30 +178,35 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
   const handleStartAnalysis = async () => {
     try {
       // Set button to preparing state immediately for visual feedback
+      console.log('[Step2] Changing button state to preparing');
       setButtonState('preparing');
       
-      // Reset any existing reanalysis state
-      window.dispatchEvent(new Event('mailmop:reanalyze-cancelled'));
-      
-      // Clear existing data first
-      await clearSenderAnalysis();
-      
       // Start analysis and check the result
+      console.log('[Step2] Calling startAnalysis...');
       const result = await startAnalysis({
         type: unsubscribeOnly ? 'quick' : 'full'
       });
+      console.log('[Step2] Analysis result:', result);
 
       // Only proceed if analysis was successfully initialized
       if (result.success) {
+        console.log('[Step2] Analysis started successfully, moving to next step...');
         await onStart(2);
+        console.log('[Step2] Moved to next step');
       } else {
-        console.log('Analysis start was cancelled or needs reauth');
-        // Reset button state if not successful
+        console.log('[Step2] Analysis start failed:', result);
         setButtonState('idle');
       }
     } catch (error) {
-      console.error('Failed to start analysis:', error);
-      // Reset button state on error
+      console.error('[Step2] Analysis error:', error);
+      // Log the full error details
+      if (error instanceof Error) {
+        console.error('[Step2] Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+      }
       setButtonState('idle');
     }
   };

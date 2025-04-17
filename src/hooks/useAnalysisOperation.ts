@@ -136,7 +136,7 @@ export function useAnalysisOperations() {
     try {
       // 1. Update status to preparing (pre-flight phase)
       updateProgress({ status: 'preparing', progress: 0 });
-      console.log('[Analysis] Starting analysis...');
+      console.log('[Analysis] Preparing analysis...');
 
       // 2. Initial token validity check (before any estimation)
       if (tokenStatus.state === 'expired') {
@@ -199,18 +199,26 @@ export function useAnalysisOperations() {
         );
       }
 
-      // 6. Initialize/check IndexedDB
+      // 6. Clear existing analysis data before starting new one
+      const hasExisting = await hasSenderAnalysis();
+      if (hasExisting) {
+        console.log('[Analysis] Clearing previous analysis data...');
+        await clearSenderAnalysis();
+        clearCurrentAnalysis();
+      }
+
+      // 7. Initialize/check IndexedDB
       console.log('[Analysis] Initializing IndexedDB...');
       await getDB();
 
-      // 7. Build Gmail query using our utility
+      // 8. Build Gmail query using our utility
       const query = buildQuery({ 
         type: 'analysis', 
         mode: options.type 
       });
       console.log(`[Analysis] Using query: ${query}`);
 
-      // 8. Generate client_action_id and start logging
+      // 9. Generate client_action_id and start logging
       const clientActionId = uuidv4();
       const analysisId = new Date().toISOString();
 
@@ -244,146 +252,167 @@ export function useAnalysisOperations() {
       // Update localStorage with Supabase ID
       updateAnalysisId(actionLog.id!);
 
-      // 9. Update status to analyzing (active operation phase)
+      // 10. Update status to analyzing (active operation phase)
       updateProgress({ status: 'analyzing', progress: 0 });
       await updateActionLog(actionLog.id!, { status: 'analyzing' });
 
-      // 10. Initialize batch processing state
-      let nextPageToken: string | undefined;
-      let batchIndex = 0;
-      let totalProcessed = 0;
-      const senderMap = new Map<string, SenderResult>();
-
-      // 11. Start batch processing loop
-      do {
-        // Add delay between batches to avoid hitting rate limits
-        if (batchIndex > 0) {
-          console.log(`[Analysis] Adding ${BATCH_DELAY_MS}ms delay between batches...`);
-          await sleep(BATCH_DELAY_MS);
-        }
-        
-        const batchNumber = batchIndex + 1;
-        console.log(`\n[Analysis] Starting Batch ${batchNumber}`);
-
-        // Check token expiration before each batch
-        console.log(`[Analysis] Checking token for batch ${batchNumber}...`);
-        if (tokenStatus.timeRemaining < TWO_MINUTES_MS) {
-          console.warn('[Analysis] Token expiring soon, pausing for reauth');
-          setReauthModal({
-            isOpen: true,
-            type: 'will_expire_during_operation',
-            eta: formatDuration(estimatedRuntimeMs - (totalProcessed / stats.totalEmails) * estimatedRuntimeMs)
-          });
-          return { success: false };
-        }
-
-        // Fetch message IDs for this batch
-        console.log(`[Analysis] Fetching IDs for batch ${batchNumber}...`);
-        const accessToken = await getAccessToken();
-        const { messageIds, nextPageToken: newPageToken } = await fetchMessageIds(
-          accessToken,
-          query,
-          nextPageToken
-        );
-
-        // Update nextPageToken for next iteration
-        nextPageToken = newPageToken;
-
-        if (messageIds.length > 0) {
-          console.log(`[Analysis] Fetching metadata for batch ${batchNumber} (${messageIds.length} messages)...`);
-          // Fetch metadata for messages
-          const metadata = await fetchMetadata(accessToken, messageIds);
-          
-          console.log(`[Analysis] Parsing headers for batch ${batchNumber}...`);
-          // Parse headers into sender information
-          const parsedSenders = parseMetadataBatch(metadata);
-
-          console.log(`[Analysis] Aggregating sender stats for batch ${batchNumber}...`);
-          // Aggregate sender statistics
-          for (const sender of parsedSenders) {
-            const existing = senderMap.get(sender.email);
-            if (existing) {
-              // Update existing sender stats
-              existing.count++;
-              if (new Date(sender.date) > new Date(existing.lastDate)) {
-                existing.lastDate = sender.date;
-              }
-              existing.hasUnsubscribe = existing.hasUnsubscribe || sender.hasUnsubscribe;
-              if (sender.unsubscribe) {
-                existing.unsubscribe = { ...existing.unsubscribe, ...sender.unsubscribe };
-              }
-            } else {
-              // Add new sender
-              senderMap.set(sender.email, {
-                senderEmail: sender.email,
-                senderName: sender.name,
-                count: 1,
-                lastDate: sender.date,
-                analysisId,
-                hasUnsubscribe: sender.hasUnsubscribe,
-                unsubscribe: sender.unsubscribe
-              });
-            }
-          }
-
-          console.log(`[Analysis] Storing results for batch ${batchNumber}...`);
-          // Store current results
-          await storeSenderResults(Array.from(senderMap.values()));
-
-          // Update progress based on effective email count
-          totalProcessed += messageIds.length;
-          const progressPercent = Math.min(100, Math.round((totalProcessed / effectiveEmailCount) * 100));
-          
-          console.log(`[Analysis] Batch ${batchNumber} complete. Progress: ${progressPercent}% (${totalProcessed.toLocaleString()}/${effectiveEmailCount.toLocaleString()} emails)`);
-          
-          updateProgress(prev => ({ 
-            ...prev,
-            progress: progressPercent
-          }));
-
-          // Update localStorage progress only during batches
-          updateAnalysisProgress(
-            batchIndex,
-            totalProcessed
-          );
-
-          batchIndex++;
-        }
-
-      } while (nextPageToken && progress.status !== 'cancelled');
-
-      console.log('\n[Analysis] Analysis complete!');
-
-      // 12. Complete with success - ensure localStorage is updated BEFORE state
-      await completeActionLog(actionLog.id!, 'success', totalProcessed);
-      completeAnalysis('success');
+      // All pre-flight checks passed and setup complete
+      // Return success now so UI can proceed
+      console.log('[Analysis] Pre-flight checks passed, proceeding with analysis');
       
-      // Now update progress state and trigger UI updates
-      updateProgress({ status: 'completed', progress: 100 });
+      // Start the batch processing in the background
+      (async () => {
+        try {
+          // 11. Initialize batch processing state
+          let nextPageToken: string | undefined;
+          let batchIndex = 0;
+          let totalProcessed = 0;
+          const senderMap = new Map<string, SenderResult>();
 
-      // Force an additional dispatch with delay to ensure UI components update
-      setTimeout(() => {
-        dispatchStatusChange();
-      }, 100);
+          // 12. Start batch processing loop
+          do {
+            // Add delay between batches to avoid hitting rate limits
+            if (batchIndex > 0) {
+              console.log(`[Analysis] Adding ${BATCH_DELAY_MS}ms delay between batches...`);
+              await sleep(BATCH_DELAY_MS);
+            }
+            
+            const batchNumber = batchIndex + 1;
+            console.log(`\n[Analysis] Starting Batch ${batchNumber}`);
+
+            // Check token expiration before each batch
+            console.log(`[Analysis] Checking token for batch ${batchNumber}...`);
+            if (tokenStatus.timeRemaining < TWO_MINUTES_MS) {
+              console.warn('[Analysis] Token expiring soon, pausing for reauth');
+              setReauthModal({
+                isOpen: true,
+                type: 'will_expire_during_operation',
+                eta: formatDuration(estimatedRuntimeMs - (totalProcessed / stats.totalEmails) * estimatedRuntimeMs)
+              });
+              return;
+            }
+
+            // Fetch message IDs for this batch
+            console.log(`[Analysis] Fetching IDs for batch ${batchNumber}...`);
+            const accessToken = await getAccessToken();
+            const { messageIds, nextPageToken: newPageToken } = await fetchMessageIds(
+              accessToken,
+              query,
+              nextPageToken
+            );
+
+            // Update nextPageToken for next iteration
+            nextPageToken = newPageToken;
+
+            if (messageIds.length > 0) {
+              console.log(`[Analysis] Fetching metadata for batch ${batchNumber} (${messageIds.length} messages)...`);
+              // Fetch metadata for messages
+              const metadata = await fetchMetadata(accessToken, messageIds);
+              
+              console.log(`[Analysis] Parsing headers for batch ${batchNumber}...`);
+              // Parse headers into sender information
+              const parsedSenders = parseMetadataBatch(metadata);
+
+              console.log(`[Analysis] Aggregating sender stats for batch ${batchNumber}...`);
+              // Aggregate sender statistics
+              for (const sender of parsedSenders) {
+                const existing = senderMap.get(sender.email);
+                if (existing) {
+                  // Update existing sender stats
+                  existing.count++;
+                  if (new Date(sender.date) > new Date(existing.lastDate)) {
+                    existing.lastDate = sender.date;
+                  }
+                  existing.hasUnsubscribe = existing.hasUnsubscribe || sender.hasUnsubscribe;
+                  if (sender.unsubscribe) {
+                    existing.unsubscribe = { ...existing.unsubscribe, ...sender.unsubscribe };
+                  }
+                } else {
+                  // Add new sender
+                  senderMap.set(sender.email, {
+                    senderEmail: sender.email,
+                    senderName: sender.name,
+                    count: 1,
+                    lastDate: sender.date,
+                    analysisId,
+                    hasUnsubscribe: sender.hasUnsubscribe,
+                    unsubscribe: sender.unsubscribe
+                  });
+                }
+              }
+
+              console.log(`[Analysis] Storing results for batch ${batchNumber}...`);
+              // Store current results
+              await storeSenderResults(Array.from(senderMap.values()));
+
+              // Update progress based on effective email count
+              totalProcessed += messageIds.length;
+              const progressPercent = Math.min(100, Math.round((totalProcessed / effectiveEmailCount) * 100));
+              
+              console.log(`[Analysis] Batch ${batchNumber} complete. Progress: ${progressPercent}% (${totalProcessed.toLocaleString()}/${effectiveEmailCount.toLocaleString()} emails)`);
+              
+              updateProgress(prev => ({ 
+                ...prev,
+                progress: progressPercent
+              }));
+
+              // Update localStorage progress only during batches
+              updateAnalysisProgress(
+                batchIndex,
+                totalProcessed
+              );
+
+              batchIndex++;
+            }
+
+          } while (nextPageToken && progress.status !== 'cancelled');
+
+          console.log('\n[Analysis] Analysis complete!');
+
+          // Complete with success - ensure localStorage is updated BEFORE state
+          await completeActionLog(actionLog.id!, 'success', totalProcessed);
+          completeAnalysis('success');
+          
+          // Now update progress state and trigger UI updates
+          updateProgress({ status: 'completed', progress: 100 });
+
+          // Force an additional dispatch with delay to ensure UI components update
+          setTimeout(() => {
+            dispatchStatusChange();
+          }, 100);
+
+        } catch (error) {
+          console.error('[Analysis] Batch processing failed:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Analysis failed during batch processing';
+          
+          // For errors, update localStorage first, then progress state
+          await completeActionLog(
+            actionLog.id!,
+            'runtime_error',
+            0,
+            errorMessage
+          );
+          completeAnalysis('runtime_error', errorMessage);
+
+          updateProgress({ 
+            status: 'error', 
+            progress: 0,
+            error: errorMessage
+          });
+          
+          // Force an additional dispatch for reliability
+          setTimeout(() => {
+            dispatchStatusChange();
+          }, 100);
+        }
+      })();
 
       return { success: true };
 
     } catch (error) {
-      console.error('[Analysis] Analysis failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Analysis failed';
+      console.error('[Analysis] Pre-flight checks failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Analysis failed during pre-flight checks';
       
-      // For errors, update localStorage first, then progress state
-      const current = getCurrentAnalysis();
-      if (current?.analysis_id) {
-        await completeActionLog(
-          current.analysis_id,
-          'runtime_error',
-          current.processed_email_count,
-          errorMessage
-        );
-        completeAnalysis('runtime_error', errorMessage);
-      }
-
       updateProgress({ 
         status: 'error', 
         progress: 0,
