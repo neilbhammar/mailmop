@@ -9,93 +9,51 @@ import { useState, useEffect } from 'react'
 export default function ReanalyzeButton() {
   const { hasAnalysis, isAnalyzing, checkAnalysisState } = useAnalysis()
   const { progress } = useAnalysisOperations()
-  const [isReanalyzing, setIsReanalyzing] = useState(false)
-  const [showButton, setShowButton] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
 
-  // Debounce the button visibility to prevent flashing during transitions
+  // Simple effect to determine button visibility based on core conditions
   useEffect(() => {
-    // Set base conditions for button visibility
-    const shouldBeVisible = hasAnalysis && 
-      !isAnalyzing && 
-      !isReanalyzing &&
-      ['completed', 'error', 'idle'].includes(progress.status)
+    // Check if analysis data exists but we're not currently analyzing
+    const shouldBeVisible = hasAnalysis && !isAnalyzing
     
-    if (!shouldBeVisible) {
-      // Hide immediately when conditions aren't met
-      setShowButton(false)
-    } else {
-      // Add a small delay before showing to prevent flashing
-      const timer = setTimeout(() => {
-        setShowButton(true)
-      }, 300)
-      
-      return () => clearTimeout(timer)
-    }
-  }, [hasAnalysis, isAnalyzing, isReanalyzing, progress.status])
+    console.log(`[ReanalyzeButton] Visibility check: hasAnalysis=${hasAnalysis}, isAnalyzing=${isAnalyzing}, shouldBeVisible=${shouldBeVisible}`)
+    
+    // Set visibility immediately (no delay)
+    setIsVisible(shouldBeVisible)
+  }, [hasAnalysis, isAnalyzing])
 
-  // Check for analysis state changes when progress changes
+  // Force check analysis state when the component mounts
   useEffect(() => {
-    // Immediately check analysis state when progress changes
-    if (progress.status === 'completed' || progress.status === 'error') {
-      console.log('[ReanalyzeButton] Analysis completed or errored, checking state...')
-      checkAnalysisState()
-      
-      // Reset reanalyzing state
-      setIsReanalyzing(false)
-      
-      // Double-check after a delay to ensure all state is updated
-      setTimeout(() => {
-        checkAnalysisState()
-      }, 200)
-    }
-    
-    // Hide button immediately when analysis is preparing or analyzing
-    if (progress.status === 'preparing' || progress.status === 'analyzing') {
-      setShowButton(false)
-    }
-  }, [progress.status, checkAnalysisState])
+    console.log('[ReanalyzeButton] Component mounted, checking analysis state')
+    checkAnalysisState()
+  }, [checkAnalysisState])
 
-  // Handle reanalyze events
+  // Always listen for analysis status changes to update visibility
   useEffect(() => {
-    const handleReanalyzeRequest = () => {
-      console.log('[ReanalyzeButton] Reanalyze requested')
-      setIsReanalyzing(true)
-      setShowButton(false)
-    }
-    
-    const handleReanalyzeCancel = () => {
-      console.log('[ReanalyzeButton] Reanalyze cancelled')
-      setIsReanalyzing(false)
-    }
-
     const handleAnalysisStatusChange = () => {
-      console.log('[ReanalyzeButton] Analysis status changed')
-      // Always check analysis state on status change
+      console.log('[ReanalyzeButton] Analysis status changed, checking state')
       checkAnalysisState()
     }
 
-    window.addEventListener('mailmop:reanalyze-requested', handleReanalyzeRequest)
-    window.addEventListener('mailmop:reanalyze-cancelled', handleReanalyzeCancel)
+    // Listen for analysis status change events
     window.addEventListener('mailmop:analysis-status-change', handleAnalysisStatusChange)
     
     return () => {
-      window.removeEventListener('mailmop:reanalyze-requested', handleReanalyzeRequest)
-      window.removeEventListener('mailmop:reanalyze-cancelled', handleReanalyzeCancel)
       window.removeEventListener('mailmop:analysis-status-change', handleAnalysisStatusChange)
     }
   }, [checkAnalysisState])
-  
-  // Log state changes for debugging
-  useEffect(() => {
-    console.log(`[ReanalyzeButton] State: hasAnalysis=${hasAnalysis}, isAnalyzing=${isAnalyzing}, progress=${progress.status}, reanalyzing=${isReanalyzing}, showButton=${showButton}`)
-  }, [hasAnalysis, isAnalyzing, progress.status, isReanalyzing, showButton])
 
   const handleReanalyze = () => {
     console.log('[ReanalyzeButton] Triggering reanalyze event')
     window.dispatchEvent(new Event('mailmop:reanalyze-requested'))
   }
 
-  if (!showButton) return null
+  // Debug logging
+  useEffect(() => {
+    console.log(`[ReanalyzeButton] Render state: hasAnalysis=${hasAnalysis}, isAnalyzing=${isAnalyzing}, isVisible=${isVisible}, progress=${progress.status}`)
+  }, [hasAnalysis, isAnalyzing, isVisible, progress.status])
+
+  if (!isVisible) return null
 
   return (
     <Button

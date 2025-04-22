@@ -84,11 +84,8 @@ interface AnalysisFilters {
 // Helper to dispatch status change event
 function dispatchStatusChange() {
   console.log('[Analysis] Dispatching status change event');
-  
-  // Use setTimeout to ensure the event is dispatched after state updates
-  setTimeout(() => {
-    window.dispatchEvent(new Event('mailmop:analysis-status-change'));
-  }, 0);
+  // Dispatch immediately without setTimeout
+  window.dispatchEvent(new Event('mailmop:analysis-status-change'));
 }
 
 // Simple sleep function for delays
@@ -100,7 +97,7 @@ export function useAnalysisOperations() {
     progress: 0
   });
 
-  // Wrap setProgress to also dispatch status change event
+  // Wrap setProgress to also dispatch status change event immediately
   const updateProgress = useCallback((newProgress: AnalysisProgress | ((prev: AnalysisProgress) => AnalysisProgress)) => {
     setProgress(prevProgress => {
       // Calculate the new state
@@ -108,7 +105,7 @@ export function useAnalysisOperations() {
         ? newProgress(prevProgress) 
         : newProgress;
       
-      // Only dispatch event if status changed
+      // Only dispatch event if status changed - but do it immediately
       if (prevProgress.status !== nextProgress.status) {
         console.log(`[Analysis] Status changing from ${prevProgress.status} to ${nextProgress.status}`);
         dispatchStatusChange();
@@ -373,13 +370,8 @@ export function useAnalysisOperations() {
           await completeActionLog(actionLog.id!, 'success', totalProcessed);
           completeAnalysis('success');
           
-          // Now update progress state and trigger UI updates
+          // Now update progress state and trigger UI updates - no setTimeout here
           updateProgress({ status: 'completed', progress: 100 });
-
-          // Force an additional dispatch with delay to ensure UI components update
-          setTimeout(() => {
-            dispatchStatusChange();
-          }, 100);
 
         } catch (error) {
           console.error('[Analysis] Batch processing failed:', error);
@@ -399,11 +391,6 @@ export function useAnalysisOperations() {
             progress: 0,
             error: errorMessage
           });
-          
-          // Force an additional dispatch for reliability
-          setTimeout(() => {
-            dispatchStatusChange();
-          }, 100);
         }
       })();
 
@@ -418,11 +405,6 @@ export function useAnalysisOperations() {
         progress: 0,
         error: errorMessage
       });
-      
-      // Force an additional dispatch for reliability
-      setTimeout(() => {
-        dispatchStatusChange();
-      }, 100);
 
       return { success: false };
     }
@@ -441,11 +423,6 @@ export function useAnalysisOperations() {
 
     updateProgress({ status: 'cancelled', progress: 0 });
     setReauthModal({ isOpen: false, type: 'expired' });
-    
-    // Force a status change event
-    setTimeout(() => {
-      dispatchStatusChange();
-    }, 100);
   }, [updateProgress]);
 
   return {

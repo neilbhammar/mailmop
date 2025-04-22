@@ -10,20 +10,25 @@ import { getCurrentAnalysis } from '@/lib/storage/actionLog'
 import { formatRelativeTime, formatDuration } from '@/lib/utils/formatRelativeTime'
 import { useEffect, useState } from 'react'
 import { useAnalysis } from '@/context/AnalysisProvider'
+import { LocalActionLog } from '@/types/actions'
 
 export function AnalysisTooltip() {
-  const { isAnalyzing } = useAnalysis();
-  const [lastAnalysis, setLastAnalysis] = useState<any>(null);
+  const { isAnalyzing, checkAnalysisState, currentAnalysis } = useAnalysis();
+  const [lastAnalysis, setLastAnalysis] = useState<LocalActionLog | null>(null);
   const [relativeTime, setRelativeTime] = useState<string>('');
 
   // Update analysis data and relative time
   useEffect(() => {
     const updateAnalysisData = () => {
-      const current = getCurrentAnalysis();
-      setLastAnalysis(current);
-      
-      if (current?.completed_at) {
-        setRelativeTime(formatRelativeTime(current.completed_at));
+      console.log('[AnalysisTooltip] Updating analysis data');
+      // Only update lastAnalysis if we're not currently analyzing
+      if (!isAnalyzing) {
+        const current = getCurrentAnalysis();
+        setLastAnalysis(current);
+        
+        if (current?.completed_at) {
+          setRelativeTime(formatRelativeTime(current.completed_at));
+        }
       }
     };
 
@@ -33,8 +38,38 @@ export function AnalysisTooltip() {
     // Update relative time every minute
     const interval = setInterval(updateAnalysisData, 60000);
 
-    return () => clearInterval(interval);
-  }, []);
+    // Also listen for analysis status changes
+    const handleAnalysisStatusChange = () => {
+      console.log('[AnalysisTooltip] Analysis status changed, updating tooltip');
+      // Check analysis state first to ensure isAnalyzing is updated
+      checkAnalysisState().then(() => {
+        // Then update our tooltip data
+        updateAnalysisData();
+      });
+    };
+
+    window.addEventListener('mailmop:analysis-status-change', handleAnalysisStatusChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('mailmop:analysis-status-change', handleAnalysisStatusChange);
+    };
+  }, [checkAnalysisState]);
+
+  // Refresh tooltip when isAnalyzing changes
+  useEffect(() => {
+    console.log(`[AnalysisTooltip] isAnalyzing changed to ${isAnalyzing}`);
+    
+    // When analysis completes, update data right away
+    if (!isAnalyzing) {
+      const current = getCurrentAnalysis();
+      setLastAnalysis(current);
+      
+      if (current?.completed_at) {
+        setRelativeTime(formatRelativeTime(current.completed_at));
+      }
+    }
+  }, [isAnalyzing]);
 
   const getAnalysisStatus = () => {
     if (isAnalyzing) return "Analysis in Progress";
@@ -44,6 +79,18 @@ export function AnalysisTooltip() {
 
   // Format date for tooltip
   const getFormattedDate = () => {
+    if (isAnalyzing) {
+      return currentAnalysis?.start_time ? 
+        new Date(currentAnalysis.start_time).toLocaleString('en-US', {
+          month: 'numeric',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }).replace(',', '') : 'In Progress';
+    }
+    
     if (!lastAnalysis?.completed_at) return 'N/A';
     return new Date(lastAnalysis.completed_at).toLocaleString('en-US', {
       month: 'numeric',
@@ -57,6 +104,12 @@ export function AnalysisTooltip() {
 
   // Calculate runtime if available
   const getRuntime = () => {
+    if (isAnalyzing) {
+      if (!currentAnalysis?.start_time) return 'In Progress';
+      const runtime = new Date().getTime() - new Date(currentAnalysis.start_time).getTime();
+      return formatDuration(runtime);
+    }
+
     if (!lastAnalysis?.completed_at || !lastAnalysis?.start_time) return 'N/A';
     const runtime = new Date(lastAnalysis.completed_at).getTime() - new Date(lastAnalysis.start_time).getTime();
     return formatDuration(runtime);
@@ -88,15 +141,30 @@ export function AnalysisTooltip() {
             </div>
             <div className="flex justify-between py-1">
               <span className="text-sm text-slate-500">Emails Analyzed</span>
-              <span className="text-sm text-slate-700">{lastAnalysis?.processed_email_count?.toLocaleString() || 0}</span>
+              <span className="text-sm text-slate-700">
+                {isAnalyzing 
+                  ? (currentAnalysis?.processed_email_count?.toLocaleString() || '0') + ' (In Progress)'
+                  : lastAnalysis?.processed_email_count?.toLocaleString() || '0'
+                }
+              </span>
             </div>
             <div className="flex justify-between py-1">
               <span className="text-sm text-slate-500">Analysis Type</span>
-              <span className="text-sm text-slate-700">{lastAnalysis?.type === 'quick' ? 'Quick' : 'Full'}</span>
+              <span className="text-sm text-slate-700">
+                {isAnalyzing 
+                  ? (currentAnalysis?.filters?.type === 'quick' ? 'Quick' : 'Full') 
+                  : (lastAnalysis?.filters?.type === 'quick' ? 'Quick' : 'Full')
+                }
+              </span>
             </div>
             <div className="flex justify-between py-1">
               <span className="text-sm text-slate-500">Status</span>
-              <span className="text-sm text-slate-700">{lastAnalysis?.end_type || 'Completed'}</span>
+              <span className="text-sm text-slate-700">
+                {isAnalyzing 
+                  ? 'In Progress'
+                  : (lastAnalysis?.end_type || 'Completed')
+                }
+              </span>
             </div>
             <div className="flex justify-between py-1">
               <span className="text-sm text-slate-500">Run Time</span>
@@ -106,7 +174,12 @@ export function AnalysisTooltip() {
           <div className="px-4 py-2 border-t border-slate-100 bg-slate-50">
             <div className="flex justify-between items-center gap-2">
               <span className="text-xs text-slate-400 shrink-0">Analysis ID</span>
-              <span className="text-[10px] font-mono text-slate-500 truncate text-right">{lastAnalysis?.client_action_id || 'N/A'}</span>
+              <span className="text-[10px] font-mono text-slate-500 truncate text-right">
+                {isAnalyzing 
+                  ? (currentAnalysis?.client_action_id || 'N/A')
+                  : (lastAnalysis?.client_action_id || 'N/A')
+                }
+              </span>
             </div>
           </div>
         </TooltipContent>

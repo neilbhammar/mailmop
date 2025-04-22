@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Check for user mismatch on SIGNED_IN event
         if (event === 'SIGNED_IN' && session.user.email) {
           console.log('[Auth] Checking for user mismatch...')
-          const isMismatch = checkUserMismatch(session.user.email)
+          const isMismatch = await checkUserMismatch(session.user.email)
           
           if (isMismatch) {
             console.log('[Auth] User mismatch detected, clearing previous data')

@@ -22,10 +22,14 @@ export async function clearAllUserData() {
 }
 
 /**
- * Checks if stored Gmail data belongs to a different user
+ * Checks if stored Gmail data belongs to a different user and clears IndexedDB
  */
-export function checkUserMismatch(currentEmail: string): boolean {
+export async function checkUserMismatch(currentEmail: string): Promise<boolean> {
   console.log('[Storage] Checking user mismatch for:', currentEmail);
+  
+  // Always clear IndexedDB data first
+  console.log('[Storage] Clearing IndexedDB data...');
+  await clearSenderAnalysis();
   
   const stats = localStorage.getItem(GMAIL_STATS_KEY);
   if (!stats) {
