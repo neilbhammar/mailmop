@@ -9,6 +9,7 @@ import {
   getSortedRowModel,
   Row
 } from "@tanstack/react-table"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { MinusSquare, ArrowUpDown } from "lucide-react"
@@ -37,6 +38,12 @@ const COLUMN_WIDTHS = {
 
 // Maximum number of rows that can be selected at once
 const MAX_SELECTED_ROWS = 25
+
+// Fixed row height for virtualization (based on h-14 class: 3.5rem = 56px)
+const ROW_HEIGHT = 56;
+
+// How many rows to render beyond the visible area (overscan)
+const OVERSCAN_COUNT = 100;
 
 // Update the Sender type to use TableSender
 export type Sender = TableSender;
@@ -122,7 +129,7 @@ const SelectCheckbox = memo(({
       className="group-hover:border-slate-600 transition-opacity duration-75"
     />
   )
-})
+}, (prev, next) => prev.checked === next.checked && prev.indeterminate === next.indeterminate)
 
 interface SenderTableProps {
   /** Callback function when selected count changes */
@@ -235,6 +242,30 @@ const LastEmailCell = memo(({ date }: { date: string }) => {
 }, (prev, next) => prev.date === next.date);
 
 /**
+ * Wrapper for RowActions to ensure consistent layout and spacing
+ */
+const ActionWrapper = memo(({ sender, onDropdownOpen }: { 
+  sender: Sender, 
+  onDropdownOpen: (email: string) => void
+}) => {
+  return (
+    <div className="flex justify-end space-x-1">
+      <RowActions
+        sender={sender}
+        onDropdownOpen={onDropdownOpen}
+        onUnsubscribe={(email) => console.log('Unsubscribe:', email)}
+        onViewInGmail={(email) => console.log('View in Gmail:', email)}
+        onDelete={(email) => console.log('Delete:', email)}
+        onMarkUnread={(email) => console.log('Mark Unread:', email)}
+        onDeleteWithExceptions={(email) => console.log('Delete with Exceptions:', email)}
+        onApplyLabel={(email) => console.log('Apply Label:', email)}
+        onBlock={(email) => console.log('Block:', email)}
+      />
+    </div>
+  );
+});
+
+/**
  * SenderTable - A high-performance table component for displaying email senders
  * Features:
  * - Fast selection using Set data structure for O(1) lookups
@@ -242,6 +273,7 @@ const LastEmailCell = memo(({ date }: { date: string }) => {
  * - Limited to MAX_SELECTED_ROWS selections for performance
  * - Optimized rendering with memoized components
  * - Sorting and row actions
+ * - Virtualized rendering for handling large datasets
  */
 export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
   // Replace mock data with real data
@@ -259,6 +291,9 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
   
   // Store the intended action (select or deselect) for shift+click operations
   const lastSelectionActionRef = useRef<boolean>(true);
+  
+  // Reference to the virtualized scrollable container
+  const tableBodyRef = useRef<HTMLDivElement>(null);
   
   // Update parent component when selection count changes
   useEffect(() => {
@@ -472,20 +507,13 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
       id: "actions",
       header: () => <div className="text-right"></div>,
       cell: ({ row }) => (
-        <RowActions
-          sender={row.original}
+        <ActionWrapper 
+          sender={row.original} 
           onDropdownOpen={handleDropdownOpen}
-          onUnsubscribe={(email) => console.log('Unsubscribe:', email)}
-          onViewInGmail={(email) => console.log('View in Gmail:', email)}
-          onDelete={(email) => console.log('Delete:', email)}
-          onMarkUnread={(email) => console.log('Mark Unread:', email)}
-          onDeleteWithExceptions={(email) => console.log('Delete with Exceptions:', email)}
-          onApplyLabel={(email) => console.log('Apply Label:', email)}
-          onBlock={(email) => console.log('Block:', email)}
         />
       )
     }
-  ], [selectedEmails, handleDropdownOpen, handleCheckboxChange, clearSelections])
+  ], [selectedEmails, handleCheckboxChange, clearSelections, handleDropdownOpen])
 
   // Initialize and configure the table
   const table = useReactTable({
@@ -503,7 +531,7 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
     onSortingChange: setSorting,
     autoResetPageIndex: false,
   })
-
+  
   /**
    * Select or deselect a range of emails (for shift+click)
    * @param startEmail - The first email in the range
@@ -596,6 +624,14 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
     e.stopPropagation()
   }, [selectedEmails, toggleEmailSelection, selectEmailRange])
 
+  // Set up the virtualizer with simplified configuration
+  const { getVirtualItems, getTotalSize } = useVirtualizer({
+    count: table.getRowModel().rows.length,
+    getScrollElement: () => tableBodyRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: OVERSCAN_COUNT,
+  });
+
   return (
     <div className="w-full h-full flex flex-col">
       {/* Fixed Header */}
@@ -625,38 +661,53 @@ export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
         </table>
       </div>
 
-      {/* Scrollable Body */}
-      <div className={cn("flex-1 overflow-auto", styles.scrollbarCustom)}>
-        <table className="w-full text-sm table-fixed">
-          <tbody>
-            {isLoading && senders.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="text-center py-8 text-slate-500">
-                  Loading senders...
-                </td>
-              </tr>
-            ) : senders.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="text-center py-8 text-slate-500">
-                  {isAnalyzing ? 'Analyzing your inbox...' : 'No senders found'}
-                </td>
-              </tr>
-            ) : (
-              table.getRowModel().rows.map(row => (
-                <SenderRow
+      {/* Table Body with Fixed-Height Container */}
+      <div 
+        ref={tableBodyRef}
+        className={cn("flex-1 overflow-auto", styles.scrollbarCustom)}
+      >
+        {/* Instead of using absolute positioning, we'll use a more traditional approach */}
+        {isLoading && senders.length === 0 ? (
+          <div className="text-center py-8 text-slate-500">
+            Loading senders...
+          </div>
+        ) : senders.length === 0 ? (
+          <div className="text-center py-8 text-slate-500">
+            {isAnalyzing ? 'Analyzing your inbox...' : 'No senders found'}
+          </div>
+        ) : (
+          <div style={{ height: `${getTotalSize()}px`, position: 'relative' }}>
+            {getVirtualItems().map(virtualRow => {
+              const row = table.getRowModel().rows[virtualRow.index];
+              return (
+                <div
                   key={row.original.email}
-                  row={row}
-                  isSelected={selectedEmails.has(row.original.email)}
-                  isActive={activeRowId === row.original.email}
-                  onRowClick={handleRowClick}
-                  onRowMouseLeave={handleRowMouseLeave}
-                  cells={row.getVisibleCells()}
-                  columnWidths={COLUMN_WIDTHS}
-                />
-              ))
-            )}
-          </tbody>
-        </table>
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <table className="w-full text-sm table-fixed border-collapse">
+                    <tbody>
+                      <SenderRow
+                        row={row}
+                        isSelected={selectedEmails.has(row.original.email)}
+                        isActive={activeRowId === row.original.email}
+                        onRowClick={handleRowClick}
+                        onRowMouseLeave={handleRowMouseLeave}
+                        cells={row.getVisibleCells()}
+                        columnWidths={COLUMN_WIDTHS}
+                      />
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

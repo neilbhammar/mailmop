@@ -3,6 +3,19 @@
   /* Firefox */
   scrollbar-width: thin;
   scrollbar-color: #ced7e3 transparent;
+  
+  /* Enable hardware acceleration for smoother scrolling */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  
+  /* Improve scroll performance */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  
+  /* Prevent flashing during scroll */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: scroll-position;
 }
 
 /* Chrome, Edge, Safari */
