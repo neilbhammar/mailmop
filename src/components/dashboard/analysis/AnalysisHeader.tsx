@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input"
 import { AnalysisTooltip } from "./AnalysisTooltip"
 import { BulkActionsBar } from "./BulkActionsBar"
 import { useSenderData } from '@/hooks/useSenderData'
+import { useState, useCallback, useMemo } from 'react'
+import { useDebouncedCallback } from 'use-debounce'
 
 interface AnalysisHeaderProps {
   selectedCount?: number
@@ -14,6 +16,7 @@ interface AnalysisHeaderProps {
   onDeleteWithExceptions?: () => void
   onApplyLabel?: () => void
   onBlockSenders?: () => void
+  onSearchChange?: (search: string) => void
 }
 
 export function AnalysisHeader({
@@ -23,19 +26,69 @@ export function AnalysisHeader({
   onMarkAllAsRead = () => console.log('Mark all as read bulk action'),
   onDeleteWithExceptions = () => console.log('Delete with exceptions bulk action'),
   onApplyLabel = () => console.log('Apply label bulk action'),
-  onBlockSenders = () => console.log('Block senders bulk action')
+  onBlockSenders = () => console.log('Block senders bulk action'),
+  onSearchChange = () => console.log('Search changed')
 }: AnalysisHeaderProps) {
   const hasSelection = selectedCount > 0;
   const { senders, isLoading, isAnalyzing } = useSenderData();
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Calculate total emails from all senders
-  const totalEmails = senders.reduce((sum, sender) => sum + sender.count, 0);
+  const getTotals = useMemo(() => {
+    if (!searchTerm) {
+      return {
+        emails: senders.reduce((sum, sender) => sum + sender.count, 0),
+        senderCount: senders.length
+      };
+    }
+
+    const lowercaseSearch = searchTerm.toLowerCase();
+    const terms = lowercaseSearch.split(' ').filter(Boolean);
+    
+    if (terms.length === 0) {
+      return {
+        emails: senders.reduce((sum, sender) => sum + sender.count, 0),
+        senderCount: senders.length
+      };
+    }
+
+    const filteredSenders = senders.filter(sender => {
+      const nameLower = sender.name.toLowerCase();
+      const emailLower = sender.email.toLowerCase();
+      
+      return terms.every(term => 
+        nameLower.includes(term) || emailLower.includes(term)
+      );
+    });
+
+    return {
+      emails: filteredSenders.reduce((sum, sender) => sum + sender.count, 0),
+      senderCount: filteredSenders.length,
+      totalEmails: senders.reduce((sum, sender) => sum + sender.count, 0),
+      totalSenders: senders.length
+    };
+  }, [senders, searchTerm]);
 
   // Get the status message
   const getStatusMessage = () => {
     if (isLoading) return "Loading..."
-    return `${totalEmails.toLocaleString()} emails from ${senders.length.toLocaleString()} senders`
+    return `${getTotals.emails.toLocaleString()} emails from ${getTotals.senderCount.toLocaleString()} senders`;
   }
+
+  // Debounce the search callback to prevent too many updates
+  const debouncedSearchChange = useDebouncedCallback(
+    (value: string) => {
+      onSearchChange(value);
+    },
+    300 // 300ms delay
+  );
+
+  // Handle search input changes
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSearchTerm = e.target.value;
+    setSearchTerm(newSearchTerm);
+    debouncedSearchChange(newSearchTerm);
+  };
 
   return (
     <div className="px-4 pt-4 pb-4 flex flex-col gap-3 shrink-0">
@@ -76,7 +129,9 @@ export function AnalysisHeader({
             </svg>
             <Input 
               placeholder="Search senders..." 
-              className="w-[240px] h-9 text-sm bg-white border-slate-200 placeholder:text-slate-400 focus-visible:ring-slate-100 pl-9" 
+              className="w-[240px] h-9 text-sm bg-white border-slate-200 placeholder:text-slate-400 focus-visible:ring-slate-100 pl-9"
+              value={searchTerm}
+              onChange={handleSearchChange}
             />
           </div>
           <Button 

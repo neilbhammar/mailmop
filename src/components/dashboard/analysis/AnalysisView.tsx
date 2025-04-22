@@ -8,6 +8,7 @@ import { useAnalysisOperations } from '@/hooks/useAnalysisOperation'
 
 export default function AnalysisView() {
   const [selectedCount, setSelectedCount] = useState(0)
+  const [searchTerm, setSearchTerm] = useState('')
   const { progress } = useAnalysisOperations()
 
   // Handlers for bulk actions
@@ -57,16 +58,20 @@ export default function AnalysisView() {
         onDeleteWithExceptions={handleDeleteWithExceptions}
         onApplyLabel={handleApplyLabel}
         onBlockSenders={handleBlockSenders}
+        onSearchChange={setSearchTerm}
       />
 
       {/* TABLE CONTAINER */}
       <div className="flex-1 min-h-0 relative">
         <div className="absolute inset-0">
-          <SenderTable onSelectedCountChange={setSelectedCount} />
+          <SenderTable 
+            onSelectedCountChange={setSelectedCount} 
+            searchTerm={searchTerm}
+          />
         </div>
       </div>
 
-      <AnalysisFooter />
+      <AnalysisFooter searchTerm={searchTerm} />
     </div>
   )
 }

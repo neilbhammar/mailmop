@@ -73,7 +73,7 @@ const SenderRow = memo(({
     <tr 
       key={row.original.email}
       className={cn(
-        "h-14 cursor-pointer group border-b border-slate-100 last:border-none transition-colors duration-75",
+        "relative h-14 cursor-pointer group transition-colors duration-75",
         "hover:bg-blue-50/75 select-none",
         (isSelected || isActive) && "bg-blue-50/75"
       )}
@@ -86,7 +86,7 @@ const SenderRow = memo(({
           <td 
             key={cell.id} 
             className={cn(
-              "px-4",
+              "px-4 border-b border-slate-100/80",
               width,
               cell.column.id === 'actions' && 'actions-container'
             )}
@@ -134,7 +134,35 @@ const SelectCheckbox = memo(({
 interface SenderTableProps {
   /** Callback function when selected count changes */
   onSelectedCountChange: (count: number) => void 
+  /** Current search term for filtering senders */
+  searchTerm?: string
 }
+
+/**
+ * Filter senders based on search term
+ * Matches against name and email, case-insensitive
+ * Memoized for performance
+ */
+const useFilteredSenders = (senders: Sender[], searchTerm: string) => {
+  return useMemo(() => {
+    if (!searchTerm) return senders;
+    
+    const lowercaseSearch = searchTerm.toLowerCase();
+    const terms = lowercaseSearch.split(' ').filter(Boolean);
+    
+    if (terms.length === 0) return senders;
+    
+    return senders.filter(sender => {
+      const nameLower = sender.name.toLowerCase();
+      const emailLower = sender.email.toLowerCase();
+      
+      // All terms must match either name or email
+      return terms.every(term => 
+        nameLower.includes(term) || emailLower.includes(term)
+      );
+    });
+  }, [senders, searchTerm]);
+};
 
 /**
  * TruncatedCell - A reusable component for handling text truncation with tooltips
@@ -275,9 +303,10 @@ const ActionWrapper = memo(({ sender, onDropdownOpen }: {
  * - Sorting and row actions
  * - Virtualized rendering for handling large datasets
  */
-export function SenderTable({ onSelectedCountChange }: SenderTableProps) {
-  // Replace mock data with real data
-  const { senders, isLoading, isAnalyzing } = useSenderData();
+export function SenderTable({ onSelectedCountChange, searchTerm = '' }: SenderTableProps) {
+  // Get senders and filter based on search term
+  const { senders: allSenders, isLoading, isAnalyzing } = useSenderData();
+  const senders = useFilteredSenders(allSenders, searchTerm);
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'count', desc: true }
   ]);
