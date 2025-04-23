@@ -298,69 +298,73 @@ export function useAnalysisOperations() {
               nextPageToken
             );
 
+            // If no messages in this batch, we're done
+            if (messageIds.length === 0) {
+              console.log(`[Analysis] No more messages to process after batch ${batchNumber - 1}`);
+              break;
+            }
+
+            // Process the batch
+            console.log(`[Analysis] Fetching metadata for batch ${batchNumber} (${messageIds.length} messages)...`);
+            // Fetch metadata for messages
+            const metadata = await fetchMetadata(accessToken, messageIds);
+            
+            console.log(`[Analysis] Parsing headers for batch ${batchNumber}...`);
+            // Parse headers into sender information
+            const parsedSenders = parseMetadataBatch(metadata);
+
+            console.log(`[Analysis] Aggregating sender stats for batch ${batchNumber}...`);
+            // Aggregate sender statistics
+            for (const sender of parsedSenders) {
+              const existing = senderMap.get(sender.email);
+              if (existing) {
+                // Update existing sender stats
+                existing.count++;
+                if (new Date(sender.date) > new Date(existing.lastDate)) {
+                  existing.lastDate = sender.date;
+                }
+                existing.hasUnsubscribe = existing.hasUnsubscribe || sender.hasUnsubscribe;
+                if (sender.unsubscribe) {
+                  existing.unsubscribe = { ...existing.unsubscribe, ...sender.unsubscribe };
+                }
+              } else {
+                // Add new sender
+                senderMap.set(sender.email, {
+                  senderEmail: sender.email,
+                  senderName: sender.name,
+                  count: 1,
+                  lastDate: sender.date,
+                  analysisId,
+                  hasUnsubscribe: sender.hasUnsubscribe,
+                  unsubscribe: sender.unsubscribe
+                });
+              }
+            }
+
+            console.log(`[Analysis] Storing results for batch ${batchNumber}...`);
+            // Store current results
+            await storeSenderResults(Array.from(senderMap.values()));
+
+            // Update progress based on effective email count
+            totalProcessed += messageIds.length;
+            const progressPercent = Math.min(100, Math.round((totalProcessed / effectiveEmailCount) * 100));
+            
+            console.log(`[Analysis] Batch ${batchNumber} complete. Progress: ${progressPercent}% (${totalProcessed.toLocaleString()}/${effectiveEmailCount.toLocaleString()} emails)`);
+            
+            updateProgress(prev => ({ 
+              ...prev,
+              progress: progressPercent
+            }));
+
+            // Update localStorage progress only during batches
+            updateAnalysisProgress(
+              batchIndex,
+              totalProcessed
+            );
+
             // Update nextPageToken for next iteration
             nextPageToken = newPageToken;
-
-            if (messageIds.length > 0) {
-              console.log(`[Analysis] Fetching metadata for batch ${batchNumber} (${messageIds.length} messages)...`);
-              // Fetch metadata for messages
-              const metadata = await fetchMetadata(accessToken, messageIds);
-              
-              console.log(`[Analysis] Parsing headers for batch ${batchNumber}...`);
-              // Parse headers into sender information
-              const parsedSenders = parseMetadataBatch(metadata);
-
-              console.log(`[Analysis] Aggregating sender stats for batch ${batchNumber}...`);
-              // Aggregate sender statistics
-              for (const sender of parsedSenders) {
-                const existing = senderMap.get(sender.email);
-                if (existing) {
-                  // Update existing sender stats
-                  existing.count++;
-                  if (new Date(sender.date) > new Date(existing.lastDate)) {
-                    existing.lastDate = sender.date;
-                  }
-                  existing.hasUnsubscribe = existing.hasUnsubscribe || sender.hasUnsubscribe;
-                  if (sender.unsubscribe) {
-                    existing.unsubscribe = { ...existing.unsubscribe, ...sender.unsubscribe };
-                  }
-                } else {
-                  // Add new sender
-                  senderMap.set(sender.email, {
-                    senderEmail: sender.email,
-                    senderName: sender.name,
-                    count: 1,
-                    lastDate: sender.date,
-                    analysisId,
-                    hasUnsubscribe: sender.hasUnsubscribe,
-                    unsubscribe: sender.unsubscribe
-                  });
-                }
-              }
-
-              console.log(`[Analysis] Storing results for batch ${batchNumber}...`);
-              // Store current results
-              await storeSenderResults(Array.from(senderMap.values()));
-
-              // Update progress based on effective email count
-              totalProcessed += messageIds.length;
-              const progressPercent = Math.min(100, Math.round((totalProcessed / effectiveEmailCount) * 100));
-              
-              console.log(`[Analysis] Batch ${batchNumber} complete. Progress: ${progressPercent}% (${totalProcessed.toLocaleString()}/${effectiveEmailCount.toLocaleString()} emails)`);
-              
-              updateProgress(prev => ({ 
-                ...prev,
-                progress: progressPercent
-              }));
-
-              // Update localStorage progress only during batches
-              updateAnalysisProgress(
-                batchIndex,
-                totalProcessed
-              );
-
-              batchIndex++;
-            }
+            batchIndex++;
 
           } while (nextPageToken && progress.status !== 'cancelled');
 

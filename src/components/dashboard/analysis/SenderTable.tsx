@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/tooltip"
 import styles from './SenderTable.module.css'
 import { formatRelativeTime } from '@/lib/utils/formatRelativeTime'
+import { Portal } from "@radix-ui/react-portal"
 
 // Define column widths for consistent layout
 const COLUMN_WIDTHS = {
@@ -662,82 +663,92 @@ export function SenderTable({ onSelectedCountChange, searchTerm = '' }: SenderTa
   });
 
   return (
-    <div className="w-full h-full flex flex-col">
-      {/* Fixed Header */}
-      <div className="border-t border-b border-slate-100">
-        <table className="w-full text-sm table-fixed">
-          <thead className="bg-white">
-            {table.getHeaderGroups().map(headerGroup => (
-              <tr key={headerGroup.id} className="h-11">
-                {headerGroup.headers.map(header => {
-                  const width = COLUMN_WIDTHS[header.column.id as keyof typeof COLUMN_WIDTHS]
-                  return (
-                    <th 
-                      key={header.id} 
-                      className={cn(
-                        "text-left px-4 py-4 font-semibold bg-white",
-                        width,
-                        "overflow-hidden"
-                      )}
-                    >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  )
-                })}
-              </tr>
-            ))}
-          </thead>
-        </table>
-      </div>
+    <>
+      {/* Add a portal root for tooltips that will render outside table constraints */}
+      <Portal>
+        <div id="tooltip-root" className="fixed inset-0 pointer-events-none z-50" />
+      </Portal>
+      
+      <div className="w-full h-full flex flex-col relative">
+        {/* Fixed Header - Add higher z-index */}
+        <div className="border-t border-b border-slate-100 relative z-20 bg-white">
+          <table className="w-full text-sm table-fixed">
+            <thead className="bg-white">
+              {table.getHeaderGroups().map(headerGroup => (
+                <tr key={headerGroup.id} className="h-11">
+                  {headerGroup.headers.map(header => {
+                    const width = COLUMN_WIDTHS[header.column.id as keyof typeof COLUMN_WIDTHS]
+                    return (
+                      <th 
+                        key={header.id} 
+                        className={cn(
+                          "text-left px-4 py-4 font-semibold bg-white",
+                          width,
+                          "overflow-hidden"
+                        )}
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                      </th>
+                    )
+                  })}
+                </tr>
+              ))}
+            </thead>
+          </table>
+        </div>
 
-      {/* Table Body with Fixed-Height Container */}
-      <div 
-        ref={tableBodyRef}
-        className={cn("flex-1 overflow-auto", styles.scrollbarCustom)}
-      >
-        {/* Instead of using absolute positioning, we'll use a more traditional approach */}
-        {isLoading && senders.length === 0 ? (
-          <div className="text-center py-8 text-slate-500">
-            Loading senders...
-          </div>
-        ) : senders.length === 0 ? (
-          <div className="text-center py-8 text-slate-500">
-            {isAnalyzing ? 'Analyzing your inbox...' : 'No senders found'}
-          </div>
-        ) : (
-          <div style={{ height: `${getTotalSize()}px`, position: 'relative' }}>
-            {getVirtualItems().map(virtualRow => {
-              const row = table.getRowModel().rows[virtualRow.index];
-              return (
-                <div
-                  key={row.original.email}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  <table className="w-full text-sm table-fixed border-collapse">
-                    <tbody>
-                      <SenderRow
-                        row={row}
-                        isSelected={selectedEmails.has(row.original.email)}
-                        isActive={activeRowId === row.original.email}
-                        onRowClick={handleRowClick}
-                        onRowMouseLeave={handleRowMouseLeave}
-                        cells={row.getVisibleCells()}
-                        columnWidths={COLUMN_WIDTHS}
-                      />
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {/* Table Body - Add position context */}
+        <div 
+          ref={tableBodyRef}
+          className={cn(
+            "flex-1 overflow-auto relative z-10", 
+            styles.scrollbarCustom
+          )}
+        >
+          {/* Instead of using absolute positioning, we'll use a more traditional approach */}
+          {isLoading && senders.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              Loading senders...
+            </div>
+          ) : senders.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              {isAnalyzing ? 'Analyzing your inbox...' : 'No senders found'}
+            </div>
+          ) : (
+            <div style={{ height: `${getTotalSize()}px`, position: 'relative' }}>
+              {getVirtualItems().map(virtualRow => {
+                const row = table.getRowModel().rows[virtualRow.index];
+                return (
+                  <div
+                    key={row.original.email}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <table className="w-full text-sm table-fixed border-collapse">
+                      <tbody>
+                        <SenderRow
+                          row={row}
+                          isSelected={selectedEmails.has(row.original.email)}
+                          isActive={activeRowId === row.original.email}
+                          onRowClick={handleRowClick}
+                          onRowMouseLeave={handleRowMouseLeave}
+                          cells={row.getVisibleCells()}
+                          columnWidths={COLUMN_WIDTHS}
+                        />
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }

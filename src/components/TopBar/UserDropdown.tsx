@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthProvider'
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
 import { RevokeAccessDialog } from '../modals/RevokeAccessDialog'
 import { SignOutDialog } from '../modals/SignOutDialog'
+import { FeedbackModal } from '../modals/FeedbackModal'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -18,6 +19,7 @@ export function UserDropdown({ user }: UserDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [showRevokeDialog, setShowRevokeDialog] = useState(false)
   const [showSignOutDialog, setShowSignOutDialog] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const { plan } = useAuth()
   const { tokenStatus, requestPermissions } = useGmailPermissions()
   const avatarUrl = user.user_metadata?.avatar_url
@@ -35,10 +37,8 @@ export function UserDropdown({ user }: UserDropdownProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleContactSupport = () => {
-    toast.info("Please email help@mailmop.com for support", {
-      description: "We'll get back to you as soon as possible!"
-    })
+  const handleShowFeedback = () => {
+    setShowFeedbackModal(true)
     setIsOpen(false)
   }
 
@@ -153,9 +153,9 @@ export function UserDropdown({ user }: UserDropdownProps) {
                 {tokenStatus.state === 'valid' ? 'Revoke Gmail Access' : 'Reconnect Gmail'}
               </button>
 
-              {/* Contact Support */}
+              {/* Share Feedback */}
               <button 
-                onClick={handleContactSupport}
+                onClick={handleShowFeedback}
                 className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
                 <MessageSquare className="w-4 h-4 mr-3" />
@@ -191,6 +191,12 @@ export function UserDropdown({ user }: UserDropdownProps) {
       <SignOutDialog
         open={showSignOutDialog}
         onOpenChange={setShowSignOutDialog}
+      />
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
       />
     </div>
   )

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ExternalLink, Trash2, MailOpen, MoreHorizontal, PenSquare, Tag, Ban } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Portal } from "@radix-ui/react-portal"
 
 interface RowActionsProps {
   sender: Sender
@@ -82,11 +83,13 @@ export function RowActions({
                 Unsubscribe
               </div>
             </TooltipTrigger>
-            {isActionTaken('unsubscribe') && (
-              <TooltipContent>
-                <p>Already unsubscribed from this sender</p>
-              </TooltipContent>
-            )}
+            <Portal container={document.getElementById('tooltip-root')}>
+              {isActionTaken('unsubscribe') && (
+                <TooltipContent sideOffset={5} className="z-[100]">
+                  <p>Already unsubscribed from this sender</p>
+                </TooltipContent>
+              )}
+            </Portal>
           </Tooltip>
         </TooltipProvider>
       )}
@@ -104,9 +107,11 @@ export function RowActions({
               <ExternalLink className="h-4 w-4" />
             </div>
           </TooltipTrigger>
-          <TooltipContent>
-            <p>View in Gmail</p>
-          </TooltipContent>
+          <Portal container={document.getElementById('tooltip-root')}>
+            <TooltipContent sideOffset={5} className="z-[100]">
+              <p>View in Gmail</p>
+            </TooltipContent>
+          </Portal>
         </Tooltip>
       </TooltipProvider>
 
@@ -127,9 +132,11 @@ export function RowActions({
               <Trash2 className="h-4 w-4" />
             </div>
           </TooltipTrigger>
-          <TooltipContent>
-            <p>{isActionTaken('delete') ? 'Already deleted emails from this sender' : 'Delete all emails from sender'}</p>
-          </TooltipContent>
+          <Portal container={document.getElementById('tooltip-root')}>
+            <TooltipContent sideOffset={5} className="z-[100]">
+              <p>{isActionTaken('delete') ? 'Already deleted emails from this sender' : 'Delete all emails from sender'}</p>
+            </TooltipContent>
+          </Portal>
         </Tooltip>
       </TooltipProvider>
 
@@ -149,9 +156,11 @@ export function RowActions({
               <MailOpen className="h-4 w-4" />
             </div>
           </TooltipTrigger>
-          <TooltipContent>
-            <p>{isActionTaken('markUnread') ? 'Already marked as read' : 'Mark all as read'}</p>
-          </TooltipContent>
+          <Portal container={document.getElementById('tooltip-root')}>
+            <TooltipContent sideOffset={5} className="z-[100]">
+              <p>{isActionTaken('markUnread') ? 'Already marked as read' : 'Mark all as read'}</p>
+            </TooltipContent>
+          </Portal>
         </Tooltip>
       </TooltipProvider>
 
@@ -176,9 +185,11 @@ export function RowActions({
                 </div>
               </DropdownMenuTrigger>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>More Actions</p>
-            </TooltipContent>
+            <Portal container={document.getElementById('tooltip-root')}>
+              <TooltipContent sideOffset={5} className="z-[100]">
+                <p>More Actions</p>
+              </TooltipContent>
+            </Portal>
           </Tooltip>
         </TooltipProvider>
         <DropdownMenuContent 
