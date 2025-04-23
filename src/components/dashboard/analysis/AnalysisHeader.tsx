@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { AnalysisTooltip } from "./AnalysisTooltip"
 import { BulkActionsBar } from "./BulkActionsBar"
 import { useSenderData } from '@/hooks/useSenderData'
+import { useExport } from '@/hooks/useExport'
 import { useState, useCallback, useMemo } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 
@@ -31,6 +32,7 @@ export function AnalysisHeader({
 }: AnalysisHeaderProps) {
   const hasSelection = selectedCount > 0;
   const { senders, isLoading, isAnalyzing } = useSenderData();
+  const { exportToCSV, isExporting, error } = useExport();
   const [searchTerm, setSearchTerm] = useState('');
 
   // Calculate total emails from all senders
@@ -137,9 +139,11 @@ export function AnalysisHeader({
           <Button 
             variant="outline" 
             className="h-9 px-4 text-sm font-normal border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-600"
+            onClick={() => exportToCSV(senders)}
+            disabled={isExporting || senders.length === 0}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export CSV
+            {isExporting ? 'Exporting...' : 'Export CSV'}
           </Button>
         </div>
       </div>
