@@ -12,7 +12,7 @@ interface FeedbackModalProps {
 type FeedbackType = 'issue' | 'idea' | 'other'
 
 export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
-  const [selectedTypes, setSelectedTypes] = useState<FeedbackType[]>([])
+  const [selectedType, setSelectedType] = useState<FeedbackType | null>(null)
   const [feedbackContent, setFeedbackContent] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [charCount, setCharCount] = useState(0)
@@ -28,25 +28,17 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     }
   }
 
-  const handleTypeToggle = (type: FeedbackType) => {
-    setSelectedTypes(prev => {
-      if (prev.includes(type)) {
-        return prev.filter(t => t !== type)
-      } else {
-        return [...prev, type]
-      }
-    })
+  const handleTypeSelect = (type: FeedbackType) => {
+    setSelectedType(type)
     
-    // Focus the textarea after selecting a type if it's the first selection
-    if (selectedTypes.length === 0) {
-      setTimeout(() => {
-        textareaRef.current?.focus()
-      }, 100)
-    }
+    // Focus the textarea after selecting a type
+    setTimeout(() => {
+      textareaRef.current?.focus()
+    }, 100)
   }
 
   const handleSubmit = async () => {
-    if (selectedTypes.length === 0 || !feedbackContent.trim() || !user) {
+    if (!selectedType || !feedbackContent.trim() || !user) {
       toast.error('Please fill out all fields', {
         description: 'Both feedback type and content are required'
       })
@@ -56,24 +48,21 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     setIsSubmitting(true)
 
     try {
-      // Insert a record for each selected feedback type
-      for (const type of selectedTypes) {
-        const { error } = await supabase.from('feedback').insert([{
-          user_id: user.id,
-          feedback_type: type,
-          content: feedbackContent.trim(),
-          user_email: user.email
-        }])
-        
-        if (error) throw error
-      }
+      const { error } = await supabase.from('feedback').insert([{
+        user_id: user.id,
+        feedback_type: selectedType,
+        content: feedbackContent.trim(),
+        user_email: user.email
+      }])
+      
+      if (error) throw error
 
       toast.success('Feedback submitted successfully', {
         description: 'Thank you for helping us improve MailMop!'
       })
       
       // Reset form and close modal
-      setSelectedTypes([])
+      setSelectedType(null)
       setFeedbackContent('')
       setCharCount(0)
       onClose()
@@ -144,13 +133,13 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                   
                   <div className="space-y-3 mt-3">
                     <div 
-                      onClick={() => handleTypeToggle('issue')}
+                      onClick={() => handleTypeSelect('issue')}
                       className={`flex items-center p-3 border rounded-lg cursor-pointer ${
-                        selectedTypes.includes('issue') ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                        selectedType === 'issue' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
                       }`}
                     >
                       <div className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full mr-3 ${
-                        selectedTypes.includes('issue') ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+                        selectedType === 'issue' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
                       }`}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <circle cx="12" cy="12" r="10" />
@@ -165,13 +154,13 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                     </div>
 
                     <div 
-                      onClick={() => handleTypeToggle('idea')}
+                      onClick={() => handleTypeSelect('idea')}
                       className={`flex items-center p-3 border rounded-lg cursor-pointer ${
-                        selectedTypes.includes('idea') ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                        selectedType === 'idea' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
                       }`}
                     >
                       <div className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full mr-3 ${
-                        selectedTypes.includes('idea') ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+                        selectedType === 'idea' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
                       }`}>
                         <Lightbulb className="w-4 h-4" />
                       </div>
@@ -182,13 +171,13 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                     </div>
                     
                     <div 
-                      onClick={() => handleTypeToggle('other')}
+                      onClick={() => handleTypeSelect('other')}
                       className={`flex items-center p-3 border rounded-lg cursor-pointer ${
-                        selectedTypes.includes('other') ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                        selectedType === 'other' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
                       }`}
                     >
                       <div className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full mr-3 ${
-                        selectedTypes.includes('other') ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+                        selectedType === 'other' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
                       }`}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <circle cx="12" cy="12" r="10" />
@@ -218,7 +207,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                   value={feedbackContent}
                   onChange={handleTextChange}
                   placeholder="Tell us what's on your mind..."
-                  className="w-full h-[210px] px-3 py-2 text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full h-[210px] px-3 py-2 text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-100 focus:border-transparent resize-none"
                 />
                 
                 <div className="mt-1 flex justify-between items-center">
@@ -244,9 +233,9 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
             
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting || selectedTypes.length === 0 || !feedbackContent.trim()}
+              disabled={isSubmitting || !selectedType || !feedbackContent.trim()}
               className={`px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium text-white ${
-                isSubmitting || selectedTypes.length === 0 || !feedbackContent.trim()
+                isSubmitting || !selectedType || !feedbackContent.trim()
                   ? 'bg-blue-300 cursor-not-allowed'
                   : 'bg-blue-500 hover:bg-blue-600'
               }`}

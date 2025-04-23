@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ExternalLink, Trash2, MailOpen, ChevronDown, PenSquare, Tag, Ban } from "lucide-react"
+import { useViewInGmail } from "@/hooks/useViewInGmail"
 
 interface BulkActionsBarProps {
   selectedCount: number

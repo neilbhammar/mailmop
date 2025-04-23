@@ -26,6 +26,7 @@ import {
 import styles from './SenderTable.module.css'
 import { formatRelativeTime } from '@/lib/utils/formatRelativeTime'
 import { Portal } from "@radix-ui/react-portal"
+import { useViewInGmail } from '@/hooks/useViewInGmail'
 
 // Define column widths for consistent layout
 const COLUMN_WIDTHS = {
@@ -134,7 +135,11 @@ const SelectCheckbox = memo(({
 
 interface SenderTableProps {
   /** Callback function when selected count changes */
-  onSelectedCountChange: (count: number) => void 
+  onSelectedCountChange: {
+    (count: number): void;
+    viewInGmail?: () => void;
+    getSelectedEmails?: (emails: string[]) => void;
+  }
   /** Current search term for filtering senders */
   searchTerm?: string
 }
@@ -213,12 +218,14 @@ const TruncatedCell = memo(({
         <TooltipTrigger asChild>
           {innerContent}
         </TooltipTrigger>
-        <TooltipContent 
-          side="top" 
-          className="max-w-[300px] break-words"
-        >
-          {content}
-        </TooltipContent>
+        <Portal container={document.getElementById('tooltip-root')}>
+          <TooltipContent 
+            side="top" 
+            className="max-w-[300px] break-words z-[100]"
+          >
+            {content}
+          </TooltipContent>
+        </Portal>
       </Tooltip>
     </TooltipProvider>
   )
@@ -254,16 +261,18 @@ const LastEmailCell = memo(({ date }: { date: string }) => {
           <TooltipTrigger asChild>
             <span className="text-slate-600 cursor-default">{relativeTime}</span>
           </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={4}>
-            {new Date(date).toLocaleString('en-US', {
-              month: 'numeric',
-              day: 'numeric',
-              year: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true
-            }).replace(',', '')}
-          </TooltipContent>
+          <Portal container={document.getElementById('tooltip-root')}>
+            <TooltipContent side="top" sideOffset={4} className="z-[100]">
+              {new Date(date).toLocaleString('en-US', {
+                month: 'numeric',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              }).replace(',', '')}
+            </TooltipContent>
+          </Portal>
         </Tooltip>
       </TooltipProvider>
     </div>
@@ -277,13 +286,15 @@ const ActionWrapper = memo(({ sender, onDropdownOpen }: {
   sender: Sender, 
   onDropdownOpen: (email: string) => void
 }) => {
+  const { viewSenderInGmail } = useViewInGmail();
+  
   return (
     <div className="flex justify-end space-x-1">
       <RowActions
         sender={sender}
         onDropdownOpen={onDropdownOpen}
         onUnsubscribe={(email) => console.log('Unsubscribe:', email)}
-        onViewInGmail={(email) => console.log('View in Gmail:', email)}
+        onViewInGmail={(email) => viewSenderInGmail(email)}
         onDelete={(email) => console.log('Delete:', email)}
         onMarkUnread={(email) => console.log('Mark Unread:', email)}
         onDeleteWithExceptions={(email) => console.log('Delete with Exceptions:', email)}
@@ -307,6 +318,7 @@ const ActionWrapper = memo(({ sender, onDropdownOpen }: {
 export function SenderTable({ onSelectedCountChange, searchTerm = '' }: SenderTableProps) {
   // Get senders and filter based on search term
   const { senders: allSenders, isLoading, isAnalyzing } = useSenderData();
+  const { viewMultipleSendersInGmail } = useViewInGmail();
   const senders = useFilteredSenders(allSenders, searchTerm);
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'count', desc: true }
@@ -602,7 +614,14 @@ export function SenderTable({ onSelectedCountChange, searchTerm = '' }: SenderTa
       for (let i = min; i <= max; i++) {
         const email = sortedRows[i].original.email
         if (isSelecting) {
-          newSet.add(email)
+          // Double-check again before adding to prevent exceeding MAX_SELECTED_ROWS
+          if (newSet.size < MAX_SELECTED_ROWS || newSet.has(email)) {
+            newSet.add(email)
+          } else {
+            // If we've reached the limit, stop adding more
+            toast.warning(`Selection limited to ${MAX_SELECTED_ROWS} rows.`);
+            break;
+          }
         } else {
           newSet.delete(email)
         }
@@ -610,6 +629,31 @@ export function SenderTable({ onSelectedCountChange, searchTerm = '' }: SenderTa
       return newSet
     })
   }, [table, selectedEmails])
+
+  // Add a new effect to enforce the selection limit
+  useEffect(() => {
+    if (selectedEmails.size > MAX_SELECTED_ROWS) {
+      toast.warning(`Selection limit is ${MAX_SELECTED_ROWS} rows. Some selections were discarded.`);
+      
+      // Trim down to the limit by removing excess items
+      setSelectedEmails(prev => {
+        const newSet = new Set<string>();
+        let count = 0;
+        
+        // Only keep MAX_SELECTED_ROWS items
+        for (const email of prev) {
+          if (count < MAX_SELECTED_ROWS) {
+            newSet.add(email);
+            count++;
+          } else {
+            break;
+          }
+        }
+        
+        return newSet;
+      });
+    }
+  }, [selectedEmails.size]);
 
   /**
    * Handle row click with support for shift+click range selection
@@ -661,6 +705,37 @@ export function SenderTable({ onSelectedCountChange, searchTerm = '' }: SenderTa
     estimateSize: () => ROW_HEIGHT,
     overscan: OVERSCAN_COUNT,
   });
+
+  // Handle bulk View in Gmail action
+  const handleBulkViewInGmail = useCallback(() => {
+    if (selectedEmails.size === 0) {
+      toast.warning('No senders selected');
+      return;
+    }
+    
+    const selectedEmailsArray = Array.from(selectedEmails);
+    viewMultipleSendersInGmail(selectedEmailsArray);
+  }, [selectedEmails, viewMultipleSendersInGmail]);
+
+  // Make handleBulkViewInGmail available to parent components
+  useEffect(() => {
+    if (onSelectedCountChange) {
+      // @ts-ignore - Adding a method to the component instance
+      onSelectedCountChange.viewInGmail = handleBulkViewInGmail;
+      
+      // Also provide the selected emails to the parent component
+      if (typeof onSelectedCountChange.getSelectedEmails === 'function') {
+        onSelectedCountChange.getSelectedEmails(Array.from(selectedEmails));
+      }
+    }
+  }, [onSelectedCountChange, handleBulkViewInGmail, selectedEmails]);
+
+  // This useEffect will update the selected emails whenever they change
+  useEffect(() => {
+    if (onSelectedCountChange && typeof onSelectedCountChange.getSelectedEmails === 'function') {
+      onSelectedCountChange.getSelectedEmails(Array.from(selectedEmails));
+    }
+  }, [selectedEmails, onSelectedCountChange]);
 
   return (
     <>

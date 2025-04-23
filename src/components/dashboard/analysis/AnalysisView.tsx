@@ -1,20 +1,56 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { SenderTable } from "./SenderTable"
 import { AnalysisHeader } from "./AnalysisHeader"
 import { AnalysisFooter } from "./AnalysisFooter"
 import { useAnalysisOperations } from '@/hooks/useAnalysisOperation'
+import { useViewInGmail } from '@/hooks/useViewInGmail'
+
+// Create a custom type for the selection count change handler
+// that includes our viewInGmail extension
+interface SelectionCountHandler {
+  (count: number): void;
+  viewInGmail?: () => void;
+}
 
 export default function AnalysisView() {
   const [selectedCount, setSelectedCount] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
   const { progress } = useAnalysisOperations()
+  const { viewMultipleSendersInGmail } = useViewInGmail();
+  
+  // Track selected emails for bulk actions
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  
+  // Use a ref to store the viewInGmail function exposed by SenderTable
+  const tableActionsRef = useRef<{
+    viewInGmail?: () => void;
+  }>({});
+
+  // Wrapper function for setSelectedCount that keeps track of table actions
+  const handleSelectedCountChange: SelectionCountHandler = useCallback((count: number) => {
+    setSelectedCount(count);
+    // When the SenderTable sets an action function on this method,
+    // store it in our ref for later use
+    if (handleSelectedCountChange.viewInGmail) {
+      tableActionsRef.current.viewInGmail = handleSelectedCountChange.viewInGmail;
+    }
+  }, []);
+
+  // Set up a side effect to receive selected emails from the table
+  useEffect(() => {
+    // @ts-ignore - Adding a method to the component instance
+    handleSelectedCountChange.getSelectedEmails = (emails: string[]) => {
+      setSelectedEmails(emails);
+    };
+  }, []);
 
   // Handlers for bulk actions
-  const handleViewInGmail = () => {
-    console.log(`View ${selectedCount} senders in Gmail`)
-  }
+  const handleViewInGmail = useCallback(() => {
+    // Use the direct hook approach for bulk view
+    viewMultipleSendersInGmail(selectedEmails);
+  }, [selectedEmails, viewMultipleSendersInGmail]);
 
   const handleDelete = () => {
     console.log(`Delete emails from ${selectedCount} senders`)
@@ -65,7 +101,7 @@ export default function AnalysisView() {
       <div className="flex-1 min-h-0 relative">
         <div className="absolute inset-0">
           <SenderTable 
-            onSelectedCountChange={setSelectedCount} 
+            onSelectedCountChange={handleSelectedCountChange} 
             searchTerm={searchTerm}
           />
         </div>
