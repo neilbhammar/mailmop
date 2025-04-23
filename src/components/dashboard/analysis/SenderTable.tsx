@@ -86,7 +86,7 @@ const SenderRow = memo(({
           <td 
             key={cell.id} 
             className={cn(
-              "px-4 border-b border-slate-100/80",
+              "px-4 border-b border-slate-200/80",
               width,
               cell.column.id === 'actions' && 'actions-container'
             )}
