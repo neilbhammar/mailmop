@@ -218,7 +218,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                   value={feedbackContent}
                   onChange={handleTextChange}
                   placeholder="Tell us what's on your mind..."
-                  className="w-full h-[208px] px-3 py-2 text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full h-[210px] px-3 py-2 text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 />
                 
                 <div className="mt-1 flex justify-between items-center">
