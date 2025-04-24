@@ -1,6 +1,6 @@
 // Types for action logging in both Supabase and localStorage
 
-export type ActionType = 'analysis' | 'delete' | 'unsubscribe' | 'block';
+export type ActionType = 'analysis' | 'delete' | 'unsubscribe' | 'block' | 'view';
 export type ActionStatus = 'started' | 'analyzing' | 'completed' | 'error';
 export type ActionEndType = 'success' | 'tab_closed' | 'user_stopped' | 'auth_failure' | 'runtime_error' | 'unknown';
 export type AnalysisType = 'full' | 'quick';
@@ -9,7 +9,7 @@ export type AnalysisType = 'full' | 'quick';
 interface BaseActionLog {
   type: ActionType;
   status: ActionStatus;
-  filters: {
+  filters?: {  // Made optional since view actions don't need filters
     type: AnalysisType;
     query: string;
   };

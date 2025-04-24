@@ -6,6 +6,7 @@ import { AnalysisHeader } from "./AnalysisHeader"
 import { AnalysisFooter } from "./AnalysisFooter"
 import { useAnalysisOperations } from '@/hooks/useAnalysisOperation'
 import { useViewInGmail } from '@/hooks/useViewInGmail'
+import { toast } from "sonner"
 
 // Create a custom type for the selection count change handler
 // that includes our viewInGmail extension
@@ -48,6 +49,10 @@ export default function AnalysisView() {
 
   // Handlers for bulk actions
   const handleViewInGmail = useCallback(() => {
+    if (selectedEmails.length === 0) {
+      toast.warning('No senders selected');
+      return;
+    }
     // Use the direct hook approach for bulk view
     viewMultipleSendersInGmail(selectedEmails);
   }, [selectedEmails, viewMultipleSendersInGmail]);
