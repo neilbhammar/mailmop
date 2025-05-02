@@ -1,7 +1,7 @@
 // Types of operations that can generate Gmail search queries
 export type QueryOperation = 
   | { type: 'analysis'; mode: 'full' | 'quick' }
-  | { type: 'delete'; mode: 'sender' | 'bulk'; senderEmail?: string }
+  | { type: 'delete'; mode: 'single' | 'bulk'; senderEmail?: string }
   | { type: 'mark'; mode: 'read' | 'unread'; senderEmail?: string };
 
 /**
@@ -30,10 +30,11 @@ export function buildQuery(operation: QueryOperation): string {
         : baseQuery;
 
     case 'delete':
-      if (operation.mode === 'sender' && operation.senderEmail) {
+      if (operation.mode === 'single' && operation.senderEmail) {
         return `${baseQuery} from:${operation.senderEmail}`;
       }
-      return baseQuery; // Bulk delete uses base query
+      console.warn('[buildQuery] Delete operation called without single sender email or for bulk. Using base query.');
+      return baseQuery;
 
     case 'mark':
       if (operation.senderEmail) {

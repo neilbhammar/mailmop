@@ -50,6 +50,8 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/gapi": "^0.0.47",
+    "@types/google.accounts": "^0.0.15",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

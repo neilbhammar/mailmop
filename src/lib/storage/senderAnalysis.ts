@@ -1,5 +1,6 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { SenderResult } from '@/types/gmail';
+import { ActionType } from '@/types/actions';
 
 // Database name and version
 const DB_NAME = 'mailmop';
@@ -111,4 +112,43 @@ export async function updateSender(sender: SenderResult): Promise<void> {
 export async function getSenderByEmail(email: string): Promise<SenderResult | undefined> {
   const db = await getDB();
   return db.get('senders', email);
+}
+
+/**
+ * Marks an action as taken for a specific sender in IndexedDB.
+ * Adds the action type to the sender's actionsTaken array if not already present.
+ * 
+ * @param senderEmail The email address of the sender.
+ * @param action The type of action taken (e.g., 'delete', 'unsubscribe').
+ */
+export async function markSenderActionTaken(
+  senderEmail: string,
+  action: ActionType
+): Promise<void> {
+  const db = await getDB();
+  const sender = await db.get('senders', senderEmail);
+
+  if (!sender) {
+    console.warn(`[markSenderActionTaken] Sender not found: ${senderEmail}`);
+    return;
+  }
+
+  // Initialize actionsTaken if it doesn't exist
+  const currentActions = sender.actionsTaken || [];
+
+  // Add the action only if it's not already present
+  if (!currentActions.includes(action)) {
+    const updatedSender: SenderResult = {
+      ...sender,
+      actionsTaken: [...currentActions, action],
+    };
+
+    // Update the sender in the database
+    await db.put('senders', updatedSender);
+    console.log(`[markSenderActionTaken] Marked '${action}' for sender: ${senderEmail}`);
+    // Notify components that sender data has changed
+    notifyAnalysisChange(); 
+  } else {
+    console.log(`[markSenderActionTaken] Action '${action}' already marked for sender: ${senderEmail}`);
+  }
 } 

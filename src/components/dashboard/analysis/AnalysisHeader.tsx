@@ -13,6 +13,7 @@ interface AnalysisHeaderProps {
   selectedCount?: number
   onViewInGmail?: () => void
   onDelete?: () => void
+  isDeleteDisabled?: boolean
   onMarkAllAsRead?: () => void
   onDeleteWithExceptions?: () => void
   onApplyLabel?: () => void
@@ -24,6 +25,7 @@ export function AnalysisHeader({
   selectedCount = 0,
   onViewInGmail = () => console.log('View in Gmail bulk action'),
   onDelete = () => console.log('Delete bulk action'),
+  isDeleteDisabled = false,
   onMarkAllAsRead = () => console.log('Mark all as read bulk action'),
   onDeleteWithExceptions = () => console.log('Delete with exceptions bulk action'),
   onApplyLabel = () => console.log('Apply label bulk action'),
@@ -104,6 +106,7 @@ export function AnalysisHeader({
               selectedCount={selectedCount}
               onViewInGmail={onViewInGmail}
               onDelete={onDelete}
+              isDeleteDisabled={isDeleteDisabled}
               onMarkAllAsRead={onMarkAllAsRead}
               onDeleteWithExceptions={onDeleteWithExceptions}
               onApplyLabel={onApplyLabel}

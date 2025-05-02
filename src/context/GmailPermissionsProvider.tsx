@@ -8,8 +8,10 @@ import { fetchGmailStats } from '@/lib/gmail/fetchGmailStats';
 import { useAuth } from './AuthProvider';
 import { ANALYSIS_CHANGE_EVENT, hasSenderAnalysis } from '@/lib/storage/senderAnalysis';
 
-const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.modify';
-const GOOGLE_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
+// Use the broader scope as requested for troubleshooting
+const GMAIL_SCOPE = 'https://mail.google.com/';
+const GOOGLE_GSI_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
+const GOOGLE_API_SCRIPT_URL = 'https://apis.google.com/js/api.js';
 
 // Default expiring soon threshold (5 minutes)
 const DEFAULT_EXPIRING_SOON_MS = 5 * 60 * 1000;
@@ -51,31 +53,93 @@ export function GmailPermissionsProvider({
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [isClientLoaded, setIsClientLoaded] = useState(false);
+  const [isGsiLoaded, setIsGsiLoaded] = useState(false);
+  const [isApiClientLoaded, setIsApiClientLoaded] = useState(false);
+  const [isGmailClientInitialized, setIsGmailClientInitialized] = useState(false);
   const [shouldShowMismatchModal, setShouldShowMismatchModal] = useState(false);
   const [gmailEmail, setGmailEmail] = useState<string | null>(null);
 
+  // Combined client loaded state
+  const isClientLoaded = isGsiLoaded && isApiClientLoaded && isGmailClientInitialized;
+
   // Load Google OAuth client script
   useEffect(() => {
-    if (document.querySelector(`script[src="${GOOGLE_SCRIPT_URL}"]`)) {
-      console.log('[Gmail] OAuth client script already loaded');
-      setIsClientLoaded(true);
-      return;
+    let gsiScript: HTMLScriptElement | null = null;
+    let apiScript: HTMLScriptElement | null = null;
+    let scriptsLoaded = { gsi: false, api: false };
+
+    const handleScriptsLoaded = () => {
+      // This function is called when *either* script finishes loading.
+      // We need both before proceeding to initialize the Gmail client.
+      if (!scriptsLoaded.gsi || !scriptsLoaded.api) return; 
+
+      console.log('[Gmail] Both GSI and API client scripts loaded. Initializing gapi.client...');
+      
+      // Now that gapi is available (from api.js), load the gmail client
+      gapi.load('client', () => {
+        console.log('[Gmail] gapi.client loaded. Initializing Gmail API client...');
+        gapi.client.load('gmail', 'v1', () => {
+          console.log('[Gmail] Gmail API client initialized successfully.');
+          setIsGmailClientInitialized(true); // Final step: Gmail client ready
+        });
+      });
+    };
+
+    // Load GSI Script (for auth)
+    if (!document.querySelector(`script[src="${GOOGLE_GSI_SCRIPT_URL}"]`)) {
+      console.log('[Gmail] Loading GSI client script...');
+      gsiScript = document.createElement('script');
+      gsiScript.src = GOOGLE_GSI_SCRIPT_URL;
+      gsiScript.async = true;
+      gsiScript.defer = true;
+      gsiScript.onload = () => {
+        console.log('[Gmail] GSI client script loaded.');
+        setIsGsiLoaded(true);
+        scriptsLoaded.gsi = true;
+        handleScriptsLoaded(); // Check if both are loaded
+      };
+      document.head.appendChild(gsiScript);
+    } else {
+      console.log('[Gmail] GSI client script already present.');
+      setIsGsiLoaded(true);
+      scriptsLoaded.gsi = true;
     }
 
-    console.log('[Gmail] Loading OAuth client script...');
-    const script = document.createElement('script');
-    script.src = GOOGLE_SCRIPT_URL;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      console.log('[Gmail] OAuth client script loaded successfully');
-      setIsClientLoaded(true);
-    };
-    document.head.appendChild(script);
+    // Load API Client Script (for gapi.client)
+    if (!document.querySelector(`script[src="${GOOGLE_API_SCRIPT_URL}"]`)) {
+      console.log('[Gmail] Loading API client script...');
+      apiScript = document.createElement('script');
+      apiScript.src = GOOGLE_API_SCRIPT_URL;
+      apiScript.async = true;
+      apiScript.defer = true;
+      apiScript.onload = () => {
+        console.log('[Gmail] API client script loaded.');
+        setIsApiClientLoaded(true);
+        scriptsLoaded.api = true;
+        handleScriptsLoaded(); // Check if both are loaded
+      };
+      // Handle potential script loading errors
+      apiScript.onerror = () => {
+         console.error('[Gmail] Failed to load API client script.');
+         // Optionally set an error state
+      }
+      document.head.appendChild(apiScript);
+    } else {
+      console.log('[Gmail] API client script already present.');
+      setIsApiClientLoaded(true);
+      scriptsLoaded.api = true;
+    }
 
+    // Initial check in case both scripts were already present
+    if (scriptsLoaded.gsi && scriptsLoaded.api) {
+      handleScriptsLoaded();
+    }
+
+    // Cleanup function to remove scripts if component unmounts
+    // (might not be strictly necessary but good practice)
     return () => {
-      script.remove();
+      gsiScript?.remove();
+      apiScript?.remove();
     };
   }, []);
 
@@ -358,7 +422,7 @@ export function GmailPermissionsProvider({
     return token.accessToken;
   }, []);
 
-  const value = {
+  const contextValue: GmailPermissionsContextType = {
     ...permissionState,
     isLoading,
     isClientLoaded,
@@ -374,7 +438,7 @@ export function GmailPermissionsProvider({
   };
 
   return (
-    <GmailPermissionsContext.Provider value={value}>
+    <GmailPermissionsContext.Provider value={contextValue}>
       {children}
     </GmailPermissionsContext.Provider>
   );

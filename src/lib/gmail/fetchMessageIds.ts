@@ -13,12 +13,14 @@ interface MessageListResponse {
  * @param accessToken - Gmail OAuth access token
  * @param query - Gmail search query (e.g., 'in:inbox')
  * @param pageToken - Token for fetching the next page of results
+ * @param maxResults - Maximum number of results to return (default: 45, max: 1000)
  * @returns Object containing message IDs and next page token
  */
 export async function fetchMessageIds(
   accessToken: string,
   query: string,
-  pageToken?: string
+  pageToken?: string,
+  maxResults: number = 45 // Default to 45, allow override
 ): Promise<{ messageIds: string[]; nextPageToken?: string }> {
   if (ENABLE_GMAIL_DEBUG) {
     console.log(`[Gmail Debug] Fetching message IDs with query: ${query}${pageToken ? ' (with page token)' : ''}`);
@@ -27,7 +29,9 @@ export async function fetchMessageIds(
   // Build request URL with query and pagination
   const url = new URL('https://www.googleapis.com/gmail/v1/users/me/messages');
   url.searchParams.append('q', query);
-  url.searchParams.append('maxResults', '45'); // Batch size of 45
+  // Use the provided maxResults, ensuring it's within reasonable bounds (e.g., 1-1000)
+  const effectiveMaxResults = Math.max(1, Math.min(1000, maxResults));
+  url.searchParams.append('maxResults', effectiveMaxResults.toString());
   if (pageToken) {
     url.searchParams.append('pageToken', pageToken);
   }
@@ -57,11 +61,21 @@ export async function fetchMessageIds(
     }
 
     // Validate response structure
-    if (!data.messages && !data.resultSizeEstimate) {
-      console.error('[Gmail Debug] Invalid response structure:', data);
+    // A valid response can have messages, or just resultSizeEstimate (often 0 if no messages found)
+    if (typeof data.resultSizeEstimate === 'undefined' && !data.messages) {
+      console.error('[Gmail Debug] Invalid response structure (missing messages and resultSizeEstimate):', data);
       throw new Error('Invalid response structure from Gmail API');
     }
+    
+    // If messages array is missing BUT resultSizeEstimate is 0, it's a valid "no messages" response.
+    if (!data.messages && data.resultSizeEstimate === 0) {
+      if (ENABLE_GMAIL_DEBUG) {
+         console.log('[Gmail Debug] Received resultSizeEstimate: 0 and no messages array. Treating as 0 results.');
+      }
+      return { messages: [], nextPageToken: undefined }; // Return empty results
+    }
 
+    // If we have messages or resultSizeEstimate > 0, proceed as normal
     return data as MessageListResponse;
   }, {
     onRetry: (attempt, error) => {

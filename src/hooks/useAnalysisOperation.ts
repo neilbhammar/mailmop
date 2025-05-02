@@ -226,11 +226,14 @@ export function useAnalysisOperations() {
       // Create localStorage log with estimates
       createLocalActionLog({
         clientActionId,
-        type: options.type,
+        type: 'analysis',
         estimatedRuntimeMs,
         totalEmails: effectiveEmailCount,
         totalEstimatedBatches,
-        query
+        filters: {
+          query,
+          mode: options.type 
+        }
       });
 
       // Create Supabase log with estimates

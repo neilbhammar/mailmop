@@ -138,10 +138,12 @@ interface SenderTableProps {
   onSelectedCountChange: {
     (count: number): void;
     viewInGmail?: () => void;
-    getSelectedEmails?: (emails: string[]) => void;
+    getSelectedEmails?: (emails: string[], emailCounts?: Record<string, number>) => void;
   }
   /** Current search term for filtering senders */
   searchTerm?: string
+  /** Callback for single sender delete action */
+  onDeleteSingleSender?: (email: string, count?: number) => void
 }
 
 /**
@@ -282,9 +284,10 @@ const LastEmailCell = memo(({ date }: { date: string }) => {
 /**
  * Wrapper for RowActions to ensure consistent layout and spacing
  */
-const ActionWrapper = memo(({ sender, onDropdownOpen }: { 
+const ActionWrapper = memo(({ sender, onDropdownOpen, onDeleteSingleSender }: { 
   sender: Sender, 
-  onDropdownOpen: (email: string) => void
+  onDropdownOpen: (email: string) => void,
+  onDeleteSingleSender?: (email: string, count?: number) => void
 }) => {
   const { viewSenderInGmail } = useViewInGmail();
   
@@ -295,7 +298,7 @@ const ActionWrapper = memo(({ sender, onDropdownOpen }: {
         onDropdownOpen={onDropdownOpen}
         onUnsubscribe={(email) => console.log('Unsubscribe:', email)}
         onViewInGmail={(email) => viewSenderInGmail(email)}
-        onDelete={(email) => console.log('Delete:', email)}
+        onDelete={(email) => onDeleteSingleSender ? onDeleteSingleSender(email, sender.count) : console.log('Delete:', email)}
         onMarkUnread={(email) => console.log('Mark Unread:', email)}
         onDeleteWithExceptions={(email) => console.log('Delete with Exceptions:', email)}
         onApplyLabel={(email) => console.log('Apply Label:', email)}
@@ -315,7 +318,7 @@ const ActionWrapper = memo(({ sender, onDropdownOpen }: {
  * - Sorting and row actions
  * - Virtualized rendering for handling large datasets
  */
-export function SenderTable({ onSelectedCountChange, searchTerm = '' }: SenderTableProps) {
+export function SenderTable({ onSelectedCountChange, searchTerm = '', onDeleteSingleSender }: SenderTableProps) {
   // Get senders and filter based on search term
   const { senders: allSenders, isLoading, isAnalyzing } = useSenderData();
   const { viewMultipleSendersInGmail } = useViewInGmail();
@@ -552,10 +555,11 @@ export function SenderTable({ onSelectedCountChange, searchTerm = '' }: SenderTa
         <ActionWrapper 
           sender={row.original} 
           onDropdownOpen={handleDropdownOpen}
+          onDeleteSingleSender={onDeleteSingleSender}
         />
       )
     }
-  ], [selectedEmails, handleCheckboxChange, clearSelections, handleDropdownOpen])
+  ], [selectedEmails, handleCheckboxChange, clearSelections, handleDropdownOpen, onDeleteSingleSender])
 
   // Initialize and configure the table
   const table = useReactTable({
@@ -730,12 +734,24 @@ export function SenderTable({ onSelectedCountChange, searchTerm = '' }: SenderTa
     }
   }, [onSelectedCountChange, handleBulkViewInGmail, selectedEmails]);
 
-  // This useEffect will update the selected emails whenever they change
+  // This effect will update the selected emails whenever they change
   useEffect(() => {
     if (onSelectedCountChange && typeof onSelectedCountChange.getSelectedEmails === 'function') {
-      onSelectedCountChange.getSelectedEmails(Array.from(selectedEmails));
+      // Create a map of email counts
+      const emailCountMap: Record<string, number> = {};
+      
+      // Get the selected senders with their counts
+      Array.from(selectedEmails).forEach(email => {
+        const sender = senders.find(s => s.email === email);
+        if (sender) {
+          emailCountMap[email] = sender.count;
+        }
+      });
+      
+      // Pass both the email array and count map to the parent component
+      onSelectedCountChange.getSelectedEmails(Array.from(selectedEmails), emailCountMap);
     }
-  }, [selectedEmails, onSelectedCountChange]);
+  }, [selectedEmails, onSelectedCountChange, senders]);
 
   return (
     <>

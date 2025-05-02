@@ -1,4 +1,4 @@
-import { LocalActionLog, AnalysisType, ActionEndType } from '@/types/actions';
+import { LocalActionLog, ActionType, ActionEndType, ActionStatus } from '@/types/actions';
 
 const CURRENT_ANALYSIS_KEY = 'mailmop_current_analysis';
 export const ACTION_STATS_UPDATED_EVENT = 'mailmop:action-stats-updated';
@@ -10,7 +10,7 @@ function notifyActionStatsChange() {
 }
 
 /**
- * Creates and stores a new analysis action log in localStorage
+ * Creates and stores a new action log in localStorage
  */
 export function createLocalActionLog({
   clientActionId,
@@ -18,25 +18,28 @@ export function createLocalActionLog({
   estimatedRuntimeMs,
   totalEmails,
   totalEstimatedBatches,
-  query
+  query,
+  filters
 }: {
   clientActionId: string;
-  type: AnalysisType;
+  type: ActionType;
   estimatedRuntimeMs: number;
   totalEmails: number;
-  totalEstimatedBatches: number;
-  query: string;
+  totalEstimatedBatches?: number;
+  query?: string;
+  filters?: Record<string, any>;
 }): LocalActionLog {
   const now = new Date().toISOString();
+  
+  // Construct filters: use passed filters object, or fallback to query if provided
+  const logFilters = filters ?? (query ? { query } : undefined);
+
   const actionLog: LocalActionLog = {
     client_action_id: clientActionId,
     analysis_id: null,
-    type: 'analysis',
+    type,
     status: 'started',
-    filters: {
-      type,
-      query
-    },
+    filters: logFilters,
     created_at: now,
     start_time: now,
     last_update_time: now,
@@ -51,6 +54,8 @@ export function createLocalActionLog({
   };
 
   localStorage.setItem(CURRENT_ANALYSIS_KEY, JSON.stringify(actionLog));
+  // Also update status immediately if needed
+  // (Assuming status update is handled separately after creation)
   return actionLog;
 }
 

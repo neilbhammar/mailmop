@@ -9,11 +9,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ExternalLink, Trash2, MailOpen, ChevronDown, PenSquare, Tag, Ban } from "lucide-react"
 import { useViewInGmail } from "@/hooks/useViewInGmail"
+import { cn } from "@/lib/utils"
 
 interface BulkActionsBarProps {
   selectedCount: number
   onViewInGmail: () => void
   onDelete: () => void
+  isDeleteDisabled?: boolean
   onMarkAllAsRead: () => void
   onDeleteWithExceptions: () => void
   onApplyLabel: () => void
@@ -24,6 +26,7 @@ export function BulkActionsBar({
   selectedCount,
   onViewInGmail,
   onDelete,
+  isDeleteDisabled = false,
   onMarkAllAsRead,
   onDeleteWithExceptions,
   onApplyLabel,
@@ -52,7 +55,11 @@ export function BulkActionsBar({
         onClick={onDelete}
         variant="ghost"
         size="sm"
-        className="text-red-500 hover:text-red-600 hover:bg-red-50 pl-3 pr-4 h-9"
+        disabled={isDeleteDisabled}
+        className={cn(
+          "text-red-500 hover:text-red-600 hover:bg-red-50 pl-3 pr-4 h-9",
+          isDeleteDisabled && "opacity-50 cursor-not-allowed hover:bg-transparent hover:text-red-500"
+        )}
       >
         <Trash2 className="h-4 w-4 mr-2" />
         <span>Delete</span>

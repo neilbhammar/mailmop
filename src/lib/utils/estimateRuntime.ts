@@ -1,84 +1,160 @@
-// Constants for runtime estimation
-export const OPERATION_RATES = {
-  analysis: 2250, // emails per minute
-  deletion: 300, // emails per minute (example rate)
-  markUnread: 500, // emails per minute (example rate)
-  // Add other operations as needed
-} as const;
+import { AnalysisType } from '@/types/actions';
 
-export const QUICK_OPERATION_MULTIPLIER = 0.5; // 60% of emails for quick operations
+export type OperationType = 'analysis' | 'delete' | 'block' | 'unsubscribe'; // Added 'delete'
+export type OperationMode = 'full' | 'quick' | 'single'; // Added 'single' for non-analysis ops
 
-export type OperationType = keyof typeof OPERATION_RATES;
-export type OperationMode = 'full' | 'quick';
+// Constants for estimation (empirical or best guesses)
+const EMAILS_PER_MINUTE_ANALYSIS = 2000; // Emails processed per minute during analysis
+const EMAILS_PER_MINUTE_DELETE = 500;  // Emails processed per minute during deletion (GUESS)
+const QUICK_ANALYSIS_PERCENTAGE = 0.1; // Quick analysis scans 10% of emails
+const BATCH_API_OVERHEAD_MS = 300; // Estimated overhead per API batch call
+const EMAILS_PER_BATCH = 45; // Typical batch size used in analysis
 
-interface EstimateRuntimeParams {
-  operationType: OperationType;
-  emailCount: number;
-  mode?: OperationMode; // Optional for all operations - if quick, applies the multiplier
-}
+// Thresholds for mode selection (if needed)
+const QUICK_MODE_THRESHOLD = 50000; // Use quick mode above 50k emails automatically? (Example)
 
 /**
- * Calculates the effective number of emails to process based on operation type and mode
+ * Gets the effective number of emails to process based on mode.
+ * For non-analysis ops, it's usually the provided count.
+ * @param totalEmails Total emails in the inbox (for analysis) or selected (for other ops)
+ * @param mode 'full', 'quick', or 'single'
+ * @param operationType The type of operation
+ * @returns The number of emails the operation will likely process
  */
 export function getEffectiveEmailCount(
   totalEmails: number,
-  mode: OperationMode = 'full',
-  operationType: OperationType = 'analysis'
+  mode: OperationMode,
+  operationType: OperationType
 ): number {
-  // First apply quick mode multiplier if applicable
-  let effectiveCount = mode === 'quick' 
-    ? Math.ceil(totalEmails * QUICK_OPERATION_MULTIPLIER)
-    : totalEmails;
-    
-  // For analysis operations, round down to nearest 100 for better granularity
   if (operationType === 'analysis') {
-    effectiveCount = Math.max(100, Math.floor(effectiveCount / 100) * 100);
+    if (mode === 'quick') {
+      // Quick analysis processes a fraction of the total emails
+      return Math.max(1, Math.ceil(totalEmails * QUICK_ANALYSIS_PERCENTAGE));
+    } else {
+      // Full analysis processes all emails
+      return totalEmails;
+    }
+  } else {
+    // For delete, block, unsubscribe, the count is usually what's selected/provided
+    // 'mode' might not be relevant, or 'single' could represent acting on one sender
+    // vs 'full'/'quick' acting on a bulk selection based on analysis results.
+    // For now, assume totalEmails passed IS the effective count for non-analysis ops.
+    return totalEmails;
   }
-  
-  return effectiveCount;
 }
 
+
 /**
- * Estimates the runtime in milliseconds for a Gmail operation
- * @param operationType - Type of operation (analysis, deletion, etc.)
- * @param emailCount - Number of emails to process (total inbox for analysis, selected emails for other ops)
- * @param mode - Whether to process all emails ('full') or use quick mode multiplier ('quick')
- * @returns Estimated runtime in milliseconds
+ * Estimates the runtime for a Gmail operation.
+ * @param operationType Type of operation ('analysis', 'delete', etc.)
+ * @param emailCount Total number of emails involved (either inbox total or selected count)
+ * @param mode Operation mode ('full', 'quick', 'single')
+ * @returns Estimated runtime in milliseconds.
  */
-export function estimateRuntimeMs({ 
-  operationType, 
-  emailCount, 
-  mode = 'full' 
-}: EstimateRuntimeParams): number {
-  // Get the rate for this operation type
-  const ratePerMinute = OPERATION_RATES[operationType];
-  
-  // Get effective email count using our helper
-  const effectiveEmailCount = getEffectiveEmailCount(emailCount, mode, operationType);
+export function estimateRuntimeMs({
+  operationType,
+  emailCount,
+  mode,
+}: {
+  operationType: OperationType;
+  emailCount: number;
+  mode: OperationMode;
+}): number {
+  const effectiveEmails = getEffectiveEmailCount(emailCount, mode, operationType);
+  let emailsPerMinute: number;
+  let calculationBasis: string;
 
-  // Calculate minutes with 1-minute minimum
-  const minutesToProcess = Math.max(1, effectiveEmailCount / ratePerMinute);
-  return minutesToProcess * 60 * 1000;
+  switch (operationType) {
+    case 'analysis':
+      emailsPerMinute = EMAILS_PER_MINUTE_ANALYSIS;
+      calculationBasis = 'analysis rate';
+      break;
+    case 'delete':
+      // We assume deletion is slower due to individual operations or confirmations needed
+      emailsPerMinute = EMAILS_PER_MINUTE_DELETE;
+      calculationBasis = 'delete rate';
+      break;
+    // Add cases for 'block', 'unsubscribe' when implemented, likely similar to delete
+    default:
+      console.warn(`Unknown operation type for estimation: ${operationType}. Defaulting to delete rate.`);
+      emailsPerMinute = EMAILS_PER_MINUTE_DELETE;
+      calculationBasis = 'default (delete) rate';
+  }
+
+  if (effectiveEmails === 0 || emailsPerMinute === 0) {
+    console.log(`[Estimate] Zero effective emails or rate for ${operationType}, returning 0ms`);
+    return 0;
+  }
+
+  // Base time based on processing rate
+  const baseTimeMs = (effectiveEmails / emailsPerMinute) * 60 * 1000;
+
+  // Estimate API call overhead (more relevant for analysis batching)
+  // For deletion, batchDelete handles up to 1000, so fewer batches might be needed
+  let apiOverheadMs = 0;
+  if (operationType === 'analysis') {
+     const estimatedBatches = Math.ceil(effectiveEmails / EMAILS_PER_BATCH);
+     apiOverheadMs = estimatedBatches * BATCH_API_OVERHEAD_MS;
+  } else if (operationType === 'delete') {
+    // Batch delete handles up to 1000 IDs per call
+    const estimatedBatches = Math.ceil(effectiveEmails / 1000);
+    // Overhead might be different for delete vs. fetch metadata
+    apiOverheadMs = estimatedBatches * BATCH_API_OVERHEAD_MS * 1.5; // Adjust overhead factor if needed
+  }
+
+
+  const totalEstimatedMs = baseTimeMs + apiOverheadMs;
+
+  console.log(`[Estimate] Operation: ${operationType} (${mode})`);
+  console.log(`[Estimate] Effective Emails: ${effectiveEmails.toLocaleString()}`);
+  console.log(`[Estimate] Basis: ${emailsPerMinute}/min (${calculationBasis})`);
+  console.log(`[Estimate] Base Time: ${formatDuration(baseTimeMs)}`);
+  console.log(`[Estimate] API Overhead: ${formatDuration(apiOverheadMs)}`);
+  console.log(`[Estimate] Total Estimated: ${formatDuration(totalEstimatedMs)}`);
+
+  // Return at least 1 second for very small counts
+  return Math.max(1000, Math.round(totalEstimatedMs));
 }
 
 /**
- * Formats a duration in milliseconds into a human-readable string
- * @param ms Duration in milliseconds
- * @returns Formatted string like "5 minutes" or "2 hours 30 minutes"
+ * Formats milliseconds into a human-readable duration string.
+ * e.g., 123456 ms -> "2m 3s"
+ * @param ms Duration in milliseconds.
+ * @returns Human-readable duration string.
  */
 export function formatDuration(ms: number): string {
-  const minutes = Math.ceil(ms / (1000 * 60));
-  
-  if (minutes < 60) {
-    return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+  if (ms < 0) ms = 0;
+
+  const seconds = Math.floor((ms / 1000) % 60);
+  const minutes = Math.floor((ms / (1000 * 60)) % 60);
+  const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
+
+  let durationString = '';
+
+  if (hours > 0) {
+    durationString += `${hours}h `;
   }
-  
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  
-  if (remainingMinutes === 0) {
-    return `${hours} hour${hours === 1 ? '' : 's'}`;
+  if (minutes > 0) {
+    durationString += `${minutes}m `;
   }
-  
-  return `${hours} hour${hours === 1 ? '' : 's'} ${remainingMinutes} minute${remainingMinutes === 1 ? '' : 's'}`;
-} 
+  // Always show seconds if the total duration is less than a minute OR if there are hours/minutes shown
+  // Or if it's exactly 0
+  if (ms < 60000 || hours > 0 || minutes > 0 || ms === 0) {
+     // Show seconds, ensuring it's not 0s if minutes/hours are present unless total is 0
+     if (seconds > 0 || durationString === '') {
+       durationString += `${seconds}s`;
+     }
+  }
+
+  // Handle edge case where result might be empty (e.g., ms=500) -> "0s"
+  // Or if only minutes/hours were added and seconds was 0, trim trailing space
+  durationString = durationString.trim();
+  if (durationString === '') {
+      // If ms was > 0 but resulted in empty string (e.g. 500ms rounds to 0s)
+      // represent it as <1s? Or stick to 0s? Let's show 0s for simplicity.
+      return '0s';
+  }
+
+
+  return durationString;
+}
