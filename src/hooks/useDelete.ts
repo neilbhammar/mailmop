@@ -21,7 +21,7 @@ import { useGmailPermissions } from '@/context/GmailPermissionsProvider'; // Gma
 
 // --- API/Helper Functions ---
 import { estimateRuntimeMs, formatDuration, OperationType, OperationMode } from '@/lib/utils/estimateRuntime';
-import { buildQuery } from '@/lib/gmail/buildQuery';
+import { buildQuery, RuleGroup } from '@/lib/gmail/buildQuery';
 import { fetchMessageIds } from '@/lib/gmail/fetchMessageIds';
 import { batchDeleteMessages } from '@/lib/gmail/batchDeleteMessages'; // Our new helper
 import { markSenderActionTaken } from '@/lib/storage/senderAnalysis'; // Import the new function
@@ -29,13 +29,12 @@ import { markSenderActionTaken } from '@/lib/storage/senderAnalysis'; // Import 
 // --- Storage & Logging ---
 import { createActionLog, updateActionLog, completeActionLog } from '@/supabase/actions/logAction';
 import {
-  createLocalActionLog,
-  updateAnalysisId, // Re-using this to store Supabase ID
-  updateAnalysisProgress, // Re-using this to track progress
-  completeAnalysis, // Re-using this to mark completion
-  clearCurrentAnalysis, // Re-using this to clear log if needed
-  getCurrentAnalysis, // Re-using this to check for ongoing ops
-} from '@/lib/storage/actionLog'; // Re-using analysis log structure for deletion
+  createActionLog as createLocalActionLog,
+  updateSupabaseLogId,
+  updateActionProgress,
+  completeActionLog as completeLocalActionLog,
+  clearCurrentActionLog,
+} from '@/lib/storage/actionLog'; // New imports for action logging
 
 // --- Components ---
 import { ReauthDialog } from '@/components/modals/ReauthDialog'; // For prompting re-login
@@ -75,6 +74,11 @@ export interface DeletingProgress {
 export interface SenderToDelete {
   email: string;
   count: number; // Estimated number of emails from this sender
+}
+
+/** Optional filter rules for deletion */
+export interface DeleteOptions {
+  filterRules?: RuleGroup[]; // Add filter rules as an optional parameter
 }
 
 /** State for the re-authentication modal */
@@ -158,10 +162,10 @@ export function useDelete() {
         await completeActionLog(
           logId,
           'user_stopped',
-          progress.emailsDeletedSoFar // Log how many were deleted before stopping
+          progress.emailsDeletedSoFar
         );
         // Also update the local log
-        completeAnalysis('user_stopped', 'User cancelled the deletion');
+        completeLocalActionLog('user_stopped');
         console.log('[Delete] Logged cancellation to Supabase and local storage');
       } catch (error) {
         console.error('[Delete] Failed to log cancellation:', error);
@@ -174,10 +178,12 @@ export function useDelete() {
   /**
    * Starts the email deletion process.
    * @param senders An array of sender objects with email and estimated count.
+   * @param options Optional deletion options including filter rules
    */
   const startDelete = useCallback(
-    async (senders: SenderToDelete[]): Promise<{ success: boolean }> => {
+    async (senders: SenderToDelete[], options?: DeleteOptions): Promise<{ success: boolean }> => {
       console.log('[Delete] Starting deletion process for senders:', senders);
+      console.log('[Delete] With filter rules:', options?.filterRules);
       isCancelledRef.current = false; // Reset cancellation flag
 
       // --- 0. Basic Checks ---
@@ -253,32 +259,31 @@ export function useDelete() {
 
       // --- 3. Logging Initialization ---
       const clientActionId = uuidv4(); // Unique ID for this specific run
-      // We can re-use the analysis log structure for simplicity
       createLocalActionLog({
         clientActionId,
-        type: 'delete', // Specify the operation type
+        type: 'delete',
         estimatedRuntimeMs,
         totalEmails: totalEmailsEstimate,
-        totalEstimatedBatches: Math.ceil(totalEmailsEstimate / DELETION_BATCH_SIZE), // Rough batch estimate
-        query: `Deleting from ${senders.length} senders`, // Simple description
+        totalEstimatedBatches: Math.ceil(totalEmailsEstimate / DELETION_BATCH_SIZE),
+        query: `Deleting from ${senders.length} senders`,
       });
       console.log(`[Delete] Created local action log: ${clientActionId}`);
 
       let supabaseLogId: string | undefined;
       try {
-      const actionLog = await createActionLog({
-        user_id: user.id,
-        type: 'delete',
-        status: 'started',
-          filters: { // Store which senders were targeted
+        const actionLog = await createActionLog({
+          user_id: user.id,
+          type: 'delete',
+          status: 'started',
+          filters: {
             senders: senders.map(s => s.email),
             estimatedCount: totalEmailsEstimate
           },
           estimated_emails: totalEmailsEstimate,
         });
         supabaseLogId = actionLog.id;
-        actionLogIdRef.current = supabaseLogId ?? null; // Store the ID
-        updateAnalysisId(supabaseLogId!); // Update local log with Supabase ID
+        actionLogIdRef.current = supabaseLogId ?? null;
+        updateSupabaseLogId(supabaseLogId!); // Update local log with Supabase ID
         console.log(`[Delete] Created Supabase action log: ${supabaseLogId}`);
       } catch (error) {
         console.error('[Delete] Failed to create Supabase action log:', error);
@@ -286,7 +291,7 @@ export function useDelete() {
           description: 'Could not log the action. Please try again.',
         });
         updateProgress({ status: 'error', error: 'Failed to log action start.' });
-        clearCurrentAnalysis(); // Clean up local log
+        clearCurrentActionLog(); // Clean up local log
         return { success: false };
       }
 
@@ -314,7 +319,12 @@ export function useDelete() {
             updateProgress({ currentSender: sender.email });
 
             // Pass mode: 'single' to buildQuery
-            const query = buildQuery({ type: 'delete', mode: 'single', senderEmail: sender.email });
+            const query = buildQuery({ 
+              type: 'delete', 
+              mode: 'single', 
+              senderEmail: sender.email,
+              filterRules: options?.filterRules // Pass filter rules if provided
+            });
             console.log(`[Delete] Using query: ${query}`);
 
             let nextPageToken: string | undefined = undefined;
@@ -384,7 +394,7 @@ export function useDelete() {
                     progressPercent: overallProgress,
                 });
                 // Update local storage log
-                updateAnalysisProgress(batchFetchAttempts, totalSuccessfullyDeleted);
+                updateActionProgress(batchFetchAttempts, totalSuccessfullyDeleted);
 
 
                 // Optional delay
@@ -440,11 +450,11 @@ export function useDelete() {
             supabaseLogId!,
             endType,
             totalSuccessfullyDeleted,
-            errorMessage // Add error message if it failed
+            errorMessage
           );
 
           // Update local storage log
-          completeAnalysis(endType, errorMessage);
+          completeLocalActionLog(endType, errorMessage);
 
           // Final UI update
           updateProgress({
@@ -476,7 +486,7 @@ export function useDelete() {
             if (supabaseLogId) {
                 try {
                     await completeActionLog(supabaseLogId, endType, totalSuccessfullyDeleted, errorMessage);
-                    completeAnalysis(endType, errorMessage);
+                    completeLocalActionLog(endType, errorMessage);
                 } catch (logError) {
                     console.error("[Delete] Failed to log critical error:", logError);
                 }
@@ -500,7 +510,7 @@ export function useDelete() {
     // --- Dependencies for useCallback ---
     [
       user?.id,
-      tokenStatus, // Include full tokenStatus object as its properties are used
+      tokenStatus,
       updateProgress,
       getAccessToken,
       requestPermissions,

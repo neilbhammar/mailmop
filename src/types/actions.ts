@@ -1,7 +1,18 @@
 // Defines the types related to actions logged in the system (local and Supabase)
 
 /** General type of action being performed */
-export type ActionType = 'analysis' | 'delete' | 'block' | 'unsubscribe' | 'other';
+export type ActionType = 
+  | 'analysis' 
+  | 'delete' 
+  | 'delete_with_exceptions' 
+  | 'apply_label' 
+  | 'block' 
+  | 'unsubscribe' 
+  | 'view' 
+  | 'preview' 
+  | 'premium_attempt' 
+  | 'mark_as_read'
+  | 'other';
 
 /** Specific mode for analysis actions */
 export type AnalysisType = 'full' | 'quick'; // Kept for analysis-specific filters
@@ -12,6 +23,7 @@ export type ActionStatus =
   | 'preparing' // Added
   | 'analyzing' // Specific to analysis?
   | 'deleting' // Added
+  | 'marking'
   | 'blocking' // Future
   | 'unsubscribing' // Future
   | 'completed'

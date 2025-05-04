@@ -17,6 +17,7 @@ function convertToTableFormat(sender: SenderResult) {
     email: sender.senderEmail,
     name: sender.senderName,
     count: sender.count,
+    unread_count: sender.unread_count,
     lastEmail: sender.lastDate,
     actionsTaken: validActions,
     // Include additional metadata for actions
@@ -25,6 +26,23 @@ function convertToTableFormat(sender: SenderResult) {
     messageIds: sender.messageIds || [],
     sampleSubjects: sender.sampleSubjects || []
   };
+}
+
+export interface Sender {
+  email: string;
+  name: string;
+  count: number;
+  unread_count: number;
+  lastEmail: string;
+  actionsTaken: any;
+  hasUnsubscribe: boolean;
+  unsubscribe?: {
+    mailto?: string;
+    url?: string;
+    requiresPost?: boolean;
+  };
+  messageIds: any;
+  sampleSubjects: any;
 }
 
 export type TableSender = ReturnType<typeof convertToTableFormat>;

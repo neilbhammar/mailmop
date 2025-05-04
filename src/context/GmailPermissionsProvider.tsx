@@ -339,15 +339,29 @@ export function GmailPermissionsProvider({
     try {
       const tokenResponse = await new Promise<GoogleTokenResponse>((resolve, reject) => {
         console.log('[Gmail] Initializing OAuth client...');
+        // Type assertion to use the expected TokenClientConfig
         const client = window.google.accounts.oauth2.initTokenClient({
           client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
           scope: GMAIL_SCOPE,
           login_hint: user.email,
-          callback: (response: GoogleTokenResponse) => {
+          // Use the library's TokenResponse type for the callback parameter
+          callback: (response: google.accounts.oauth2.TokenResponse) => {
             if (response.error) {
-              reject(response);
+              // Reject with the error description or the whole response
+              reject(response.error_description || response); 
             } else {
-              resolve(response);
+              // Ensure expires_in is treated as a number before resolving
+              const expiresInNum = parseInt(response.expires_in, 10);
+              if (isNaN(expiresInNum)) {
+                reject(new Error('Invalid expires_in value received from Google'));
+                return;
+              }
+              
+              // Resolve with the expected structure, converting expires_in
+              resolve({
+                ...response,
+                expires_in: expiresInNum, 
+              } as GoogleTokenResponse); // Asserting back to our type after conversion
             }
           },
         });

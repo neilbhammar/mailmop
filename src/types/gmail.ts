@@ -69,19 +69,19 @@ export interface SenderSummary {
 }
 
 export interface SenderResult {
-  senderEmail: string;        // Primary Key
+  senderEmail: string;
   senderName: string;
   count: number;
+  unread_count: number;
   lastDate: string;
-  analysisId: string;         // Associates sender with a specific analysis
-  actionsTaken?: string[];    // Track actions taken on this sender
-
-  sampleSubjects?: string[];
-  messageIds?: string[];
-  hasUnsubscribe?: boolean;
+  analysisId: string;
+  hasUnsubscribe: boolean;
   unsubscribe?: {
     mailto?: string;
     url?: string;
     requiresPost?: boolean;
   };
+  actionsTaken?: string[];
+  messageIds?: string[];
+  sampleSubjects?: string[];
 } 

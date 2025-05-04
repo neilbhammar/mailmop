@@ -5,6 +5,7 @@ interface ParsedSender {
   name: string;
   date: string;
   hasUnsubscribe: boolean;
+  isUnread: boolean;
   unsubscribe?: {
     mailto?: string;
     url?: string;
@@ -42,6 +43,7 @@ export function parseHeaders(metadata: GmailMessageMetadata): ParsedSender {
     name: '',
     date: '',
     hasUnsubscribe: false,
+    isUnread: metadata.labelIds?.includes('UNREAD') || false,
     messageId: metadata.id
   };
 

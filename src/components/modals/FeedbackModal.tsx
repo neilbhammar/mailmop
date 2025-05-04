@@ -166,7 +166,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">Idea</p>
-                        <p className="text-sm text-gray-500">I have a suggestion for improvement</p>
+                        <p className="text-sm text-gray-500">I have a suggestion or request</p>
                       </div>
                     </div>
                     

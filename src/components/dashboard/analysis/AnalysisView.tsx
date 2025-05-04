@@ -9,9 +9,15 @@ import { useViewInGmail } from '@/hooks/useViewInGmail'
 import { toast } from "sonner"
 import { usePremiumFeature } from '@/hooks/usePremiumFeature'
 import { useDelete, SenderToDelete } from "@/hooks/useDelete"
+import { useDeleteWithExceptions } from "@/hooks/useDeleteWithExceptions"
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
+import { DeleteWithExceptionsModal } from "@/components/modals/DeleteWithExceptionsModal"
 import { PremiumFeatureModal } from "@/components/modals/PremiumFeatureModal"
+import { ReauthDialog } from "@/components/modals/ReauthDialog"
 import { useSenderData, TableSender } from '@/hooks/useSenderData'
+import { RuleGroup } from '@/lib/gmail/buildQuery'
+import { useMarkAsRead, SenderToMark } from '@/hooks/useMarkAsRead'
+import { MarkAsReadConfirmModal } from '@/components/modals/MarkAsReadConfirmModal'
 
 // Create a custom type for the selection count change handler
 // that includes our viewInGmail extension
@@ -24,6 +30,7 @@ interface SelectionCountHandler {
 export default function AnalysisView() {
   const [selectedCount, setSelectedCount] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false)
   const { progress } = useAnalysisOperations()
   const { viewMultipleSendersInGmail, viewSenderInGmail } = useViewInGmail()
   const { 
@@ -34,18 +41,28 @@ export default function AnalysisView() {
     itemCount
   } = usePremiumFeature()
   const { 
+    progress: deleteProgress,
     startDelete,
-    // progress: deleteProgress, // We might want delete-specific progress later
-    // cancelDelete, // We might need a cancel button later
-    // reauthModal, 
-    // closeReauthModal
+    cancelDelete,
+    reauthModal: deleteReauthModal,
+    closeReauthModal: closeDeleteReauthModal
   } = useDelete()
+  
+  const {
+    progress: deleteWithExceptionsProgress,
+    startDeleteWithExceptions,
+    cancelDelete: cancelDeleteWithExceptions,
+    reauthModal: deleteWithExceptionsReauthModal,
+    closeReauthModal: closeDeleteWithExceptionsReauthModal
+  } = useDeleteWithExceptions()
   
   // Track selected emails for bulk actions
   const [selectedEmails, setSelectedEmails] = useState<string[]>([])
   
   // Delete confirmation modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  // Delete with exceptions modal state
+  const [isDeleteWithExceptionsModalOpen, setIsDeleteWithExceptionsModalOpen] = useState(false)
   // Track the emails to delete when confirmed
   const [emailsToDelete, setEmailsToDelete] = useState<string[]>([])
   // Store email counts per sender
@@ -68,6 +85,22 @@ export default function AnalysisView() {
 
   const { senders } = useSenderData()
 
+  // Add state for mark as read functionality
+  const [isMarkAsReadModalOpen, setIsMarkAsReadModalOpen] = useState(false)
+  const [emailsToMark, setEmailsToMark] = useState<string[]>([])
+  
+  // Add mark as read hook
+  const {
+    progress: markAsReadProgress,
+    startMarkAsRead,
+    cancelMarkAsRead,
+    reauthModal: markAsReadReauthModal,
+    closeReauthModal: closeMarkAsReadReauthModal,
+  } = useMarkAsRead()
+
+  // Add state for unread count map
+  const [unreadCountMap, setUnreadCountMap] = useState<Record<string, number>>({});
+
   // Wrapper function for setSelectedCount that keeps track of table actions
   const handleSelectedCountChange: SelectionCountHandler = useCallback((count: number) => {
     setSelectedCount(count);
@@ -77,6 +110,28 @@ export default function AnalysisView() {
       tableActionsRef.current.viewInGmail = handleSelectedCountChange.viewInGmail;
     }
   }, []);
+
+  // Update the effect that gets sender data
+  useEffect(() => {
+    if (!selectedEmails.length) {
+      setUnreadCountMap({});
+      return;
+    }
+
+    // Create a map of unread counts
+    const unreadCounts: Record<string, number> = {};
+    
+    // Get the selected senders with their unread counts
+    selectedEmails.forEach(email => {
+      const sender = senders.find(s => s.email === email);
+      if (sender) {
+        unreadCounts[email] = sender.unread_count || 0;
+      }
+    });
+    
+    // Only update unread counts map
+    setUnreadCountMap(unreadCounts);
+  }, [selectedEmails, senders]);
 
   // Set up a side effect to receive selected emails from the table
   useEffect(() => {
@@ -166,16 +221,104 @@ export default function AnalysisView() {
 
   // Handler for delete with exceptions
   const handleDeleteWithExceptions = useCallback(() => {
-    // Check if user has premium access first
-    if (checkFeatureAccess('delete_with_exceptions', emailsToDelete.length)) {
-      console.log(`Delete with exceptions for ${emailsToDelete.length} senders`);
-      // This would later be implemented with a different modal and logic
+    // Start with current selected emails or any emailsToDelete that were set
+    const emailsToUse = selectedEmails.length > 0 ? selectedEmails : emailsToDelete;
+    
+    if (emailsToUse.length === 0) {
+      toast.warning('No senders selected');
+      return;
     }
-  }, [emailsToDelete.length, checkFeatureAccess]);
+    
+    // Check if user has premium access first
+    if (checkFeatureAccess('delete_with_exceptions', emailsToUse.length)) {
+      // Set the emails to delete - similar to regular delete flow
+      setEmailsToDelete(emailsToUse);
+      // Open the delete with exceptions modal
+      setIsDeleteWithExceptionsModalOpen(true);
+    }
+    // If access check fails, the premium modal will be shown by the hook
+  }, [selectedEmails, emailsToDelete, checkFeatureAccess]);
 
-  const handleMarkAllRead = () => {
-    console.log(`Mark all emails from ${selectedCount} senders as read`);
-  }
+  // Handler for when delete with exceptions is confirmed
+  const handleDeleteWithExceptionsConfirm = useCallback(async (filterRules: RuleGroup[]) => {
+    if (emailsToDelete.length === 0) return;
+    
+    // Format senders with counts
+    const sendersToDeleteFormatted: SenderToDelete[] = emailsToDelete.map(email => ({
+      email: email,
+      count: emailCountMap[email] || 30
+    }));
+    
+    // Pass filter rules to startDelete
+    const result = await startDeleteWithExceptions(sendersToDeleteFormatted, filterRules);
+    
+    if (result.success) {
+      setSelectedEmails([]);
+      setEmailsToDelete([]);
+    } 
+  }, [emailsToDelete, emailCountMap, startDeleteWithExceptions]);
+
+  // Handler for single sender delete with exceptions from row actions
+  const handleDeleteSingleSenderWithExceptions = useCallback((email: string, emailCount?: number) => {
+    const currentCount = emailCount || emailCountMap[email] || 30;
+    setEmailCountMap(prev => ({ ...prev, [email]: currentCount }));
+
+    // Check feature access
+    if (checkFeatureAccess('delete_with_exceptions', 1)) {
+      // Access granted, set email and open modal
+      setEmailsToDelete([email]);
+      setIsDeleteWithExceptionsModalOpen(true);
+    } else {
+      // Access denied, hook opened modal. Store sender for potential view action.
+      setActiveSingleSender(email);
+    }
+  }, [checkFeatureAccess, emailCountMap]);
+
+  // Handler for mark as read functionality
+  const handleMarkAllRead = useCallback(() => {
+    if (selectedEmails.length === 0) {
+      toast.warning('No senders selected');
+      return;
+    }
+
+    // Check premium access
+    if (checkFeatureAccess('mark_read', selectedEmails.length)) {
+      setEmailsToMark(selectedEmails);
+      setIsMarkAsReadModalOpen(true);
+    }
+  }, [selectedEmails, checkFeatureAccess]);
+
+  // Handler for single sender mark as read
+  const handleMarkSingleSenderRead = useCallback((email: string) => {
+    // Find the sender in our data to get the actual unread count
+    const sender = senders.find(s => s.email === email);
+    if (!sender) return;
+
+    if (checkFeatureAccess('mark_read', 1)) {
+      setEmailsToMark([email]);
+      setUnreadCountMap(prev => ({ ...prev, [email]: sender.unread_count }));
+      setIsMarkAsReadModalOpen(true);
+    } else {
+      setActiveSingleSender(email);
+    }
+  }, [checkFeatureAccess, senders]);
+
+  // Handler for when mark as read is confirmed
+  const handleMarkAsReadConfirm = useCallback(async () => {
+    if (emailsToMark.length === 0) return;
+    
+    const sendersToMarkFormatted: SenderToMark[] = emailsToMark.map(email => ({
+      email: email,
+      unreadCount: emailCountMap[email] || 30
+    }));
+    
+    const result = await startMarkAsRead(sendersToMarkFormatted);
+    
+    if (result.success) {
+      setSelectedEmails([]);
+      setEmailsToMark([]);
+    }
+  }, [emailsToMark, emailCountMap, startMarkAsRead]);
 
   const handleApplyLabel = () => {
     console.log(`Apply label to ${selectedCount} senders`);
@@ -239,6 +382,7 @@ export default function AnalysisView() {
         onApplyLabel={handleApplyLabel}
         onBlockSenders={handleBlockSenders}
         onSearchChange={setSearchTerm}
+        onToggleUnreadOnly={setShowUnreadOnly}
       />
 
       {/* TABLE CONTAINER */}
@@ -247,12 +391,18 @@ export default function AnalysisView() {
           <SenderTable 
             onSelectedCountChange={handleSelectedCountChange} 
             searchTerm={searchTerm}
+            showUnreadOnly={showUnreadOnly}
             onDeleteSingleSender={handleDeleteSingleSender}
+            onDeleteWithExceptions={handleDeleteSingleSenderWithExceptions}
+            onMarkSingleSenderRead={handleMarkSingleSenderRead}
           />
         </div>
       </div>
 
-      <AnalysisFooter searchTerm={searchTerm} />
+      <AnalysisFooter 
+        searchTerm={searchTerm} 
+        showUnreadOnly={showUnreadOnly}
+      />
       
       {/* Delete Confirmation Modal (Local State) */}
       <DeleteConfirmModal
@@ -266,6 +416,17 @@ export default function AnalysisView() {
         onDeleteWithExceptions={handleDeleteWithExceptions}
       />
 
+      {/* Delete With Exceptions Modal (Local State) */}
+      <DeleteWithExceptionsModal
+        open={isDeleteWithExceptionsModalOpen}
+        onOpenChange={setIsDeleteWithExceptionsModalOpen}
+        emailCount={totalEmailCount}
+        senderCount={emailsToDelete.length}
+        onConfirm={handleDeleteWithExceptionsConfirm}
+        senders={emailsToDelete}
+        emailCountMap={emailCountMap}
+      />
+
       {/* Premium Feature Modal (State from Hook) */}
       <PremiumFeatureModal
         open={isPremiumModalOpen}
@@ -273,6 +434,38 @@ export default function AnalysisView() {
         featureName={currentFeature || 'delete'}
         senderCount={itemCount}
         onViewInGmail={handleViewInGmail}
+      />
+      
+      {/* --- Add Reauth Dialog for Delete Flow --- */}
+      <ReauthDialog
+        open={deleteReauthModal.isOpen || deleteWithExceptionsReauthModal.isOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            closeDeleteReauthModal();
+            closeDeleteWithExceptionsReauthModal();
+          }
+        }}
+        type={deleteReauthModal.isOpen ? deleteReauthModal.type : deleteWithExceptionsReauthModal.type}
+        eta={deleteReauthModal.isOpen ? deleteReauthModal.eta : deleteWithExceptionsReauthModal.eta}
+      />
+
+      {/* Add Mark As Read Modal */}
+      <MarkAsReadConfirmModal
+        open={isMarkAsReadModalOpen}
+        onOpenChange={setIsMarkAsReadModalOpen}
+        unreadCount={emailsToMark.reduce((sum, email) => sum + (unreadCountMap[email] || 0), 0)}
+        senderCount={emailsToMark.length}
+        onConfirm={handleMarkAsReadConfirm}
+        senders={emailsToMark}
+        unreadCountMap={unreadCountMap}
+      />
+
+      {/* Add Mark As Read Reauth Dialog */}
+      <ReauthDialog
+        open={markAsReadReauthModal.isOpen}
+        onOpenChange={closeMarkAsReadReauthModal}
+        type={markAsReadReauthModal.type}
+        eta={markAsReadReauthModal.eta}
       />
     </div>
   )

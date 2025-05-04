@@ -8,6 +8,14 @@ import { useSenderData } from '@/hooks/useSenderData'
 import { useExport } from '@/hooks/useExport'
 import { useState, useCallback, useMemo } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
+import { MoreHorizontal, Download, Mail } from 'lucide-react'
+import { cn } from "@/lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface AnalysisHeaderProps {
   selectedCount?: number
@@ -19,6 +27,7 @@ interface AnalysisHeaderProps {
   onApplyLabel?: () => void
   onBlockSenders?: () => void
   onSearchChange?: (search: string) => void
+  onToggleUnreadOnly?: (enabled: boolean) => void
 }
 
 export function AnalysisHeader({
@@ -30,48 +39,49 @@ export function AnalysisHeader({
   onDeleteWithExceptions = () => console.log('Delete with exceptions bulk action'),
   onApplyLabel = () => console.log('Apply label bulk action'),
   onBlockSenders = () => console.log('Block senders bulk action'),
-  onSearchChange = () => console.log('Search changed')
+  onSearchChange = () => console.log('Search changed'),
+  onToggleUnreadOnly = () => console.log('Toggle unread only')
 }: AnalysisHeaderProps) {
   const hasSelection = selectedCount > 0;
   const { senders, isLoading, isAnalyzing } = useSenderData();
   const { exportToCSV, isExporting, error } = useExport();
   const [searchTerm, setSearchTerm] = useState('');
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
   // Calculate total emails from all senders
   const getTotals = useMemo(() => {
-    if (!searchTerm) {
-      return {
-        emails: senders.reduce((sum, sender) => sum + sender.count, 0),
-        senderCount: senders.length
-      };
+    // First filter by unread if enabled
+    let filteredSenders = senders;
+    if (showUnreadOnly) {
+      filteredSenders = senders.filter(sender => sender.unread_count > 0);
     }
 
-    const lowercaseSearch = searchTerm.toLowerCase();
-    const terms = lowercaseSearch.split(' ').filter(Boolean);
-    
-    if (terms.length === 0) {
-      return {
-        emails: senders.reduce((sum, sender) => sum + sender.count, 0),
-        senderCount: senders.length
-      };
-    }
-
-    const filteredSenders = senders.filter(sender => {
-      const nameLower = sender.name.toLowerCase();
-      const emailLower = sender.email.toLowerCase();
+    // Then apply search filter if present
+    if (searchTerm) {
+      const lowercaseSearch = searchTerm.toLowerCase();
+      const terms = lowercaseSearch.split(' ').filter(Boolean);
       
-      return terms.every(term => 
-        nameLower.includes(term) || emailLower.includes(term)
-      );
-    });
+      if (terms.length > 0) {
+        filteredSenders = filteredSenders.filter(sender => {
+          const nameLower = sender.name.toLowerCase();
+          const emailLower = sender.email.toLowerCase();
+          
+          return terms.every(term => 
+            nameLower.includes(term) || emailLower.includes(term)
+          );
+        });
+      }
+    }
 
     return {
-      emails: filteredSenders.reduce((sum, sender) => sum + sender.count, 0),
+      emails: showUnreadOnly 
+        ? filteredSenders.reduce((sum, sender) => sum + sender.unread_count, 0)
+        : filteredSenders.reduce((sum, sender) => sum + sender.count, 0),
       senderCount: filteredSenders.length,
       totalEmails: senders.reduce((sum, sender) => sum + sender.count, 0),
       totalSenders: senders.length
     };
-  }, [senders, searchTerm]);
+  }, [senders, searchTerm, showUnreadOnly]);
 
   // Get the status message
   const getStatusMessage = () => {
@@ -92,6 +102,13 @@ export function AnalysisHeader({
     const newSearchTerm = e.target.value;
     setSearchTerm(newSearchTerm);
     debouncedSearchChange(newSearchTerm);
+  };
+
+  // Handle unread only toggle
+  const handleUnreadOnlyToggle = () => {
+    const newValue = !showUnreadOnly;
+    setShowUnreadOnly(newValue);
+    onToggleUnreadOnly(newValue);
   };
 
   return (
@@ -139,15 +156,46 @@ export function AnalysisHeader({
               onChange={handleSearchChange}
             />
           </div>
-          <Button 
-            variant="outline" 
-            className="h-9 px-4 text-sm font-normal border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-600"
-            onClick={() => exportToCSV(senders)}
-            disabled={isExporting || senders.length === 0}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            {isExporting ? 'Exporting...' : 'Export CSV'}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon"
+                className="h-9 w-9 border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-600"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[260px] bg-white border border-slate-200 shadow-lg py-2">
+              <DropdownMenuItem 
+                className="flex items-center justify-between cursor-pointer px-3 py-2 hover:bg-slate-50"
+                onSelect={handleUnreadOnlyToggle}
+              >
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-slate-500 mr-2" />
+                  <span className="text-sm text-slate-700">Unread Senders Only</span>
+                </div>
+                <span className={cn(
+                  "px-2 py-0.5 text-xs font-medium rounded-md",
+                  showUnreadOnly 
+                    ? "bg-blue-100 text-blue-700" 
+                    : "bg-slate-100 text-slate-600"
+                )}>
+                  {showUnreadOnly ? 'On' : 'Off'}
+                </span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-slate-50"
+                onSelect={() => exportToCSV(senders)}
+                disabled={isExporting || senders.length === 0}
+              >
+                <Download className="h-4 w-4 text-slate-500 mr-2" />
+                <span className="text-sm text-slate-700">
+                  {isExporting ? 'Exporting...' : 'Export CSV'}
+                </span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

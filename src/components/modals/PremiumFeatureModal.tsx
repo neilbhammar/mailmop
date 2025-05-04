@@ -143,8 +143,7 @@ export function PremiumFeatureModal({
               
               <div className="bg-slate-50 p-4 rounded-md text-sm text-slate-700 mb-6">
                 <p>
-                  <span className="font-medium">Tip:</span> You can still {featureName.toLowerCase()} 
-                  by viewing {senderCount > 1 ? 'these senders' : 'this sender'} in Gmail and taking action there.
+                <span className="font-medium">Tip:</span> You can still delete or modify emails from {senderCount > 1 ? 'these senders' : 'this sender'}  directly in Gmail without upgrading.
                 </p>
               </div>
             </div>

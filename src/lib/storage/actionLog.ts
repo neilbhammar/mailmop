@@ -1,3 +1,10 @@
+/**
+ * actionLog.ts
+ * 
+ * Manages action logs in localStorage for operations like delete, unsubscribe, etc.
+ * Separate from analysis logs to avoid confusion and maintain clean data separation.
+ */
+
 import { LocalActionLog, ActionType, ActionEndType, ActionStatus } from '@/types/actions';
 
 const CURRENT_ANALYSIS_KEY = 'mailmop_current_analysis';
@@ -7,6 +14,83 @@ export const ACTION_STATS_UPDATED_EVENT = 'mailmop:action-stats-updated';
 function notifyActionStatsChange() {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent(ACTION_STATS_UPDATED_EVENT));
+}
+
+const ACTION_LOG_KEY = 'mailmop_current_action';
+
+interface ActionLog {
+  clientActionId: string;
+  type: 'delete' | 'delete_with_exceptions' | 'unsubscribe' | 'mark_as_read'; // Add more action types as needed
+  estimatedRuntimeMs: number;
+  totalEmails: number;
+  totalEstimatedBatches: number;
+  query: string;
+  supabaseLogId?: string;
+  progress?: {
+    batchesProcessed: number;
+    emailsProcessed: number;
+  };
+  endType?: 'success' | 'user_stopped' | 'runtime_error';
+  errorMessage?: string;
+}
+
+/**
+ * Creates a new action log entry in localStorage
+ */
+export function createActionLog(log: Omit<ActionLog, 'supabaseLogId' | 'progress' | 'endType' | 'errorMessage'>) {
+  localStorage.setItem(ACTION_LOG_KEY, JSON.stringify(log));
+}
+
+/**
+ * Updates the Supabase log ID for the current action
+ */
+export function updateSupabaseLogId(id: string) {
+  const currentLog = getCurrentActionLog();
+  if (currentLog) {
+    localStorage.setItem(ACTION_LOG_KEY, JSON.stringify({ ...currentLog, supabaseLogId: id }));
+  }
+}
+
+/**
+ * Updates progress for the current action
+ */
+export function updateActionProgress(batchesProcessed: number, emailsProcessed: number) {
+  const currentLog = getCurrentActionLog();
+  if (currentLog) {
+    localStorage.setItem(ACTION_LOG_KEY, JSON.stringify({
+      ...currentLog,
+      progress: { batchesProcessed, emailsProcessed }
+    }));
+  }
+}
+
+/**
+ * Marks the current action as complete
+ */
+export function completeActionLog(endType: ActionLog['endType'], errorMessage?: string) {
+  const currentLog = getCurrentActionLog();
+  if (currentLog) {
+    localStorage.setItem(ACTION_LOG_KEY, JSON.stringify({
+      ...currentLog,
+      endType,
+      errorMessage
+    }));
+  }
+}
+
+/**
+ * Gets the current action log if any
+ */
+export function getCurrentActionLog(): ActionLog | null {
+  const logStr = localStorage.getItem(ACTION_LOG_KEY);
+  return logStr ? JSON.parse(logStr) : null;
+}
+
+/**
+ * Clears the current action log
+ */
+export function clearCurrentActionLog() {
+  localStorage.removeItem(ACTION_LOG_KEY);
 }
 
 /**

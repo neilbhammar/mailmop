@@ -61,7 +61,8 @@ const SenderRow = memo(({
   onRowClick, 
   onRowMouseLeave,
   cells,
-  columnWidths
+  columnWidths,
+  showUnreadOnly
 }: { 
   row: Row<Sender>
   isSelected: boolean
@@ -70,6 +71,7 @@ const SenderRow = memo(({
   onRowMouseLeave: () => void
   cells: any[]
   columnWidths: typeof COLUMN_WIDTHS
+  showUnreadOnly: boolean
 }) => {
   return (
     <tr 
@@ -100,13 +102,14 @@ const SenderRow = memo(({
     </tr>
   )
 }, (prevProps, nextProps) => {
-  // Only re-render if selection, active state, or row data changed
+  // Only re-render if selection, active state, row data, or showUnreadOnly changed
   return (
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.isActive === nextProps.isActive &&
     prevProps.row.original.count === nextProps.row.original.count &&
     prevProps.row.original.lastEmail === nextProps.row.original.lastEmail &&
-    prevProps.row.original.actionsTaken.length === nextProps.row.original.actionsTaken.length
+    prevProps.row.original.actionsTaken.length === nextProps.row.original.actionsTaken.length &&
+    prevProps.showUnreadOnly === nextProps.showUnreadOnly
   )
 })
 
@@ -142,34 +145,49 @@ interface SenderTableProps {
   }
   /** Current search term for filtering senders */
   searchTerm?: string
+  /** Whether to show only unread senders */
+  showUnreadOnly?: boolean
   /** Callback for single sender delete action */
   onDeleteSingleSender?: (email: string, count?: number) => void
+  /** Callback for delete with exceptions action */
+  onDeleteWithExceptions?: (email: string, count?: number) => void
+  /** Callback for marking a single sender as read */
+  onMarkSingleSenderRead?: (email: string, unreadCount?: number) => void
 }
 
 /**
- * Filter senders based on search term
+ * Filter senders based on search term and unread status
  * Matches against name and email, case-insensitive
  * Memoized for performance
  */
-const useFilteredSenders = (senders: Sender[], searchTerm: string) => {
+const useFilteredSenders = (senders: Sender[], searchTerm: string, showUnreadOnly: boolean) => {
   return useMemo(() => {
-    if (!searchTerm) return senders;
+    let filtered = senders;
     
-    const lowercaseSearch = searchTerm.toLowerCase();
-    const terms = lowercaseSearch.split(' ').filter(Boolean);
+    // First apply unread filter if enabled
+    if (showUnreadOnly) {
+      filtered = filtered.filter(sender => sender.unread_count > 0);
+    }
     
-    if (terms.length === 0) return senders;
-    
-    return senders.filter(sender => {
-      const nameLower = sender.name.toLowerCase();
-      const emailLower = sender.email.toLowerCase();
+    // Then apply search term filter
+    if (searchTerm) {
+      const lowercaseSearch = searchTerm.toLowerCase();
+      const terms = lowercaseSearch.split(' ').filter(Boolean);
       
-      // All terms must match either name or email
-      return terms.every(term => 
-        nameLower.includes(term) || emailLower.includes(term)
-      );
-    });
-  }, [senders, searchTerm]);
+      if (terms.length > 0) {
+        filtered = filtered.filter(sender => {
+          const nameLower = sender.name.toLowerCase();
+          const emailLower = sender.email.toLowerCase();
+          
+          return terms.every(term => 
+            nameLower.includes(term) || emailLower.includes(term)
+          );
+        });
+      }
+    }
+    
+    return filtered;
+  }, [senders, searchTerm, showUnreadOnly]);
 };
 
 /**
@@ -284,10 +302,18 @@ const LastEmailCell = memo(({ date }: { date: string }) => {
 /**
  * Wrapper for RowActions to ensure consistent layout and spacing
  */
-const ActionWrapper = memo(({ sender, onDropdownOpen, onDeleteSingleSender }: { 
+const ActionWrapper = memo(({ 
+  sender, 
+  onDropdownOpen, 
+  onDeleteSingleSender, 
+  onDeleteWithExceptions,
+  onMarkSingleSenderRead 
+}: { 
   sender: Sender, 
   onDropdownOpen: (email: string) => void,
-  onDeleteSingleSender?: (email: string, count?: number) => void
+  onDeleteSingleSender?: (email: string, count?: number) => void,
+  onDeleteWithExceptions?: (email: string, count?: number) => void,
+  onMarkSingleSenderRead?: (email: string, unreadCount?: number) => void
 }) => {
   const { viewSenderInGmail } = useViewInGmail();
   
@@ -299,8 +325,8 @@ const ActionWrapper = memo(({ sender, onDropdownOpen, onDeleteSingleSender }: {
         onUnsubscribe={(email) => console.log('Unsubscribe:', email)}
         onViewInGmail={(email) => viewSenderInGmail(email)}
         onDelete={(email) => onDeleteSingleSender ? onDeleteSingleSender(email, sender.count) : console.log('Delete:', email)}
-        onMarkUnread={(email) => console.log('Mark Unread:', email)}
-        onDeleteWithExceptions={(email) => console.log('Delete with Exceptions:', email)}
+        onMarkUnread={(email) => onMarkSingleSenderRead ? onMarkSingleSenderRead(email, sender.count) : console.log('Mark Unread:', email)}
+        onDeleteWithExceptions={(email) => onDeleteWithExceptions ? onDeleteWithExceptions(email, sender.count) : console.log('Delete with Exceptions:', email)}
         onApplyLabel={(email) => console.log('Apply Label:', email)}
         onBlock={(email) => console.log('Block:', email)}
       />
@@ -318,11 +344,18 @@ const ActionWrapper = memo(({ sender, onDropdownOpen, onDeleteSingleSender }: {
  * - Sorting and row actions
  * - Virtualized rendering for handling large datasets
  */
-export function SenderTable({ onSelectedCountChange, searchTerm = '', onDeleteSingleSender }: SenderTableProps) {
-  // Get senders and filter based on search term
+export function SenderTable({
+  onSelectedCountChange,
+  searchTerm = '',
+  showUnreadOnly = false,
+  onDeleteSingleSender,
+  onDeleteWithExceptions,
+  onMarkSingleSenderRead
+}: SenderTableProps) {
+  // Get senders and filter based on search term and unread status
   const { senders: allSenders, isLoading, isAnalyzing } = useSenderData();
   const { viewMultipleSendersInGmail } = useViewInGmail();
-  const senders = useFilteredSenders(allSenders, searchTerm);
+  const senders = useFilteredSenders(allSenders, searchTerm, showUnreadOnly);
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'count', desc: true }
   ]);
@@ -532,20 +565,26 @@ export function SenderTable({ onSelectedCountChange, searchTerm = '', onDeleteSi
           className="w-full text-right group"
         >
           <span className="inline-flex items-center gap-1 text-slate-600 font-normal group-hover:text-slate-900">
-            Count
+            {showUnreadOnly ? 'Unread' : 'Count'}
             <ArrowUpDown className="h-3.5 w-3.5 text-slate-500" />
           </span>
         </button>
       ),
       cell: ({ row }) => (
         <div className="truncate text-right pr-2">
-          <span className="text-blue-700">{row.getValue("count")}</span>
+          <span className="text-blue-700">
+            {showUnreadOnly ? row.original.unread_count : row.getValue("count")}
+          </span>
         </div>
       ),
       sortingFn: (rowA, rowB) => {
-        const a = Number(rowA.getValue("count"))
-        const b = Number(rowB.getValue("count"))
-        return a > b ? 1 : a < b ? -1 : 0
+        const a = showUnreadOnly ? 
+          Number(rowA.original.unread_count) : 
+          Number(rowA.getValue("count"));
+        const b = showUnreadOnly ? 
+          Number(rowB.original.unread_count) : 
+          Number(rowB.getValue("count"));
+        return a > b ? 1 : a < b ? -1 : 0;
       }
     },
     {
@@ -556,10 +595,12 @@ export function SenderTable({ onSelectedCountChange, searchTerm = '', onDeleteSi
           sender={row.original} 
           onDropdownOpen={handleDropdownOpen}
           onDeleteSingleSender={onDeleteSingleSender}
+          onDeleteWithExceptions={onDeleteWithExceptions}
+          onMarkSingleSenderRead={onMarkSingleSenderRead}
         />
       )
     }
-  ], [selectedEmails, handleCheckboxChange, clearSelections, handleDropdownOpen, onDeleteSingleSender])
+  ], [selectedEmails, handleCheckboxChange, clearSelections, handleDropdownOpen, onDeleteSingleSender, onDeleteWithExceptions, onMarkSingleSenderRead, showUnreadOnly])
 
   // Initialize and configure the table
   const table = useReactTable({
@@ -830,6 +871,7 @@ export function SenderTable({ onSelectedCountChange, searchTerm = '', onDeleteSi
                           onRowMouseLeave={handleRowMouseLeave}
                           cells={row.getVisibleCells()}
                           columnWidths={COLUMN_WIDTHS}
+                          showUnreadOnly={showUnreadOnly}
                         />
                       </tbody>
                     </table>

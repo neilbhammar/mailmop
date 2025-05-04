@@ -5,35 +5,47 @@ import { useMemo } from 'react'
 
 interface AnalysisFooterProps {
   searchTerm?: string
+  showUnreadOnly?: boolean
 }
 
-export function AnalysisFooter({ searchTerm = '' }: AnalysisFooterProps) {
+export function AnalysisFooter({ searchTerm = '', showUnreadOnly = false }: AnalysisFooterProps) {
   const { senders, isLoading, isAnalyzing } = useSenderData()
 
-  // Filter senders based on search term
+  // Filter senders based on search term and unread status
   const filteredCount = useMemo(() => {
-    if (!searchTerm) return senders.length;
+    let filtered = senders;
     
-    const lowercaseSearch = searchTerm.toLowerCase();
-    const terms = lowercaseSearch.split(' ').filter(Boolean);
+    // First apply unread filter if enabled
+    if (showUnreadOnly) {
+      filtered = filtered.filter(sender => sender.unread_count > 0);
+    }
     
-    if (terms.length === 0) return senders.length;
-    
-    return senders.filter(sender => {
-      const nameLower = sender.name.toLowerCase();
-      const emailLower = sender.email.toLowerCase();
+    // Then apply search term filter
+    if (searchTerm) {
+      const lowercaseSearch = searchTerm.toLowerCase();
+      const terms = lowercaseSearch.split(' ').filter(Boolean);
       
-      return terms.every(term => 
-        nameLower.includes(term) || emailLower.includes(term)
-      );
-    }).length;
-  }, [senders, searchTerm]);
+      if (terms.length > 0) {
+        filtered = filtered.filter(sender => {
+          const nameLower = sender.name.toLowerCase();
+          const emailLower = sender.email.toLowerCase();
+          
+          return terms.every(term => 
+            nameLower.includes(term) || emailLower.includes(term)
+          );
+        });
+      }
+    }
+    
+    return filtered.length;
+  }, [senders, searchTerm, showUnreadOnly]);
 
   // Handle different states with appropriate messages
   const getMessage = () => {
     if (isLoading) return "Loading senders..."
-    if (searchTerm) {
-      return `Showing ${filteredCount.toLocaleString()} of ${senders.length.toLocaleString()} senders`;
+    if (searchTerm || showUnreadOnly) {
+      const filterType = showUnreadOnly ? (searchTerm ? 'filtered' : 'unread') : 'matching';
+      return `Showing ${filteredCount.toLocaleString()} ${filterType} of ${senders.length.toLocaleString()} senders`;
     }
     return `Showing ${senders.length.toLocaleString()} senders`
   }

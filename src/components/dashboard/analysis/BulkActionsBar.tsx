@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ExternalLink, Trash2, MailOpen, ChevronDown, PenSquare, Tag, Ban } from "lucide-react"
+import { ExternalLink, Trash2, MailOpen, ChevronDown, PenSquare, Tag, Ban, PenOff, PencilOff } from "lucide-react"
 import { useViewInGmail } from "@/hooks/useViewInGmail"
 import { cn } from "@/lib/utils"
 
@@ -77,7 +77,7 @@ export function BulkActionsBar({
       </Button>
       
       {/* More dropdown */}
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button 
             variant="ghost" 
@@ -88,16 +88,28 @@ export function BulkActionsBar({
             <ChevronDown className="h-4 w-4 ml-2" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56 bg-white rounded-lg border border-slate-200 shadow-lg">
-          <DropdownMenuItem onClick={onDeleteWithExceptions}>
-            <PenSquare className="h-4 w-4 mr-2" />
+        <DropdownMenuContent className="w-56 bg-white rounded-lg border border-gray-100 shadow-md z-50 py-1">
+          <DropdownMenuItem 
+            onSelect={(e) => {
+              e.preventDefault();
+              onDeleteWithExceptions();
+            }}
+            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50 cursor-pointer"
+          >
+            <PencilOff className="h-4 w-4 mr-2" />
             <span>Delete with Exceptions</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onApplyLabel}>
+          <DropdownMenuItem 
+            onClick={onApplyLabel}
+            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50 cursor-pointer"
+          >
             <Tag className="h-4 w-4 mr-2" />
             <span>Apply Label</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onBlockSenders}>
+          <DropdownMenuItem 
+            onClick={onBlockSenders}
+            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50 cursor-pointer"
+          >
             <Ban className="h-4 w-4 mr-2" />
             <span>Block Sender{selectedCount > 1 ? 's' : ''}</span>
           </DropdownMenuItem>

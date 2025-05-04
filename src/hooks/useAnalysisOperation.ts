@@ -323,6 +323,9 @@ export function useAnalysisOperations() {
               if (existing) {
                 // Update existing sender stats
                 existing.count++;
+                if (sender.isUnread) {
+                  existing.unread_count++;
+                }
                 if (new Date(sender.date) > new Date(existing.lastDate)) {
                   existing.lastDate = sender.date;
                 }
@@ -336,6 +339,7 @@ export function useAnalysisOperations() {
                   senderEmail: sender.email,
                   senderName: sender.name,
                   count: 1,
+                  unread_count: sender.isUnread ? 1 : 0,
                   lastDate: sender.date,
                   analysisId,
                   hasUnsubscribe: sender.hasUnsubscribe,

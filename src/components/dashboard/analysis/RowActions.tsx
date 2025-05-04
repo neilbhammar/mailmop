@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ExternalLink, Trash2, MailOpen, MoreHorizontal, PenSquare, Tag, Ban } from "lucide-react"
+import { ExternalLink, Trash2, MailOpen, MoreHorizontal, PenSquare, Tag, Ban, PencilOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Portal } from "@radix-ui/react-portal"
 
@@ -166,6 +166,7 @@ export function RowActions({
 
       {/* More Actions Dropdown */}
       <DropdownMenu 
+        modal={false}
         onOpenChange={(isOpen) => {
           if (isOpen) {
             onDropdownOpen(sender.email)
@@ -194,20 +195,32 @@ export function RowActions({
         </TooltipProvider>
         <DropdownMenuContent 
           align="end" 
-          className="w-56 bg-white rounded-lg border border-slate-200 shadow-lg"
+          className="w-56 bg-white rounded-lg border border-gray-100 shadow-md z-50 py-1"
         >
-          <DropdownMenuItem onClick={() => onDeleteWithExceptions(sender.email)}>
-            <PenSquare className="h-4 w-4 mr-2" />
+          <DropdownMenuItem 
+            onSelect={(e) => {
+              e.preventDefault();
+              onDeleteWithExceptions(sender.email);
+            }}
+            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50 cursor-pointer"
+          >
+            <PencilOff className="h-4 w-4 mr-2 shrink-0" />
             <span>Delete with Exceptions</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onApplyLabel(sender.email)}>
+          <DropdownMenuItem 
+            onClick={() => onApplyLabel(sender.email)}
+            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50 cursor-pointer"
+          >
             <Tag className="h-4 w-4 mr-2" />
             <span>Apply Label</span>
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={() => !isActionTaken('block') && onBlock(sender.email)}
             disabled={isActionTaken('block')}
-            className={cn(isActionTaken('block') && "opacity-40 cursor-not-allowed")}
+            className={cn(
+              "flex items-center w-full px-4 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50 cursor-pointer",
+              isActionTaken('block') && "opacity-40 cursor-not-allowed data-[highlighted]:bg-white"
+            )}
           >
             <Ban className="h-4 w-4 mr-2" />
             <span>{isActionTaken('block') ? 'Sender blocked' : 'Block Sender'}</span>

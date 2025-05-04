@@ -1,6 +1,6 @@
 import { AnalysisType } from '@/types/actions';
 
-export type OperationType = 'analysis' | 'delete' | 'block' | 'unsubscribe'; // Added 'delete'
+export type OperationType = 'analysis' | 'delete' | 'block' | 'unsubscribe' | 'mark';
 export type OperationMode = 'full' | 'quick' | 'single'; // Added 'single' for non-analysis ops
 
 // Constants for estimation (empirical or best guesses)
@@ -73,6 +73,11 @@ export function estimateRuntimeMs({
       // We assume deletion is slower due to individual operations or confirmations needed
       emailsPerMinute = EMAILS_PER_MINUTE_DELETE;
       calculationBasis = 'delete rate';
+      break;
+    case 'mark':
+      // Marking as read operations are typically faster than deletion
+      emailsPerMinute = EMAILS_PER_MINUTE_ANALYSIS;
+      calculationBasis = 'mark rate';
       break;
     // Add cases for 'block', 'unsubscribe' when implemented, likely similar to delete
     default:
