@@ -6,7 +6,7 @@ export type OperationMode = 'full' | 'quick' | 'single'; // Added 'single' for n
 // Constants for estimation (empirical or best guesses)
 const EMAILS_PER_MINUTE_ANALYSIS = 2000; // Emails processed per minute during analysis
 const EMAILS_PER_MINUTE_DELETE = 500;  // Emails processed per minute during deletion (GUESS)
-const QUICK_ANALYSIS_PERCENTAGE = 0.1; // Quick analysis scans 10% of emails
+const QUICK_ANALYSIS_PERCENTAGE = 0.25; // Quick analysis scans 25% of emails
 const BATCH_API_OVERHEAD_MS = 300; // Estimated overhead per API batch call
 const EMAILS_PER_BATCH = 45; // Typical batch size used in analysis
 

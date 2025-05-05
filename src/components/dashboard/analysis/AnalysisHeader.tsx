@@ -168,7 +168,7 @@ export function AnalysisHeader({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[260px] bg-white border border-slate-200 shadow-lg py-2">
               <DropdownMenuItem 
-                className="flex items-center justify-between cursor-pointer px-3 py-2 hover:bg-slate-50"
+                className="flex items-center justify-between cursor-pointer px-3 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50"
                 onSelect={handleUnreadOnlyToggle}
               >
                 <div className="flex items-center gap-2">
@@ -185,12 +185,12 @@ export function AnalysisHeader({
                 </span>
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-slate-50"
+                className="flex items-center gap-2 cursor-pointer px-3 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50"
                 onSelect={() => exportToCSV(senders)}
                 disabled={isExporting || senders.length === 0}
               >
                 <Download className="h-4 w-4 text-slate-500 mr-2" />
-                <span className="text-sm text-slate-700">
+                <span className="text-sm">
                   {isExporting ? 'Exporting...' : 'Export CSV'}
                 </span>
               </DropdownMenuItem>
