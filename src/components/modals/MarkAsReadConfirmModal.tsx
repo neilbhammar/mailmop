@@ -63,7 +63,7 @@ export function MarkAsReadConfirmModal({
       // Single sender case
       return unreadCount > 0 
         ? `Mark ${unreadCount.toLocaleString()} emails as read`
-        : 'Mark emails as read'
+        : 'Mark emails from 1 sender as read'
     } else {
       // Multiple senders case
       return unreadCount > 0

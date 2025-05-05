@@ -147,18 +147,18 @@ export function RowActions({
             <div
               role="button"
               tabIndex={0}
-              className={cn(
-                iconButtonStyles,
-                isActionTaken('markUnread') && "opacity-40 cursor-not-allowed hover:bg-transparent group-hover:text-slate-400"
-              )}
-              onClick={() => !isActionTaken('markUnread') && onMarkUnread(sender.email)}
+              className={iconButtonStyles}
+              onClick={(e) => {
+                e.stopPropagation();
+                onMarkUnread(sender.email);
+              }}
             >
               <MailOpen className="h-4 w-4" />
             </div>
           </TooltipTrigger>
           <Portal container={document.getElementById('tooltip-root')}>
             <TooltipContent sideOffset={5} className="z-[100]">
-              <p>{isActionTaken('markUnread') ? 'Already marked as read' : 'Mark all as read'}</p>
+              <p>Mark all as read</p>
             </TooltipContent>
           </Portal>
         </Tooltip>

@@ -289,14 +289,25 @@ export default function AnalysisView() {
   }, [selectedEmails, checkFeatureAccess]);
 
   // Handler for single sender mark as read
-  const handleMarkSingleSenderRead = useCallback((email: string) => {
+  const handleMarkSingleSenderRead = useCallback((email: string, unreadCount?: number) => {
     // Find the sender in our data to get the actual unread count
     const sender = senders.find(s => s.email === email);
-    if (!sender) return;
+    
+    // Only use unread count if it exists and is greater than 0
+    const actualUnreadCount = (unreadCount ?? sender?.unread_count) || 0;
 
     if (checkFeatureAccess('mark_read', 1)) {
       setEmailsToMark([email]);
-      setUnreadCountMap(prev => ({ ...prev, [email]: sender.unread_count }));
+      // Only add to unreadCountMap if there are unread emails
+      if (actualUnreadCount > 0) {
+        setUnreadCountMap(prev => ({ ...prev, [email]: actualUnreadCount }));
+      } else {
+        // Remove from unreadCountMap if no unread emails
+        setUnreadCountMap(prev => {
+          const { [email]: _, ...rest } = prev;
+          return rest;
+        });
+      }
       setIsMarkAsReadModalOpen(true);
     } else {
       setActiveSingleSender(email);

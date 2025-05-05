@@ -325,7 +325,7 @@ const ActionWrapper = memo(({
         onUnsubscribe={(email) => console.log('Unsubscribe:', email)}
         onViewInGmail={(email) => viewSenderInGmail(email)}
         onDelete={(email) => onDeleteSingleSender ? onDeleteSingleSender(email, sender.count) : console.log('Delete:', email)}
-        onMarkUnread={(email) => onMarkSingleSenderRead ? onMarkSingleSenderRead(email, sender.count) : console.log('Mark Unread:', email)}
+        onMarkUnread={(email) => onMarkSingleSenderRead ? onMarkSingleSenderRead(email, sender.unread_count) : console.log('Mark Unread:', email)}
         onDeleteWithExceptions={(email) => onDeleteWithExceptions ? onDeleteWithExceptions(email, sender.count) : console.log('Delete with Exceptions:', email)}
         onApplyLabel={(email) => console.log('Apply Label:', email)}
         onBlock={(email) => console.log('Block:', email)}
