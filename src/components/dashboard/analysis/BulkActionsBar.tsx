@@ -32,6 +32,11 @@ export function BulkActionsBar({
   onApplyLabel,
   onBlockSenders
 }: BulkActionsBarProps) {
+  // Add block handler
+  const handleBlock = () => {
+    onBlockSenders();
+  };
+
   return (
     <div className="flex items-center h-9 gap-1">
       <span className="text-sm font-medium text-slate-700">{selectedCount} selected</span>
@@ -100,14 +105,17 @@ export function BulkActionsBar({
             <span>Delete with Exceptions</span>
           </DropdownMenuItem>
           <DropdownMenuItem 
-            onClick={onApplyLabel}
+            onSelect={(e) => {
+              e.preventDefault();
+              onApplyLabel();
+            }}
             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50 cursor-pointer"
           >
             <Tag className="h-4 w-4 mr-2" />
             <span>Apply Label</span>
           </DropdownMenuItem>
           <DropdownMenuItem 
-            onClick={onBlockSenders}
+            onClick={handleBlock}
             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50 cursor-pointer"
           >
             <Ban className="h-4 w-4 mr-2" />

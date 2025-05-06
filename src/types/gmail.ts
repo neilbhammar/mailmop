@@ -23,6 +23,29 @@ export interface GmailPermissionState {
   hasEmailData: boolean;
 }
 
+// Gmail Label Types
+export interface GmailLabel {
+  id: string;
+  name: string;
+  messageListVisibility?: 'hide' | 'show';
+  labelListVisibility?: 'labelHide' | 'labelShow' | 'labelShowIfUnread';
+  type?: 'system' | 'user';
+  color?: {
+    textColor: string;
+    backgroundColor: string;
+  };
+}
+
+export interface CreateLabelRequest {
+  name: string;
+  messageListVisibility?: 'hide' | 'show';
+  labelListVisibility?: 'labelHide' | 'labelShow' | 'labelShowIfUnread';
+  color?: {
+    textColor: string;
+    backgroundColor: string;
+  };
+}
+
 // Google OAuth Types
 export interface GoogleTokenResponse {
   access_token: string;

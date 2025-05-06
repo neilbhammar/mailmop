@@ -20,7 +20,7 @@ const ACTION_LOG_KEY = 'mailmop_current_action';
 
 interface ActionLog {
   clientActionId: string;
-  type: 'delete' | 'delete_with_exceptions' | 'unsubscribe' | 'mark_as_read'; // Add more action types as needed
+  type: 'delete' | 'delete_with_exceptions' | 'unsubscribe' | 'mark_as_read' | 'modify_label'; // Add more action types as needed
   estimatedRuntimeMs: number;
   totalEmails: number;
   totalEstimatedBatches: number;

@@ -37,7 +37,7 @@ export function RowActions({
   onDropdownOpen
 }: RowActionsProps) {
   const isActionTaken = (action: 'unsubscribe' | 'delete' | 'markUnread' | 'block') => {
-    return sender.actionsTaken.includes(action)
+    return sender.actionsTaken && sender.actionsTaken.includes(action);
   }
 
   // Base styles for icon buttons
@@ -64,6 +64,11 @@ export function RowActions({
     "transition-all duration-150"
   )
 
+  // Add block handler
+  const handleBlock = () => {
+    onBlock(sender.email);
+  };
+
   return (
     <div className="flex items-center justify-end gap-1.5">
       {/* Unsubscribe Button - Only show if hasUnsubscribe is true */}
@@ -86,7 +91,12 @@ export function RowActions({
             <Portal container={document.getElementById('tooltip-root')}>
               {isActionTaken('unsubscribe') && (
                 <TooltipContent sideOffset={5} className="z-[100]">
-                  <p>Already unsubscribed from this sender</p>
+                  <p>Unsubscribe request already sent for this sender</p>
+                </TooltipContent>
+              )}
+              {!isActionTaken('unsubscribe') && (
+                <TooltipContent sideOffset={5} className="z-[100]">
+                  <p>Unsubscribe from {sender.name || sender.email}</p>
                 </TooltipContent>
               )}
             </Portal>
@@ -208,15 +218,17 @@ export function RowActions({
             <span>Delete with Exceptions</span>
           </DropdownMenuItem>
           <DropdownMenuItem 
-            onClick={() => onApplyLabel(sender.email)}
+            onSelect={(e) => {
+              e.preventDefault();
+              onApplyLabel(sender.email);
+            }}
             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50 cursor-pointer"
           >
             <Tag className="h-4 w-4 mr-2" />
             <span>Apply Label</span>
           </DropdownMenuItem>
           <DropdownMenuItem 
-            onClick={() => !isActionTaken('block') && onBlock(sender.email)}
-            disabled={isActionTaken('block')}
+            onClick={handleBlock}
             className={cn(
               "flex items-center w-full px-4 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50 cursor-pointer",
               isActionTaken('block') && "opacity-40 cursor-not-allowed data-[highlighted]:bg-white"

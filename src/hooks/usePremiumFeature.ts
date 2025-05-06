@@ -17,11 +17,11 @@ import { ActionType, ActionStatus } from '@/types/actions'
 // Map of premium features to their ActionType for logging
 const featureToActionType: Record<string, ActionType> = {
   delete: 'delete',
-  mark_read: 'apply_label', // Map to closest existing action type
+  mark_read: 'mark_as_read', // Map to closest existing action type
   unsubscribe: 'unsubscribe',
-  apply_label: 'apply_label', // Map to closest existing action type
+  apply_label: 'modify_label', // Map to closest existing action type
   delete_with_exceptions: 'delete',
-  block_sender: 'block'
+  block_sender: 'modify_label',
 }
 
 // Premium features in the app

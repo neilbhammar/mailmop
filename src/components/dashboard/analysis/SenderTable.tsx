@@ -27,6 +27,7 @@ import styles from './SenderTable.module.css'
 import { formatRelativeTime } from '@/lib/utils/formatRelativeTime'
 import { Portal } from "@radix-ui/react-portal"
 import { useViewInGmail } from '@/hooks/useViewInGmail'
+import { ApplyLabelModal } from '@/components/modals/ApplyLabelModal'
 
 // Define column widths for consistent layout
 const COLUMN_WIDTHS = {
@@ -142,6 +143,7 @@ interface SenderTableProps {
     (count: number): void;
     viewInGmail?: () => void;
     getSelectedEmails?: (emails: string[], emailCounts?: Record<string, number>) => void;
+    applyLabelBulk?: () => void;
   }
   /** Current search term for filtering senders */
   searchTerm?: string
@@ -153,6 +155,14 @@ interface SenderTableProps {
   onDeleteWithExceptions?: (email: string, count?: number) => void
   /** Callback for marking a single sender as read */
   onMarkSingleSenderRead?: (email: string, unreadCount?: number) => void
+  /** Callback for single sender apply label */
+  onApplyLabelSingle?: (email: string) => void
+  /** Callback for bulk apply label */
+  onApplyLabelBulk?: (emails: string[]) => void
+  /** Callback for blocking a single sender */
+  onBlockSingleSender: (email: string) => void
+  /** Callback for unsubscribing from a single sender */
+  onUnsubscribeSingleSender?: (email: string) => void
 }
 
 /**
@@ -307,13 +317,19 @@ const ActionWrapper = memo(({
   onDropdownOpen, 
   onDeleteSingleSender, 
   onDeleteWithExceptions,
-  onMarkSingleSenderRead 
+  onMarkSingleSenderRead,
+  onApplyLabelSingle,
+  onBlockSingleSender,
+  onUnsubscribeSingleSender
 }: { 
   sender: Sender, 
   onDropdownOpen: (email: string) => void,
   onDeleteSingleSender?: (email: string, count?: number) => void,
   onDeleteWithExceptions?: (email: string, count?: number) => void,
-  onMarkSingleSenderRead?: (email: string, unreadCount?: number) => void
+  onMarkSingleSenderRead?: (email: string, unreadCount?: number) => void,
+  onApplyLabelSingle?: (email: string) => void,
+  onBlockSingleSender: (email: string) => void,
+  onUnsubscribeSingleSender?: (email: string) => void
 }) => {
   const { viewSenderInGmail } = useViewInGmail();
   
@@ -322,13 +338,17 @@ const ActionWrapper = memo(({
       <RowActions
         sender={sender}
         onDropdownOpen={onDropdownOpen}
-        onUnsubscribe={(email) => console.log('Unsubscribe:', email)}
+        onUnsubscribe={(email) => 
+          onUnsubscribeSingleSender 
+            ? onUnsubscribeSingleSender(email) 
+            : console.warn('onUnsubscribeSingleSender not provided to ActionWrapper')
+        }
         onViewInGmail={(email) => viewSenderInGmail(email)}
         onDelete={(email) => onDeleteSingleSender ? onDeleteSingleSender(email, sender.count) : console.log('Delete:', email)}
         onMarkUnread={(email) => onMarkSingleSenderRead ? onMarkSingleSenderRead(email, sender.unread_count) : console.log('Mark Unread:', email)}
         onDeleteWithExceptions={(email) => onDeleteWithExceptions ? onDeleteWithExceptions(email, sender.count) : console.log('Delete with Exceptions:', email)}
-        onApplyLabel={(email) => console.log('Apply Label:', email)}
-        onBlock={(email) => console.log('Block:', email)}
+        onApplyLabel={(email) => onApplyLabelSingle ? onApplyLabelSingle(email) : console.log('Apply Label Single:', email)}
+        onBlock={(email) => onBlockSingleSender(email)}
       />
     </div>
   );
@@ -350,7 +370,9 @@ export function SenderTable({
   showUnreadOnly = false,
   onDeleteSingleSender,
   onDeleteWithExceptions,
-  onMarkSingleSenderRead
+  onMarkSingleSenderRead,
+  onBlockSingleSender,
+  onUnsubscribeSingleSender
 }: SenderTableProps) {
   // Get senders and filter based on search term and unread status
   const { senders: allSenders, isLoading, isAnalyzing } = useSenderData();
@@ -372,6 +394,18 @@ export function SenderTable({
   
   // Reference to the virtualized scrollable container
   const tableBodyRef = useRef<HTMLDivElement>(null);
+  
+  // --- State for Apply Label Modal ---
+  const [isApplyLabelModalOpen, setIsApplyLabelModalOpen] = useState(false);
+  const [applyLabelModalData, setApplyLabelModalData] = useState<{ 
+    senders: string[], 
+    emailCount: number,
+    emailCountMap: Record<string, number>
+  }>({ 
+    senders: [], 
+    emailCount: 0,
+    emailCountMap: {}
+  });
   
   // Update parent component when selection count changes
   useEffect(() => {
@@ -597,10 +631,19 @@ export function SenderTable({
           onDeleteSingleSender={onDeleteSingleSender}
           onDeleteWithExceptions={onDeleteWithExceptions}
           onMarkSingleSenderRead={onMarkSingleSenderRead}
+          onApplyLabelSingle={(email) => {
+            // Find the sender to get the email count
+            const sender = senders.find(s => s.email === email);
+            if (sender) {
+              handleOpenApplyLabelModal([email], sender.count); // Open modal for single sender
+            }
+          }}
+          onBlockSingleSender={onBlockSingleSender}
+          onUnsubscribeSingleSender={onUnsubscribeSingleSender}
         />
       )
     }
-  ], [selectedEmails, handleCheckboxChange, clearSelections, handleDropdownOpen, onDeleteSingleSender, onDeleteWithExceptions, onMarkSingleSenderRead, showUnreadOnly])
+  ], [selectedEmails, handleCheckboxChange, clearSelections, handleDropdownOpen, onDeleteSingleSender, onDeleteWithExceptions, onMarkSingleSenderRead, showUnreadOnly, onUnsubscribeSingleSender])
 
   // Initialize and configure the table
   const table = useReactTable({
@@ -794,6 +837,56 @@ export function SenderTable({
     }
   }, [selectedEmails, onSelectedCountChange, senders]);
 
+  // --- Placeholder Handlers for Apply Label ---
+  const handleOpenApplyLabelModal = useCallback((emails: string[], totalEmailCount: number) => {
+    console.log("Opening Apply Label Modal for:", emails, "Total emails:", totalEmailCount);
+    // Get email counts for the selected senders
+    const emailCountMap: Record<string, number> = {};
+    emails.forEach(email => {
+      const sender = senders.find(s => s.email === email);
+      if (sender) {
+        emailCountMap[email] = sender.count;
+      }
+    });
+    
+    // TODO: Check Pro Plan status here before opening
+    setApplyLabelModalData({ 
+      senders: emails, 
+      emailCount: totalEmailCount,
+      emailCountMap
+    });
+    setIsApplyLabelModalOpen(true);
+  }, [senders]);
+
+  const handleApplyLabelConfirm = useCallback(async (options: any) => {
+    // This is where the actual logic from useApplyLabel will go later
+    console.log("Confirming Apply Label with options:", options);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500)); 
+    console.log("Apply Label action complete (simulated).");
+    // Close modal is handled inside ApplyLabelModal on success
+    // Need to potentially update UI state / refetch data or update local state here
+  }, []);
+
+  // Add callback for bulk apply label action
+  useEffect(() => {
+    if (onSelectedCountChange && typeof onSelectedCountChange.getSelectedEmails === 'function') {
+      const selectedEmailsArray = Array.from(selectedEmails);
+      const selectedSendersData = selectedEmailsArray
+        .map(email => senders.find(s => s.email === email))
+        .filter((s): s is Sender => !!s); // Ensure only valid senders are included
+        
+      const totalEmailCount = selectedSendersData.reduce((sum, sender) => sum + sender.count, 0);
+      
+      // @ts-ignore - Adding dynamic method
+      onSelectedCountChange.applyLabelBulk = () => {
+        if (selectedEmailsArray.length > 0) {
+          handleOpenApplyLabelModal(selectedEmailsArray, totalEmailCount);
+        }
+      }
+    }
+  }, [selectedEmails, onSelectedCountChange, senders, handleOpenApplyLabelModal]);
+
   return (
     <>
       {/* Add a portal root for tooltips that will render outside table constraints */}
@@ -882,6 +975,17 @@ export function SenderTable({
           )}
         </div>
       </div>
+      
+      {/* Apply Label Modal */}
+      <ApplyLabelModal
+        open={isApplyLabelModalOpen}
+        onOpenChange={setIsApplyLabelModalOpen}
+        senderCount={applyLabelModalData.senders.length}
+        emailCount={applyLabelModalData.emailCount}
+        senders={applyLabelModalData.senders}
+        emailCountMap={applyLabelModalData.emailCountMap}
+        onConfirm={handleApplyLabelConfirm}
+      />
     </>
   )
 }

@@ -1,0 +1,719 @@
+"use client"
+
+import { useState, useEffect, useRef, useMemo } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Check, ChevronsUpDown, Mail, Plus, PlusCircle, Tag, X, Loader2, ChevronRight, ChevronDown, Search } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { fetchLabels, getStoredLabels } from "@/lib/gmail/fetchLabels"
+import { createSimpleLabel } from "@/lib/gmail/createLabel"
+import { getStoredToken } from "@/lib/gmail/tokenStorage"
+import { GmailLabel } from "@/types/gmail"
+import { toast } from "sonner"
+import { ScrollArea } from "@/components/ui/scroll-area"
+
+// Add new imports for hooks
+import { useModifyLabel } from "@/hooks/useModifyLabel"
+import { useCreateFilter } from "@/hooks/useCreateFilter"
+
+interface ApplyLabelModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  senderCount: number
+  emailCount: number
+  senders?: string[]
+  emailCountMap?: Record<string, number>
+  onConfirm: (options: { 
+    actionType: 'add' | 'remove'
+    labelIds: string[]
+    labelNames: string[]
+    createNewLabels: string[]
+    applyToFuture: boolean 
+  }) => Promise<void>
+}
+
+type SelectedLabel = {
+  id: string;
+  name: string;
+  color?: {
+    textColor: string;
+    backgroundColor: string;
+  };
+  isNew?: boolean;
+};
+
+// Label sections for organization
+type LabelSection = {
+  title: string;
+  type: 'system' | 'user';
+  expanded: boolean;
+};
+
+// Labels to exclude from options
+const EXCLUDED_LABELS = ["CHAT", "DRAFT", "SENT"];
+
+export function ApplyLabelModal({
+  open,
+  onOpenChange,
+  senderCount,
+  emailCount,
+  senders = [],
+  emailCountMap = {},
+  onConfirm,
+}: ApplyLabelModalProps) {
+  // Add hooks
+  const { startModifyLabel, progress: modifyProgress } = useModifyLabel()
+  const { startCreateFilter, progress: filterProgress } = useCreateFilter()
+  
+  // State for the modal controls
+  const [actionType, setActionType] = useState<'add' | 'remove'>('add')
+  const [selectedLabels, setSelectedLabels] = useState<SelectedLabel[]>([])
+  const [applyToFuture, setApplyToFuture] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [searchValue, setSearchValue] = useState("")
+  const [availableLabels, setAvailableLabels] = useState<GmailLabel[]>([])
+  const [isLoadingLabels, setIsLoadingLabels] = useState(false)
+  const [isCreatingLabel, setIsCreatingLabel] = useState(false)
+  const [labelSections, setLabelSections] = useState<LabelSection[]>([
+    { title: 'System Labels', type: 'system', expanded: true },
+    { title: 'User Labels', type: 'user', expanded: true }
+  ])
+  const [inputFocused, setInputFocused] = useState(false)
+  
+  // Ref for the input field and container
+  const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Fetch labels when the modal opens
+  useEffect(() => {
+    if (open) {
+      fetchGmailLabels();
+    }
+  }, [open]);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!open) {
+      setActionType('add')
+      setSelectedLabels([])
+      setApplyToFuture(false)
+      setIsProcessing(false)
+      setSearchValue("")
+      setInputFocused(false)
+    }
+  }, [open])
+  
+  // Handle clicks outside the container to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setInputFocused(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Function to fetch Gmail labels
+  const fetchGmailLabels = async () => {
+    setIsLoadingLabels(true);
+    
+    try {
+      // Check for cached labels first
+      const cachedLabels = getStoredLabels();
+      if (cachedLabels && cachedLabels.length > 0) {
+        setAvailableLabels(cachedLabels);
+      }
+      
+      // Get token
+      const token = getStoredToken();
+      if (!token) {
+        toast.error("Your Gmail session has expired. Please reconnect.");
+        return;
+      }
+      
+      // Fetch fresh labels
+      const labels = await fetchLabels(token.accessToken);
+      setAvailableLabels(labels);
+    } catch (error) {
+      console.error("Error fetching labels:", error);
+      toast.error("Failed to load labels. Please try again.");
+    } finally {
+      setIsLoadingLabels(false);
+    }
+  };
+
+  // Toggle section expanded state
+  const toggleSectionExpanded = (sectionType: 'system' | 'user') => {
+    setLabelSections(prev => 
+      prev.map(section => 
+        section.type === sectionType 
+          ? { ...section, expanded: !section.expanded } 
+          : section
+      )
+    );
+  };
+
+  // Handle confirmation
+  const handleConfirm = async () => {
+    if (selectedLabels.length === 0) return
+    
+    setIsProcessing(true)
+    try {
+      // Prepare the sender data for the hooks
+      const sendersToModify = senders.map(email => ({
+        email,
+        emailCount: emailCountMap[email] || 0
+      }))
+
+      // First modify the labels on existing emails
+      await startModifyLabel({
+        senders: sendersToModify,
+        labelIds: selectedLabels.map(label => label.id),
+        actionType
+      })
+
+      // If apply to future is checked, create the filter
+      if (applyToFuture) {
+        await startCreateFilter({
+          senders: senders,
+          labelIds: selectedLabels.map(label => label.id),
+          actionType
+        })
+      }
+
+      // Call the onConfirm callback if provided
+      if (onConfirm) {
+        const newLabels = selectedLabels.filter(label => label.isNew).map(label => label.name)
+        await onConfirm({
+          actionType,
+          labelIds: selectedLabels.map(label => label.id),
+          labelNames: selectedLabels.map(label => label.name),
+          createNewLabels: newLabels,
+          applyToFuture
+        })
+      }
+
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Error applying labels:", error)
+      toast.error("Failed to apply labels. Please try again.")
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  // Create a new label
+  const handleCreateLabel = async () => {
+    if (!searchValue.trim()) return;
+    
+    setIsCreatingLabel(true);
+    try {
+      // Get token
+      const token = getStoredToken();
+      if (!token) {
+        toast.error("Your Gmail session has expired. Please reconnect.");
+        return;
+      }
+      
+      // Create the label
+      const newLabel = await createSimpleLabel(token.accessToken, searchValue.trim());
+      
+      if (newLabel) {
+        // Add to available labels
+        setAvailableLabels(prev => [...prev, newLabel]);
+        
+        // Add to selected labels
+        setSelectedLabels(prev => [...prev, {
+          id: newLabel.id,
+          name: newLabel.name,
+          color: newLabel.color
+        }]);
+        
+        toast.success(`Label "${searchValue.trim()}" created successfully`);
+      } else {
+        // If null is returned, the label already exists but wasn't in our list
+        // Refresh the labels to get the existing one
+        await fetchGmailLabels();
+        
+        // Find the label in the refreshed list
+        const existingLabel = getStoredLabels()?.find(
+          label => label.name.toLowerCase() === searchValue.trim().toLowerCase()
+        );
+        
+        if (existingLabel) {
+          setSelectedLabels(prev => [...prev, {
+            id: existingLabel.id,
+            name: existingLabel.name,
+            color: existingLabel.color
+          }]);
+          
+          toast.info(`Label "${searchValue.trim()}" already exists and has been selected`);
+        } else {
+          toast.error(`Failed to create or find label "${searchValue.trim()}"`);
+        }
+      }
+      
+      // Clear the search
+      setSearchValue("");
+    } catch (error) {
+      console.error("Error creating label:", error);
+      toast.error(`Failed to create label "${searchValue.trim()}". Please try again.`);
+    } finally {
+      setIsCreatingLabel(false);
+    }
+  };
+
+  // Group labels by their type (system or user)
+  const groupedLabels = useMemo(() => {
+    const systemLabels: GmailLabel[] = [];
+    const userLabels: GmailLabel[] = [];
+
+    availableLabels.forEach(label => {
+      // Skip excluded labels
+      if (EXCLUDED_LABELS.includes(label.id)) {
+        return;
+      }
+      
+      if (label.type === 'system') {
+        systemLabels.push(label);
+      } else {
+        userLabels.push(label);
+      }
+    });
+
+    return {
+      system: systemLabels,
+      user: userLabels
+    };
+  }, [availableLabels]);
+
+  // Filter labels based on search and selection
+  const getFilteredLabels = (type: 'system' | 'user') => {
+    return (type === 'system' ? groupedLabels.system : groupedLabels.user).filter(label => {
+      // Filter by search value
+      const matchesSearch = label.name.toLowerCase().includes(searchValue.toLowerCase());
+      // Don't show labels that are already selected
+      const notSelected = !selectedLabels.some(selected => selected.id === label.id);
+      // Don't show system labels when removing (unless it's explicitly a system label section)
+      const isAllowedForAction = actionType === 'add' || type === 'user' || (type === 'system' && label.type === 'system');
+      
+      return matchesSearch && notSelected && isAllowedForAction;
+    });
+  };
+
+  const showCreateOption = searchValue && !availableLabels.some(
+    label => label.name.toLowerCase() === searchValue.toLowerCase()
+  ) && !selectedLabels.some(label => 
+    label.name.toLowerCase() === searchValue.toLowerCase()
+  );
+
+  const handleAddLabel = (label: GmailLabel) => {
+    setSelectedLabels(prev => [...prev, {
+      id: label.id,
+      name: label.name,
+      color: label.color
+    }]);
+    setSearchValue(""); 
+    
+    // Focus the input to continue adding labels
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }
+
+  const handleRemoveLabel = (labelId: string) => {
+    setSelectedLabels(prev => prev.filter(label => label.id !== labelId));
+  }
+
+  // Get email count for a sender
+  const getEmailCountForSender = (sender: string): number => {
+    return emailCountMap[sender] || 0;
+  }
+  
+  // Sort senders by email count (highest first)
+  const sortedSenders = [...senders].sort((a, b) => {
+    const countA = getEmailCountForSender(a);
+    const countB = getEmailCountForSender(b);
+    return countB - countA;
+  });
+  
+  // Handle key presses in the input field
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Create new label on Enter if text exists
+    if (e.key === 'Enter' && searchValue.trim()) {
+      e.preventDefault();
+      
+      // Check if label exists to select it
+      const existingLabel = availableLabels.find(
+        label => label.name.toLowerCase() === searchValue.toLowerCase()
+      );
+      
+      if (existingLabel) {
+        handleAddLabel(existingLabel);
+      } else if (showCreateOption) {
+        handleCreateLabel();
+      }
+    }
+    
+    // Remove last label on Backspace if input is empty
+    if (e.key === 'Backspace' && !searchValue && selectedLabels.length > 0) {
+      handleRemoveLabel(selectedLabels[selectedLabels.length - 1].id);
+    }
+    
+    // Close dropdown on Escape
+    if (e.key === 'Escape') {
+      setInputFocused(false);
+    }
+  };
+
+  // Helper to get label color display
+  const getLabelColor = (label: SelectedLabel) => {
+    if (label.color) {
+      return label.color.backgroundColor;
+    }
+    // Default color if none specified
+    return "#a78bfa";
+  };
+
+  // Find a system label section
+  const systemSection = labelSections.find(s => s.type === 'system');
+  // Find a user label section
+  const userSection = labelSections.find(s => s.type === 'user');
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg bg-white shadow-lg">
+        <DialogHeader>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+              <Tag className="h-4 w-4 text-purple-600" />
+            </div>
+            <DialogTitle className="text-lg font-semibold">
+              {actionType === 'add' ? 'Apply Labels' : 'Remove Labels'}
+            </DialogTitle>
+          </div>
+          <p className="text-sm text-slate-600 mt-1">
+            This will affect {emailCount.toLocaleString()} emails from {senderCount} {senderCount === 1 ? 'sender' : 'senders'}
+          </p>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {/* Selected Senders - Moved to top */}
+          {senders && senders.length > 0 && (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="p-2.5 border-b bg-slate-50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-700">Selected Senders</span>
+                  <span className="text-xs text-slate-500">{senderCount} {senderCount === 1 ? 'sender' : 'senders'}</span>
+                </div>
+              </div>
+              <div className="max-h-[100px] overflow-y-auto p-2.5 bg-white">
+                <div className="space-y-1.5">
+                  {sortedSenders.map(sender => {
+                    const emailCount = getEmailCountForSender(sender);
+                    return (
+                      <div 
+                        key={sender} 
+                        className="flex items-center justify-between py-1"
+                      >
+                        <div className="flex flex-col flex-1 min-w-0 mr-4">
+                          <span className="text-sm text-slate-700 truncate">{sender}</span>
+                        </div>
+                        {emailCount > 0 && (
+                          <span className="text-sm text-blue-600 font-medium whitespace-nowrap">
+                            {emailCount.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Label Selection Area */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-700">
+              Select Labels
+            </label>
+            
+            <div className="flex gap-2 items-start">
+              {/* Action Type Selector */}
+              <Select 
+                value={actionType} 
+                onValueChange={(value: 'add' | 'remove') => setActionType(value)}
+              >
+                <SelectTrigger className="w-[140px] bg-white border-slate-200">
+                  <SelectValue placeholder="Action" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="add">Add labels</SelectItem>
+                  <SelectItem value="remove">Remove labels</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {/* Label Input & Selection Area */}
+              <div 
+                ref={containerRef} 
+                className="flex-1 relative"
+              >
+                {/* Input Field */}
+                <div className="relative flex min-h-[36px] rounded-md border border-slate-200 bg-white text-sm">
+                  <div className="flex flex-wrap gap-1 p-1.5 items-center w-full">
+                    {/* Selected Labels */}
+                    {selectedLabels.map(label => (
+                      <div 
+                        key={label.id}
+                        className="inline-flex items-center gap-1 bg-slate-100 rounded-md pl-1.5 pr-0.5 py-0.5 text-sm"
+                      >
+                        <div 
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{backgroundColor: getLabelColor(label)}}
+                        />
+                        <span className="text-xs text-slate-700">{label.name}</span>
+                        <button
+                          type="button"
+                          className="h-4 w-4 rounded-full inline-flex items-center justify-center text-slate-400 hover:text-slate-500 hover:bg-slate-200"
+                          onClick={() => handleRemoveLabel(label.id)}
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                    
+                    <div className="flex items-center flex-1 min-w-[80px]">
+                      {searchValue.length === 0 && selectedLabels.length === 0 && (
+                        <Search className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
+                      )}
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={searchValue}
+                        onChange={(e) => setSearchValue(e.target.value)}
+                        onFocus={() => setInputFocused(true)}
+                        onKeyDown={handleInputKeyDown}
+                        className="flex-1 bg-transparent outline-none placeholder:text-slate-500 disabled:cursor-not-allowed disabled:opacity-50 p-0 text-sm"
+                        placeholder={selectedLabels.length ? "Add more labels..." : "Type to search or create labels..."}
+                        disabled={isLoadingLabels || isCreatingLabel}
+                      />
+                      
+                      {/* Loading indicator */}
+                      {(isLoadingLabels || isCreatingLabel) && (
+                        <Loader2 className="h-4 w-4 animate-spin text-slate-400 ml-1" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Label Dropdown - Only visible when input is focused */}
+                {inputFocused && (
+                  <div className="absolute left-0 right-0 mt-1 border border-slate-200 rounded-md bg-white shadow-md z-50">
+                    {isLoadingLabels ? (
+                      <div className="py-3 text-center">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto text-slate-400" />
+                        <p className="text-xs text-slate-500 mt-1">Loading labels...</p>
+                      </div>
+                    ) : (
+                      <Command className="bg-white">
+                        <ScrollArea className="h-[180px]">
+                          {/* Empty State */}
+                          {getFilteredLabels('user').length === 0 && getFilteredLabels('system').length === 0 && !showCreateOption && (
+                            <div className="py-3 text-center text-sm text-slate-500">
+                              {searchValue 
+                                ? 'No matching labels found.'
+                                : 'Type to search for labels.'}
+                            </div>
+                          )}
+                          
+                          {/* User Labels Section */}
+                          {getFilteredLabels('user').length > 0 && userSection && (
+                            <>
+                              <div 
+                                className="flex items-center px-2 py-1.5 text-sm font-medium text-slate-700 border-t border-slate-100 cursor-pointer hover:bg-slate-50"
+                                onClick={() => toggleSectionExpanded('user')}
+                              >
+                                {userSection.expanded ? (
+                                  <ChevronDown className="h-3.5 w-3.5 mr-1 text-slate-500" />
+                                ) : (
+                                  <ChevronRight className="h-3.5 w-3.5 mr-1 text-slate-500" />
+                                )}
+                                <span>User Labels ({getFilteredLabels('user').length})</span>
+                              </div>
+                              
+                              {userSection.expanded && (
+                                <CommandGroup className="pt-0">
+                                  {getFilteredLabels('user').map((label) => (
+                                    <CommandItem
+                                      key={label.id}
+                                      value={label.name}
+                                      onSelect={() => handleAddLabel(label)}
+                                      className="py-2 bg-white"
+                                    >
+                                      <div className="flex items-center">
+                                        <div 
+                                          className="h-3 w-3 rounded-full mr-2"
+                                          style={{backgroundColor: label.color?.backgroundColor || '#a78bfa'}}
+                                        />
+                                        <span>{label.name}</span>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              )}
+                            </>
+                          )}
+                          
+                          {/* System Labels Section */}
+                          {getFilteredLabels('system').length > 0 && systemSection && (
+                            <>
+                              <div 
+                                className="flex items-center px-2 py-1.5 text-sm font-medium text-slate-700 border-t border-slate-100 cursor-pointer hover:bg-slate-50 mt-1"
+                                onClick={() => toggleSectionExpanded('system')}
+                              >
+                                {systemSection.expanded ? (
+                                  <ChevronDown className="h-3.5 w-3.5 mr-1 text-slate-500" />
+                                ) : (
+                                  <ChevronRight className="h-3.5 w-3.5 mr-1 text-slate-500" />
+                                )}
+                                <span>System Labels ({getFilteredLabels('system').length})</span>
+                              </div>
+                              
+                              {systemSection.expanded && (
+                                <CommandGroup className="pt-0">
+                                  {getFilteredLabels('system').map((label) => (
+                                    <CommandItem
+                                      key={label.id}
+                                      value={label.name}
+                                      onSelect={() => handleAddLabel(label)}
+                                      className="py-2 bg-white"
+                                    >
+                                      <div className="flex items-center">
+                                        <div 
+                                          className="h-3 w-3 rounded-full mr-2"
+                                          style={{backgroundColor: label.color?.backgroundColor || '#cbd5e1'}}
+                                        />
+                                        <span>{label.name}</span>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              )}
+                            </>
+                          )}
+                          
+                          {/* Create Label Option */}
+                          {showCreateOption && !isCreatingLabel && searchValue && (
+                            <CommandItem
+                              value={`create-${searchValue}`}
+                              onSelect={handleCreateLabel}
+                              className="py-2 mt-1 text-purple-600 bg-white border-t border-slate-100"
+                            >
+                              <PlusCircle className="h-4 w-4 mr-2" />
+                              <span>Create new label: <strong>{searchValue}</strong></span>
+                            </CommandItem>
+                          )}
+                        </ScrollArea>
+                      </Command>
+                    )}
+                  </div>
+                )}
+                
+                {showCreateOption && !isCreatingLabel && (
+                  <p className="text-xs text-purple-600 mt-1">
+                    Press Enter to create "{searchValue}"
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Future Apply Option */}
+          <div className="flex items-start space-x-2 py-1">
+            <div className="flex h-5 items-center">
+              <Checkbox 
+                id="apply-future" 
+                checked={applyToFuture} 
+                onCheckedChange={(checked) => setApplyToFuture(checked as boolean)}
+                className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 border-slate-300"
+              />
+            </div>
+            <div>
+              <Label 
+                htmlFor="apply-future" 
+                className="text-sm font-medium text-slate-700 leading-tight cursor-pointer"
+              >
+                Also {actionType === 'add' ? 'apply' : 'remove'} for future emails
+              </Label>
+              <p className="text-xs text-slate-500 mt-1">
+                Creates a Gmail filter to {actionType === 'add' ? 'add' : 'remove'} these labels for incoming emails
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <DialogFooter className="flex justify-end gap-2 pt-3">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="bg-white border-slate-200"
+            disabled={isProcessing}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            className={cn(
+              actionType === 'add' ? "bg-purple-600 hover:bg-purple-700" : "bg-red-600 hover:bg-red-700",
+              "text-white"
+            )}
+            disabled={selectedLabels.length === 0 || isProcessing || isLoadingLabels || isCreatingLabel}
+          >
+            {isProcessing ? (
+              <div className="flex items-center gap-2">
+                <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <span>Processing...</span>
+              </div>
+            ) : (
+              <span>{actionType === 'add' ? 'Apply Labels' : 'Remove Labels'}</span>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+} 

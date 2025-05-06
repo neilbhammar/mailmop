@@ -18,6 +18,10 @@ import { useSenderData, TableSender } from '@/hooks/useSenderData'
 import { RuleGroup } from '@/lib/gmail/buildQuery'
 import { useMarkAsRead, SenderToMark } from '@/hooks/useMarkAsRead'
 import { MarkAsReadConfirmModal } from '@/components/modals/MarkAsReadConfirmModal'
+import { BlockSenderModal } from '@/components/modals/BlockSenderModal'
+import { useUnsubscribe, UnsubscribeMethodDetails } from '@/hooks/useUnsubscribe'
+import { getUnsubscribeMethod } from '@/lib/gmail/getUnsubscribeMethod'
+import { ConfirmUnsubscribeModal } from '@/components/modals/ConfirmUnsubscribeModal'
 
 // Create a custom type for the selection count change handler
 // that includes our viewInGmail extension
@@ -25,6 +29,9 @@ interface SelectionCountHandler {
   (count: number): void;
   viewInGmail?: () => void;
   getSelectedEmails?: (emails: string[], emailCounts?: Record<string, number>) => void;
+  applyLabelBulk?: () => void;
+  applyLabelSingle?: (email: string) => void;
+  unsubscribeSingleSender?: (email: string) => void;
 }
 
 export default function AnalysisView() {
@@ -57,7 +64,7 @@ export default function AnalysisView() {
   } = useDeleteWithExceptions()
   
   // Track selected emails for bulk actions
-  const [selectedEmails, setSelectedEmails] = useState<string[]>([])
+  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set())
   
   // Delete confirmation modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -101,6 +108,20 @@ export default function AnalysisView() {
   // Add state for unread count map
   const [unreadCountMap, setUnreadCountMap] = useState<Record<string, number>>({});
 
+  // Add state for block modal
+  const [isBlockModalOpen, setIsBlockModalOpen] = useState(false)
+  const [emailsToBlock, setEmailsToBlock] = useState<string[]>([])
+
+  // Hook for unsubscribe functionality
+  const unsubscribeHook = useUnsubscribe();
+
+  // State for ConfirmUnsubscribeModal
+  const [isConfirmUnsubscribeModalOpen, setConfirmUnsubscribeModalOpen] = useState(false);
+  const [unsubscribeModalData, setUnsubscribeModalData] = useState<{
+    senderEmail: string;
+    methodDetails: UnsubscribeMethodDetails;
+  } | null>(null);
+
   // Wrapper function for setSelectedCount that keeps track of table actions
   const handleSelectedCountChange: SelectionCountHandler = useCallback((count: number) => {
     setSelectedCount(count);
@@ -113,7 +134,7 @@ export default function AnalysisView() {
 
   // Update the effect that gets sender data
   useEffect(() => {
-    if (!selectedEmails.length) {
+    if (!selectedEmails.size) {
       setUnreadCountMap({});
       return;
     }
@@ -137,7 +158,7 @@ export default function AnalysisView() {
   useEffect(() => {
     // @ts-ignore - Adding a method to the component instance
     handleSelectedCountChange.getSelectedEmails = (emails: string[], emailCounts?: Record<string, number>) => {
-      setSelectedEmails(emails);
+      setSelectedEmails(new Set(emails));
       
       // If provided email counts, use them
       if (emailCounts) {
@@ -155,7 +176,7 @@ export default function AnalysisView() {
 
   // Handlers for bulk actions
   const handleViewInGmail = useCallback(() => {
-    if (selectedEmails.length === 0 && !activeSingleSender) {
+    if (selectedEmails.size === 0 && !activeSingleSender) {
       toast.warning('No senders selected');
       return;
     }
@@ -168,19 +189,19 @@ export default function AnalysisView() {
     }
     
     // Otherwise use the selected emails for bulk action
-    viewMultipleSendersInGmail(selectedEmails);
+    viewMultipleSendersInGmail(Array.from(selectedEmails));
   }, [selectedEmails, viewMultipleSendersInGmail, activeSingleSender, viewSenderInGmail]);
 
   // Handler to initiate the delete flow - uses checkFeatureAccess
   const handleDelete = useCallback(() => {
-    if (selectedEmails.length === 0) {
+    if (selectedEmails.size === 0) {
       toast.warning('No senders selected');
       return;
     }
     // checkFeatureAccess will open the premium modal if needed and set internal state
-    if (checkFeatureAccess('delete', selectedEmails.length)) {
+    if (checkFeatureAccess('delete', selectedEmails.size)) {
       // If access granted, proceed to open delete confirm modal
-      setEmailsToDelete(selectedEmails);
+      setEmailsToDelete(Array.from(selectedEmails));
       setIsDeleteModalOpen(true);
     }
     // No else needed, hook handles opening the premium modal
@@ -198,7 +219,7 @@ export default function AnalysisView() {
     const result = await startDelete(sendersToDeleteFormatted);
     
     if (result.success) {
-      setSelectedEmails([]);
+      setSelectedEmails(new Set());
       setEmailsToDelete([]);
     } 
   }, [emailsToDelete, emailCountMap, startDelete]);
@@ -222,7 +243,7 @@ export default function AnalysisView() {
   // Handler for delete with exceptions
   const handleDeleteWithExceptions = useCallback(() => {
     // Start with current selected emails or any emailsToDelete that were set
-    const emailsToUse = selectedEmails.length > 0 ? selectedEmails : emailsToDelete;
+    const emailsToUse = selectedEmails.size > 0 ? Array.from(selectedEmails) : emailsToDelete;
     
     if (emailsToUse.length === 0) {
       toast.warning('No senders selected');
@@ -253,7 +274,7 @@ export default function AnalysisView() {
     const result = await startDeleteWithExceptions(sendersToDeleteFormatted, filterRules);
     
     if (result.success) {
-      setSelectedEmails([]);
+      setSelectedEmails(new Set());
       setEmailsToDelete([]);
     } 
   }, [emailsToDelete, emailCountMap, startDeleteWithExceptions]);
@@ -276,14 +297,14 @@ export default function AnalysisView() {
 
   // Handler for mark as read functionality
   const handleMarkAllRead = useCallback(() => {
-    if (selectedEmails.length === 0) {
+    if (selectedEmails.size === 0) {
       toast.warning('No senders selected');
       return;
     }
 
     // Check premium access
-    if (checkFeatureAccess('mark_read', selectedEmails.length)) {
-      setEmailsToMark(selectedEmails);
+    if (checkFeatureAccess('mark_read', selectedEmails.size)) {
+      setEmailsToMark(Array.from(selectedEmails));
       setIsMarkAsReadModalOpen(true);
     }
   }, [selectedEmails, checkFeatureAccess]);
@@ -326,18 +347,95 @@ export default function AnalysisView() {
     const result = await startMarkAsRead(sendersToMarkFormatted);
     
     if (result.success) {
-      setSelectedEmails([]);
+      setSelectedEmails(new Set());
       setEmailsToMark([]);
     }
   }, [emailsToMark, emailCountMap, startMarkAsRead]);
 
+  const handleApplyLabelSingle = useCallback((email: string) => {
+    console.log("Apply Label for single sender:", email);
+    // TODO: Implement premium check for Apply Label
+    // TODO: If premium, open ApplyLabelModal for single sender
+  }, []);
+
+  const handleApplyLabelBulk = useCallback(() => {
+    console.log("Apply Label for BULK senders:", Array.from(selectedEmails));
+    // TODO: Implement premium check for Apply Label
+    // TODO: If premium, open ApplyLabelModal for bulk senders
+  }, [selectedEmails]);
+
+  // Placeholder handler for Unsubscribe
+  const handleUnsubscribeSingleSender = useCallback(async (email: string) => {
+    if (checkFeatureAccess('unsubscribe', 1)) {
+      const sender = senders.find(s => s.email === email);
+      if (!sender) {
+        toast.error("Sender data not found for unsubscribe action.");
+        return;
+      }
+      if (!sender.hasUnsubscribe || !sender.unsubscribe) {
+        toast.error(`No unsubscribe information found for ${email}.`);
+        return;
+      }
+
+      const methodDetails = getUnsubscribeMethod(sender.unsubscribe);
+      if (!methodDetails) {
+        toast.error(`Could not determine a valid unsubscribe method for ${email}.`);
+        return;
+      }
+
+      // Logic for modal confirmation or direct action
+      if (methodDetails.type === 'mailto' && !methodDetails.requiresPost) {
+        const skipConfirm = sessionStorage.getItem("skipUnsubConfirm") === "true";
+        if (!skipConfirm) {
+          setUnsubscribeModalData({ senderEmail: email, methodDetails });
+          setConfirmUnsubscribeModalOpen(true);
+        } else {
+          // Skip modal and directly run unsubscribe
+          await unsubscribeHook.run({ senderEmail: email }, methodDetails);
+        }
+      } else {
+        // For URL or mailto with requiresPost, run directly
+        await unsubscribeHook.run({ senderEmail: email }, methodDetails);
+      }
+    } else {
+      // Premium modal was shown by checkFeatureAccess, store sender for potential view action
+      setActiveSingleSender(email);
+    }
+  }, [checkFeatureAccess, senders, setActiveSingleSender, unsubscribeHook]);
+
+  // Handler for block sender (single and bulk)
+  const handleBlockSender = useCallback((emails: string[]) => {
+    if (emails.length === 0) {
+      // ... existing code ...
+    }
+  }, []);
+
   const handleApplyLabel = () => {
     console.log(`Apply label to ${selectedCount} senders`);
+    // Call the dynamically attached function on the handleSelectedCountChange object
+    if (handleSelectedCountChange.applyLabelBulk) {
+      handleSelectedCountChange.applyLabelBulk();
+    }
   }
 
   const handleBlockSenders = () => {
-    console.log(`Block ${selectedCount} senders`);
+    if (selectedEmails.size === 0) return;
+    setEmailsToBlock(Array.from(selectedEmails));
+    setIsBlockModalOpen(true);
   }
+
+  const handleBlockConfirm = async () => {
+    // The actual blocking is handled inside the modal
+    // This is just for any UI updates needed after blocking
+    setSelectedEmails(new Set());
+    setEmailsToBlock([]);
+  }
+
+  // Add handler for single sender block
+  const handleBlockSingleSender = useCallback((email: string) => {
+    setEmailsToBlock([email]);
+    setIsBlockModalOpen(true);
+  }, []);
 
   // --- NEW: Logic to disable bulk delete button ---
   const isBulkDeleteDisabled = useMemo(() => {
@@ -350,7 +448,7 @@ export default function AnalysisView() {
     
     // Find the sender data objects corresponding to the selected emails
     const selectedSenderDataList = senders.filter(sender => 
-      selectedEmails.includes(sender.email)
+      selectedEmails.has(sender.email)
     );
     
     // If we couldn't find data for all selected emails (shouldn't happen, but safety check)
@@ -406,6 +504,8 @@ export default function AnalysisView() {
             onDeleteSingleSender={handleDeleteSingleSender}
             onDeleteWithExceptions={handleDeleteSingleSenderWithExceptions}
             onMarkSingleSenderRead={handleMarkSingleSenderRead}
+            onBlockSingleSender={handleBlockSingleSender}
+            onUnsubscribeSingleSender={handleUnsubscribeSingleSender}
           />
         </div>
       </div>
@@ -477,6 +577,36 @@ export default function AnalysisView() {
         onOpenChange={closeMarkAsReadReauthModal}
         type={markAsReadReauthModal.type}
         eta={markAsReadReauthModal.eta}
+      />
+
+      {/* Add Confirm Unsubscribe Modal */}
+      {unsubscribeModalData && (
+        <ConfirmUnsubscribeModal
+          open={isConfirmUnsubscribeModalOpen}
+          onOpenChange={setConfirmUnsubscribeModalOpen}
+          senderEmail={unsubscribeModalData.senderEmail}
+          onConfirm={async () => {
+            if (unsubscribeModalData) { // Should always be true if modal is open
+              await unsubscribeHook.run(
+                { senderEmail: unsubscribeModalData.senderEmail }, 
+                unsubscribeModalData.methodDetails
+              );
+            }
+            setUnsubscribeModalData(null); // Clear data after use
+          }}
+          onCancel={() => setUnsubscribeModalData(null)} // Clear data on cancel
+        />
+      )}
+
+      {/* Add BlockSenderModal */}
+      <BlockSenderModal
+        open={isBlockModalOpen}
+        onOpenChange={setIsBlockModalOpen}
+        emailCount={totalEmailCount}
+        senderCount={emailsToBlock.length}
+        onConfirm={handleBlockConfirm}
+        senders={emailsToBlock}
+        emailCountMap={emailCountMap}
       />
     </div>
   )

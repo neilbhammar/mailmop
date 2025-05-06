@@ -1,18 +1,19 @@
 // Defines the types related to actions logged in the system (local and Supabase)
 
 /** General type of action being performed */
-export type ActionType = 
-  | 'analysis' 
-  | 'delete' 
-  | 'delete_with_exceptions' 
-  | 'apply_label' 
-  | 'block' 
-  | 'unsubscribe' 
-  | 'view' 
-  | 'preview' 
-  | 'premium_attempt' 
+export type ActionType =
   | 'mark_as_read'
-  | 'other';
+  | 'modify_label'
+  | 'create_filter'
+  | 'delete'
+  | 'unsubscribe'
+  | 'delete_with_exceptions'
+  | 'analysis'
+  | 'view'
+  | 'preview'
+  | 'premium_attempt'
+  | 'other'
+  | 'unsubscribe';
 
 /** Specific mode for analysis actions */
 export type AnalysisType = 'full' | 'quick'; // Kept for analysis-specific filters
@@ -24,8 +25,9 @@ export type ActionStatus =
   | 'analyzing' // Specific to analysis?
   | 'deleting' // Added
   | 'marking'
-  | 'blocking' // Future
-  | 'unsubscribing' // Future
+  | 'modifying'
+  | 'unsubscribing'
+  | 'creating'
   | 'completed'
   | 'error'
   | 'cancelled';
@@ -33,8 +35,9 @@ export type ActionStatus =
 /** How an action concluded */
 export type ActionEndType =
   | 'success'
-  | 'runtime_error'
+  | 'partial_success'
   | 'user_stopped'
+  | 'runtime_error'
   | 'token_expired' // Maybe needed?
   | 'permission_error'; // Maybe needed?
 
@@ -78,4 +81,20 @@ export interface LocalActionLog {
   completed_at: string | null; // ISO timestamp
   end_type: ActionEndType | null;
   completion_reason: string | null; // e.g., error message or 'cancelled'
-} 
+}
+
+export type OperationType =
+  | 'mark'
+  | 'modify_label'
+  | 'delete'
+  | 'analysis';
+
+export type OperationMode =
+  | 'single'
+  | 'full'
+  | 'quick'
+  | 'bulk'
+  | 'read'
+  | 'unread'
+  | 'add'
+  | 'remove'; 

@@ -8,8 +8,14 @@ import { fetchGmailStats } from '@/lib/gmail/fetchGmailStats';
 import { useAuth } from './AuthProvider';
 import { ANALYSIS_CHANGE_EVENT, hasSenderAnalysis } from '@/lib/storage/senderAnalysis';
 
-// Use the broader scope as requested for troubleshooting
-const GMAIL_SCOPE = 'https://mail.google.com/';
+// Use both scopes - broad scope for general operations and settings.basic for filters
+const GMAIL_SCOPES = [
+  'https://www.googleapis.com/auth/gmail.modify',
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/gmail.labels',
+  'https://www.googleapis.com/auth/gmail.settings.basic'
+].join(' ');
+
 const GOOGLE_GSI_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
 const GOOGLE_API_SCRIPT_URL = 'https://apis.google.com/js/api.js';
 
@@ -342,7 +348,7 @@ export function GmailPermissionsProvider({
         // Type assertion to use the expected TokenClientConfig
         const client = window.google.accounts.oauth2.initTokenClient({
           client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
-          scope: GMAIL_SCOPE,
+          scope: GMAIL_SCOPES,
           login_hint: user.email,
           // Use the library's TokenResponse type for the callback parameter
           callback: (response: google.accounts.oauth2.TokenResponse) => {
