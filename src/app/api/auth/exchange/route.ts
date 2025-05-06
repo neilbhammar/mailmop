@@ -9,8 +9,8 @@ export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the authorization code from the request body
-    const { code } = await request.json();
+    // Get the authorization code and redirect URI from the request body
+    const { code, redirectUri } = await request.json();
     
     // If there's no code, we can't do the exchange
     if (!code) {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       code: code,
       client_id: process.env.GOOGLE_CLIENT_ID!,
       client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`, // Where Google sent us after login
+      redirect_uri: redirectUri,            // Use the same redirectUri that Google saw
       grant_type: 'authorization_code',
     });
 

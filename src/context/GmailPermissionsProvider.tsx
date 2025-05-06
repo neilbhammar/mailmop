@@ -7,6 +7,8 @@ import { fetchGmailProfile } from '@/lib/gmail/fetchProfile';
 import { fetchGmailStats } from '@/lib/gmail/fetchGmailStats';
 import { useAuth } from './AuthProvider';
 import { ANALYSIS_CHANGE_EVENT, hasSenderAnalysis } from '@/lib/storage/senderAnalysis';
+import { primeAccessToken } from '@/lib/gmail/token';
+
 
 // Use both scopes - broad scope for general operations and settings.basic for filters
 const GMAIL_SCOPES = [
@@ -329,76 +331,64 @@ export function GmailPermissionsProvider({
   }, [updateTokenStatus]);
 
   // Request Gmail permissions
-  const requestPermissions = useCallback(async () => {
-    if (!isClientLoaded) {
-      console.error('[Gmail] OAuth client not loaded yet');
-      return false;
-    }
+  // OLD  — keep the wrapper, just swap the inside
+const requestPermissions = useCallback(async () => {
+  if (!isClientLoaded) return false;
 
-    if (!user?.email) {
-      console.error('[Gmail] No authenticated user email found');
-      return false;
-    }
+  return new Promise<boolean>((resolve, reject) => {
+    const codeClient = window.google.accounts.oauth2.initCodeClient({
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+      scope: GMAIL_SCOPES,
+      login_hint: user?.email ?? '',
+      ux_mode: 'popup',
+      callback: async ({ code, error }) => {
+        if (error || !code) {
+          console.error('[Gmail] OAuth error:', error);
+          return reject(error);
+        }
 
-    console.log('[Gmail] Requesting permissions...');
-    setIsLoading(true);
-    try {
-      const tokenResponse = await new Promise<GoogleTokenResponse>((resolve, reject) => {
-        console.log('[Gmail] Initializing OAuth client...');
-        // Type assertion to use the expected TokenClientConfig
-        const client = window.google.accounts.oauth2.initTokenClient({
-          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
-          scope: GMAIL_SCOPES,
-          login_hint: user.email,
-          // Use the library's TokenResponse type for the callback parameter
-          callback: (response: google.accounts.oauth2.TokenResponse) => {
-            if (response.error) {
-              // Reject with the error description or the whole response
-              reject(response.error_description || response); 
-            } else {
-              // Ensure expires_in is treated as a number before resolving
-              const expiresInNum = parseInt(response.expires_in, 10);
-              if (isNaN(expiresInNum)) {
-                reject(new Error('Invalid expires_in value received from Google'));
-                return;
-              }
-              
-              // Resolve with the expected structure, converting expires_in
-              resolve({
-                ...response,
-                expires_in: expiresInNum, 
-              } as GoogleTokenResponse); // Asserting back to our type after conversion
-            }
-          },
+        
+        // Trade code → tokens via Edge
+        const resp = await fetch('/api/auth/exchange', {
+          method: 'POST',
+          credentials: 'include',                // sends cookie back
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code,
+            redirectUri: window.location.origin   // must match OAuth config
+          }),
         });
-        client.requestAccessToken();
-      });
 
-      const emailVerified = await verifyEmailMatch(tokenResponse.access_token);
-      if (!emailVerified) {
-        return false;
-      }
+        if (!resp.ok) {
+          const msg = await resp.text();
+          console.error('[Gmail] Exchange failed:', msg);
+          return reject(msg);
+        }
 
-      console.log('[Gmail] Permissions granted successfully, storing token...');
-      storeGmailToken(tokenResponse.access_token, tokenResponse.expires_in);
-      
-      // Immediately update token status
-      updateTokenStatus();
+        const { access_token, expires_in } = await resp.json();
 
-      try {
-        await fetchGmailStats(tokenResponse.access_token);
-      } catch (statsError) {
-        console.error('[Gmail] Failed to fetch Gmail stats after authentication:', statsError);
-      }
+        // 1) Put it in memory for immediate use
+        primeAccessToken(access_token, expires_in);
 
-      return true;
-    } catch (error) {
-      console.error('[Gmail] Failed to get permissions:', error);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isClientLoaded, updateTokenStatus, verifyEmailMatch, user?.email]);
+        // 2) (TEMP) also keep sessionStorage alive until Step 4
+        storeGmailToken(access_token, expires_in);
+
+        // Verify the Gmail ↔ Supabase email match
+        const ok = await verifyEmailMatch(access_token);
+        if (!ok) return reject('email_mismatch');
+
+        // Kick off stats fetch, update UI, etc.
+        updateTokenStatus();
+        fetchGmailStats(access_token).catch(console.error);
+
+        resolve(true);
+      },
+    });
+
+    // Opens the popup
+    codeClient.requestCode();
+  });
+}, [isClientLoaded, user?.email, verifyEmailMatch, updateTokenStatus]);
 
   // Determine if we need to show the permissions modal
   const shouldShowPermissionsModal = false; // Disabled - permissions now handled in IntroStepper - old logic was: !permissionState.isTokenValid && !permissionState.hasEmailData && !shouldShowMismatchModal;

@@ -213,21 +213,35 @@ const TruncatedCell = memo(({
 }) => {
   const textRef = useRef<HTMLDivElement>(null)
   const [isTextTruncated, setIsTextTruncated] = useState(false)
+  const resizeObserverRef = useRef<ResizeObserver | null>(null)
 
   // Check if text is truncated on mount and resize
   useEffect(() => {
     const checkTruncation = () => {
       if (textRef.current) {
-        setIsTextTruncated(
-          textRef.current.scrollWidth > textRef.current.clientWidth
-        )
+        const isTruncated = textRef.current.scrollWidth > textRef.current.clientWidth
+        if (isTruncated !== isTextTruncated) {
+          setIsTextTruncated(isTruncated)
+        }
       }
     }
 
+    // Initial check
     checkTruncation()
-    window.addEventListener('resize', checkTruncation)
-    return () => window.removeEventListener('resize', checkTruncation)
-  }, [content])
+
+    // Set up ResizeObserver
+    if (textRef.current) {
+      resizeObserverRef.current = new ResizeObserver(checkTruncation)
+      resizeObserverRef.current.observe(textRef.current)
+    }
+
+    // Cleanup
+    return () => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect()
+      }
+    }
+  }, [content, isTextTruncated]) // Only re-run if content changes or truncation state changes
 
   const innerContent = (
     <div 

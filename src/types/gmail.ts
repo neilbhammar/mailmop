@@ -108,3 +108,4 @@ export interface SenderResult {
   messageIds?: string[];
   sampleSubjects?: string[];
 } 
+
