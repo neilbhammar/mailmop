@@ -35,7 +35,11 @@ export interface CreateFilterOptions {
 
 export function useCreateFilter() {
   const { user } = useAuth();
-  const { tokenStatus, getAccessToken, requestPermissions, isClientLoaded } = useGmailPermissions();
+  const {
+    getAccessToken,
+    hasRefreshToken: isGmailConnected,
+    isClientLoaded
+  } = useGmailPermissions();
 
   // State for progress visible to the UI
   const [progress, setProgress] = useState<CreateFilterProgress>({
@@ -83,24 +87,28 @@ export function useCreateFilter() {
         return { success: false };
       }
 
-      // --- Token & Permission Checks ---
-      if (tokenStatus.state !== 'valid' && tokenStatus.state !== 'expiring_soon') {
-        if (tokenStatus.state === 'expired') {
-          toast.error('Gmail token expired', {
-            description: 'Please reconnect to Gmail.',
-            action: { label: 'Reconnect', onClick: () => requestPermissions() }
-          });
-          updateProgress({ status: 'error', error: 'Token expired' });
-          return { success: false };
-        } else {
-          toast.error('Gmail connection error', {
-            description: `Token state is ${tokenStatus.state}. Please reconnect.`,
-            action: { label: 'Reconnect', onClick: () => requestPermissions() }
-          });
-          updateProgress({ status: 'error', error: `Gmail token state: ${tokenStatus.state}` });
-          return { success: false };
-        }
+      // --- Token & Permission Checks (New Strategy) ---
+      if (!isGmailConnected) {
+        toast.error('Gmail not connected.', { description: 'Please reconnect to Gmail to create filters.' });
+        updateProgress({ status: 'error', error: 'Gmail not connected. Please reconnect.' });
+        return { success: false };
       }
+
+      let acquiredAccessToken: string; // Renamed for clarity
+      try {
+        const token = await getAccessToken(); 
+        if (!token) { 
+          throw new Error("Failed to retrieve a valid access token from getAccessToken.");
+        }
+        acquiredAccessToken = token;
+        console.log('[CreateFilter] Access token validated/acquired.');
+      } catch (error: any) {
+        console.error('[CreateFilter] Failed to validate/acquire token:', error);
+        toast.error('Gmail authentication failed.', { description: 'Please reconnect to Gmail.' });
+        updateProgress({ status: 'error', error: `Gmail authentication failed: ${error.message}` });
+        return { success: false };
+      }
+      // --- End Token & Permission Checks ---
 
       // --- Logging Initialization ---
       let supabaseLogId: string | undefined;
@@ -125,11 +133,11 @@ export function useCreateFilter() {
       }
 
       try {
-        const accessToken = await getAccessToken();
+        // const accessToken = await getAccessToken(); // Removed, use acquiredAccessToken from above
         
         // Create a single filter for all senders
         const result = await createFiltersForSenders(
-          accessToken,
+          acquiredAccessToken, // Use the token obtained and validated above
           options.senders,
           {
             addLabelIds: options.actionType === 'add' ? options.labelIds : undefined,
@@ -212,7 +220,12 @@ export function useCreateFilter() {
         return { success: false };
       }
     },
-    [user?.id, isClientLoaded, tokenStatus, getAccessToken, requestPermissions]
+    [
+      user?.id,
+      isClientLoaded,
+      getAccessToken, // Still needed for the try/catch block
+      isGmailConnected // Added
+    ]
   );
 
   return {

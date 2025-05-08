@@ -12,7 +12,7 @@ function formatTimeRemaining(ms: number): string {
 
 // For now, we'll just create a visual representation without the actual functionality
 export function GmailConnectionStatus() {
-  const { tokenStatus, requestPermissions } = useGmailPermissions()
+  const { tokenStatus, requestPermissions, hasRefreshToken, refreshTokenState } = useGmailPermissions()
   const [isHovered, setIsHovered] = useState(false)
   const [localTimeRemaining, setLocalTimeRemaining] = useState(tokenStatus.timeRemaining)
   const lastUpdateTimeRef = useRef(Date.now())
@@ -45,38 +45,36 @@ export function GmailConnectionStatus() {
 
   // Helper for status styling
   const getStatusStyles = () => {
-    switch (tokenStatus.state) {
-      case 'valid':
-        return "border-gray-100 text-gray-600 cursor-default"
-      case 'expiring_soon':
-        return "border-yellow-100 text-yellow-600 hover:bg-yellow-50"
-      case 'expired':
-        return "border-red-100 text-red-600 hover:bg-red-50"
+    if (refreshTokenState === 'unknown') {
+      return "border-gray-100 text-gray-500 cursor-default"; // Neutral style for initializing
     }
+    if (hasRefreshToken) { // refreshTokenState === 'present'
+      return "border-gray-100 text-gray-600 cursor-default"; 
+    }
+    // refreshTokenState === 'absent'
+    return "border-red-100 text-red-600 hover:bg-red-50 cursor-pointer";
   }
 
   const getStatusDot = () => {
-    switch (tokenStatus.state) {
-      case 'valid':
-        return "bg-green-500"
-      case 'expiring_soon':
-        return "bg-yellow-500"
-      case 'expired':
-        return "bg-red-500"
+    if (refreshTokenState === 'unknown') {
+      return "bg-gray-400"; // Neutral dot for initializing
     }
+    if (hasRefreshToken) { // refreshTokenState === 'present'
+      return "bg-green-500";
+    }
+    // refreshTokenState === 'absent'
+    return "bg-red-500";
   }
 
   const getStatusText = () => {
-    switch (tokenStatus.state) {
-      case 'valid':
-        return "Gmail Connected"
-      case 'expiring_soon': {
-        const minutesLeft = Math.ceil(tokenStatus.timeRemaining / (60 * 1000))
-        return `Gmail Connection Expires in ${minutesLeft}m`
-      }
-      case 'expired':
-        return "Reconnect Gmail"
+    if (refreshTokenState === 'unknown') {
+      return "Checking..."
     }
+    if (hasRefreshToken) { // refreshTokenState === 'present'
+      return "Gmail Connected";
+    }
+    // refreshTokenState === 'absent'
+    return "Reconnect Gmail";
   }
   
   return (
@@ -99,10 +97,12 @@ export function GmailConnectionStatus() {
             )}
           />
           {/* Pulse effect for non-valid states */}
-          {tokenStatus.state !== 'valid' && (
+          {/* Show pulse only if refresh token is missing (absent), or if initializing */}
+          {(refreshTokenState === 'absent' || refreshTokenState === 'unknown') && (
             <div className={cn(
               "absolute w-1.5 h-1.5 rounded-full animate-ping opacity-75",
-              getStatusDot()
+              // Pulse is red for absent, gray for unknown
+              refreshTokenState === 'absent' ? "bg-red-500" : "bg-gray-400"
             )} />
           )}
         </div>
@@ -114,14 +114,23 @@ export function GmailConnectionStatus() {
         <div className="absolute left-0 top-full mt-1 z-50 w-64 p-4 bg-white text-gray-600 text-sm rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
           <div className="relative">
             <div className="font-medium mb-1">
-              {tokenStatus.state === 'valid' ? "Gmail Connected" : "Gmail Connection Required"}
+              {refreshTokenState === 'unknown'
+                ? "Checking Gmail Connection..."
+                : hasRefreshToken 
+                  ? "Gmail Connection Status" 
+                  : "Gmail Connection Required"}
             </div>
             <div className="text-gray-500 text-xs">
-              {tokenStatus.state === 'valid' 
-                ? `MailMop has the right access to help clean your inbox. Click on your profile to revoke access. Token expires in ${formatTimeRemaining(localTimeRemaining)}.`
-                : tokenStatus.state === 'expiring_soon'
-                  ? `Your Gmail access will expire in ${formatTimeRemaining(localTimeRemaining)}. Click to refresh access.`
-                  : "Authorizing is required for analyzing, deleting, and unsubscribing"
+              {refreshTokenState === 'unknown'
+                ? "Please wait while we verify your Gmail connection."
+                : !hasRefreshToken // refreshTokenState === 'absent'
+                  ? "MailMop needs to connect to your Gmail account. Click to grant access."
+                  // refreshTokenState === 'present'
+                  : (tokenStatus.state === 'valid' || tokenStatus.state === 'expiring_soon') 
+                    ? localTimeRemaining > 0 
+                      ? `MailMop has the access it needs to help you declutter your inbox. Access token will automatically refresh in ${formatTimeRemaining(localTimeRemaining)}.`
+                      : `MailMop has the access it needs to help you declutter your inbox. Access token will automatically refresh upon action.` 
+                    : `MailMop has the access it needs to help you declutter your inbox. Access token will automatically refresh upon action.` // Covers 'expired' state (when refresh token is present)
               }
             </div>
           </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { getStoredGmailStats, GmailStats, fetchGmailStats, GMAIL_STATS_UPDATED_EVENT } from '@/lib/gmail/fetchGmailStats'
-import { getStoredToken } from '@/lib/gmail/tokenStorage'
+import { getAccessToken } from '@/lib/gmail/token'
 import { useState, useEffect } from 'react'
 import { 
   MailIcon, 
@@ -87,33 +87,7 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
   
   // Get stored stats on component mount
   useEffect(() => {
-    // Try to get stats from localStorage first
-    const storedStats = getStoredGmailStats();
-    
-    if (storedStats) {
-      setStats(storedStats);
-      setIsLoading(false);
-    } else {
-      // If no stats in localStorage, fetch them using the token
-      const token = getStoredToken();
-      
-      if (token?.accessToken) {
-        setIsLoading(true);
-        fetchGmailStats(token.accessToken)
-          .then(freshStats => {
-            setStats(freshStats);
-          })
-          .catch(error => {
-            console.error('Failed to fetch Gmail stats:', error);
-          })
-          .finally(() => {
-            setIsLoading(false);
-          });
-      } else {
-        // No token available - can't fetch stats
-        setIsLoading(false);
-      }
-    }
+    checkStats();
 
     // Listen for Gmail stats updates
     const handleStatsUpdated = (event: Event) => {
@@ -208,6 +182,47 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
         });
       }
       setButtonState('idle');
+    }
+  };
+
+  const handleRefreshStats = async () => {
+    const accessToken = await getAccessToken().catch(() => null);
+    if (accessToken) {
+      setIsLoading(true);
+      fetchGmailStats(accessToken)
+        .then(() => {
+          // ... rest of the code ...
+        })
+        .catch((error) => {
+          // ... error handling ...
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  };
+
+  const checkStats = async () => {
+    const storedStats = getStoredGmailStats();
+    
+    if (storedStats) {
+      setStats(storedStats);
+      setIsLoading(false);
+    } else {
+      // If no stats in localStorage, fetch them using the token
+      const accessToken = await getAccessToken().catch(() => null);
+      if (accessToken) {
+        setIsLoading(true);
+        try {
+          await fetchGmailStats(accessToken);
+          const newStats = getStoredGmailStats();
+          setStats(newStats);
+        } catch (error) {
+          console.error('Failed to fetch Gmail stats:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
     }
   };
 

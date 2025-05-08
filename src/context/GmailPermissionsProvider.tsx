@@ -2,12 +2,23 @@
 
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { GmailPermissionState, GoogleTokenResponse, GoogleTokenClient, GoogleTokenClientConfig, TokenStatus, TokenStatusOptions, TokenRunStatus } from '@/types/gmail';
-import { getStoredToken, storeGmailToken, clearToken as clearStoredToken, STORAGE_CHANGE_EVENT } from '@/lib/gmail/tokenStorage';
 import { fetchGmailProfile } from '@/lib/gmail/fetchProfile';
 import { fetchGmailStats } from '@/lib/gmail/fetchGmailStats';
 import { useAuth } from './AuthProvider';
 import { ANALYSIS_CHANGE_EVENT, hasSenderAnalysis } from '@/lib/storage/senderAnalysis';
-import { primeAccessToken } from '@/lib/gmail/token';
+import { 
+  primeAccessToken, 
+  getAccessToken as libGetAccessToken, 
+  peekAccessToken as libPeekAccessToken, 
+  tokenTimeRemaining as libTokenTimeRemaining, 
+  revokeAndClearToken, 
+  hasRefreshToken as libHasRefreshToken,
+  initializeTokenState,
+  forceRefreshAccessToken as libForceRefreshAccessToken,
+  clearAccessTokenOnlyInStorage,
+  expireAccessTokenInStorage,
+  getRefreshTokenState
+} from '@/lib/gmail/token';
 
 
 // Use both scopes - broad scope for general operations and settings.basic for filters
@@ -31,14 +42,24 @@ interface GmailPermissionsContextType extends GmailPermissionState {
   shouldShowPermissionsModal: boolean;
   shouldShowMismatchModal: boolean;
   gmailEmail: string | null;
-  clearToken: () => void;
+  clearToken: () => Promise<void>;
   tokenStatus: TokenStatus;
   canTokenSurvive: (durationMs: number) => boolean;
   getTokenRunStatus: (durationMs: number) => TokenRunStatus;
   getAccessToken: () => Promise<string>;
+  forceRefreshAccessToken: () => Promise<string>;
+  peekAccessToken: () => { accessToken: string; expiresAt: number } | null;
+  tokenTimeRemaining: () => number;
+  hasRefreshToken: boolean;
+  clearAccessTokenOnly: () => Promise<void>;
+  expireAccessToken: () => Promise<void>;
+  refreshTokenState: 'unknown' | 'present' | 'absent';
 }
 
 const GmailPermissionsContext = createContext<GmailPermissionsContextType | null>(null);
+
+// Custom event for token changes
+export const TOKEN_CHANGE_EVENT = 'mailmop:token-change';
 
 export function GmailPermissionsProvider({ 
   children,
@@ -53,11 +74,24 @@ export function GmailPermissionsProvider({
     hasEmailData: false,
   });
   
-  const [tokenStatus, setTokenStatus] = useState<TokenStatus>({
-    isValid: false,
-    expiresAt: null,
-    timeRemaining: 0,
-    state: 'expired'
+  const [tokenStatus, setTokenStatus] = useState<TokenStatus>(() => {
+    const initialRefreshTokenState = getRefreshTokenState();
+    let initialStateForTokenStatus: TokenStatus['state'] = 'initializing';
+
+    if (initialRefreshTokenState === 'present') {
+      // If refresh token is present, access token is initially considered expired until checked/refreshed
+      initialStateForTokenStatus = 'expired'; 
+    } else if (initialRefreshTokenState === 'absent') {
+      initialStateForTokenStatus = 'no_connection';
+    }
+    // If 'unknown', it remains 'initializing'
+
+    return {
+      isValid: false,
+      expiresAt: null,
+      timeRemaining: 0,
+      state: initialStateForTokenStatus,
+    };
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -151,9 +185,18 @@ export function GmailPermissionsProvider({
     };
   }, []);
 
+  // Initialize token state on mount
+  useEffect(() => {
+    console.log('[Gmail] Initializing token state from Provider');
+    initializeTokenState().then(() => {
+      // After token.ts finishes initializing, updateTokenStatus will correctly set all states.
+      updateTokenStatus();
+    });
+  }, []); // updateTokenStatus is not a direct dependency here, it's called in .then()
+
   // Check initial state on mount and after permissions granted
   const checkPermissionState = useCallback(async () => {
-    const token = getStoredToken();
+    const token = libPeekAccessToken();
     const hasData = await hasSenderAnalysis();
 
     const newState = {
@@ -181,8 +224,8 @@ export function GmailPermissionsProvider({
     const handleStorageChange = (e: Event) => {
       if (e instanceof CustomEvent) {
         const { key } = e.detail as { key: string };
-        if (key === 'gmail_token' || key === 'email_data') {
-          console.log('[Gmail] Storage changed, rechecking state');
+        if (key === 'token' || key === 'email_data') {
+          console.log('[Gmail] Token/data changed, rechecking state');
           checkPermissionState();
         }
       }
@@ -201,7 +244,7 @@ export function GmailPermissionsProvider({
     };
 
     // Add listeners
-    window.addEventListener('mailmop:storage-change', handleStorageChange);
+    window.addEventListener(TOKEN_CHANGE_EVENT, handleStorageChange);
     window.addEventListener(ANALYSIS_CHANGE_EVENT, handleAnalysisChange);
     window.addEventListener('focus', handleFocus);
 
@@ -210,7 +253,7 @@ export function GmailPermissionsProvider({
 
     // Cleanup
     return () => {
-      window.removeEventListener('mailmop:storage-change', handleStorageChange);
+      window.removeEventListener(TOKEN_CHANGE_EVENT, handleStorageChange);
       window.removeEventListener(ANALYSIS_CHANGE_EVENT, handleAnalysisChange);
       window.removeEventListener('focus', handleFocus);
     };
@@ -229,7 +272,7 @@ export function GmailPermissionsProvider({
           supabase: user?.email
         });
         setShouldShowMismatchModal(true);
-        clearStoredToken();
+        await revokeAndClearToken();
         return false;
       }
       
@@ -237,7 +280,7 @@ export function GmailPermissionsProvider({
       return true;
     } catch (error) {
       console.error('[Gmail] Failed to verify email match:', error);
-      clearStoredToken();
+      await revokeAndClearToken();
       return false;
     }
   }, [user?.email]);
@@ -245,42 +288,52 @@ export function GmailPermissionsProvider({
   // Function to update token status
   const updateTokenStatus = useCallback(() => {
     console.log('[Gmail] Updating token status');
-    const token = getStoredToken();
-    const now = Date.now();
-    
-    if (!token?.expiresAt) {
+    const currentRefreshTokenState = getRefreshTokenState();
+
+    if (currentRefreshTokenState === 'unknown') {
       setTokenStatus({
         isValid: false,
         expiresAt: null,
         timeRemaining: 0,
-        state: 'expired'
+        state: 'initializing',
       });
-      
-      setPermissionState(prev => ({
-        ...prev,
-        hasToken: false
-      }));
+      setPermissionState(prev => ({ ...prev, hasGmailConnection: false, hasToken: false }));
       return;
     }
 
-    const timeRemaining = token.expiresAt - now;
-    const isValid = timeRemaining > 0;
+    const currentHasRefreshToken = libHasRefreshToken(); // This now uses refreshTokenState === 'present'
+    setPermissionState(prev => ({
+      ...prev,
+      hasGmailConnection: currentHasRefreshToken
+    }));
     
+    const token = libPeekAccessToken();
+    if (currentRefreshTokenState === 'absent' || !token) {
+      setTokenStatus({
+        isValid: false,
+        expiresAt: null,
+        timeRemaining: 0,
+        state: 'no_connection' // If refresh token is absent, it's no_connection
+      });
+      setPermissionState(prev => ({ ...prev, hasToken: false })); // Ensure hasToken is false
+      return;
+    }
+
+    // At this point, refreshTokenState is 'present' and we have a memToken (or should attempt refresh)
+    const timeRemaining = libTokenTimeRemaining();
+    const isValid = timeRemaining > 0;
     const state = !isValid ? 'expired' 
                  : timeRemaining < expiringSoonThresholdMs ? 'expiring_soon'
                  : 'valid';
 
     setTokenStatus({
       isValid,
-      expiresAt: token.expiresAt,
+      expiresAt: token!.expiresAt, // token is guaranteed to be non-null here if state isn't no_connection
       timeRemaining,
       state
     });
-    
-    setPermissionState(prev => ({
-      ...prev,
-      hasToken: true
-    }));
+    setPermissionState(prev => ({ ...prev, hasToken: isValid }));
+
   }, [expiringSoonThresholdMs]);
 
   // Update token status in various scenarios
@@ -295,7 +348,7 @@ export function GmailPermissionsProvider({
     const handleStorageChange = (e: Event) => {
       if (e instanceof CustomEvent) {
         const { key } = e.detail as { key: string };
-        if (key === 'gmail_token') {
+        if (key === 'token') {
           console.log('[Gmail] Token storage changed, updating status');
           updateTokenStatus();
         }
@@ -317,78 +370,74 @@ export function GmailPermissionsProvider({
     };
 
     // Add all listeners
-    window.addEventListener(STORAGE_CHANGE_EVENT, handleStorageChange);
+    window.addEventListener(TOKEN_CHANGE_EVENT, handleStorageChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
 
     // Cleanup
     return () => {
       clearInterval(interval);
-      window.removeEventListener(STORAGE_CHANGE_EVENT, handleStorageChange);
+      window.removeEventListener(TOKEN_CHANGE_EVENT, handleStorageChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
     };
   }, [updateTokenStatus]);
 
   // Request Gmail permissions
-  // OLD  — keep the wrapper, just swap the inside
-const requestPermissions = useCallback(async () => {
-  if (!isClientLoaded) return false;
+  const requestPermissions = useCallback(async () => {
+    if (!isClientLoaded) return false;
 
-  return new Promise<boolean>((resolve, reject) => {
-    const codeClient = window.google.accounts.oauth2.initCodeClient({
-      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
-      scope: GMAIL_SCOPES,
-      login_hint: user?.email ?? '',
-      ux_mode: 'popup',
-      callback: async ({ code, error }) => {
-        if (error || !code) {
-          console.error('[Gmail] OAuth error:', error);
-          return reject(error);
-        }
+    return new Promise<boolean>((resolve, reject) => {
+      const codeClient = window.google.accounts.oauth2.initCodeClient({
+        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+        scope: GMAIL_SCOPES,
+        login_hint: user?.email ?? '',
+        ux_mode: 'popup',
+        callback: async ({ code, error }) => {
+          if (error || !code) {
+            console.error('[Gmail] OAuth error:', error);
+            return reject(error);
+          }
 
-        
-        // Trade code → tokens via Edge
-        const resp = await fetch('/api/auth/exchange', {
-          method: 'POST',
-          credentials: 'include',                // sends cookie back
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            code,
-            redirectUri: window.location.origin   // must match OAuth config
-          }),
-        });
+          
+          // Trade code → tokens via Edge
+          const resp = await fetch('/api/auth/exchange', {
+            method: 'POST',
+            credentials: 'include',                // sends cookie back
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              code,
+              redirectUri: window.location.origin   // must match OAuth config
+            }),
+          });
 
-        if (!resp.ok) {
-          const msg = await resp.text();
-          console.error('[Gmail] Exchange failed:', msg);
-          return reject(msg);
-        }
+          if (!resp.ok) {
+            const msg = await resp.text();
+            console.error('[Gmail] Exchange failed:', msg);
+            return reject(msg);
+          }
 
-        const { access_token, expires_in } = await resp.json();
+          const { access_token, expires_in } = await resp.json();
 
-        // 1) Put it in memory for immediate use
-        primeAccessToken(access_token, expires_in);
+          // 1) Put it in memory for immediate use
+          primeAccessToken(access_token, expires_in);
 
-        // 2) (TEMP) also keep sessionStorage alive until Step 4
-        storeGmailToken(access_token, expires_in);
+          // Verify the Gmail ↔ Supabase email match
+          const ok = await verifyEmailMatch(access_token);
+          if (!ok) return reject('email_mismatch');
 
-        // Verify the Gmail ↔ Supabase email match
-        const ok = await verifyEmailMatch(access_token);
-        if (!ok) return reject('email_mismatch');
+          // Kick off stats fetch, update UI, etc.
+          updateTokenStatus();
+          fetchGmailStats(access_token).catch(console.error);
 
-        // Kick off stats fetch, update UI, etc.
-        updateTokenStatus();
-        fetchGmailStats(access_token).catch(console.error);
+          resolve(true);
+        },
+      });
 
-        resolve(true);
-      },
+      // Opens the popup
+      codeClient.requestCode();
     });
-
-    // Opens the popup
-    codeClient.requestCode();
-  });
-}, [isClientLoaded, user?.email, verifyEmailMatch, updateTokenStatus]);
+  }, [isClientLoaded, user?.email, verifyEmailMatch, updateTokenStatus]);
 
   // Determine if we need to show the permissions modal
   const shouldShowPermissionsModal = false; // Disabled - permissions now handled in IntroStepper - old logic was: !permissionState.isTokenValid && !permissionState.hasEmailData && !shouldShowMismatchModal;
@@ -401,16 +450,31 @@ const requestPermissions = useCallback(async () => {
     });
   }, [shouldShowPermissionsModal, permissionState]);
 
-  const clearToken = useCallback(() => {
-    clearStoredToken();
-    // Immediately update token status
+  const clearToken = useCallback(async () => {
+    await revokeAndClearToken();
     updateTokenStatus();
-    // Also update permission state
-    setPermissionState(prev => ({
-      ...prev,
-      hasToken: false
-    }));
+    window.dispatchEvent(new CustomEvent(TOKEN_CHANGE_EVENT, { detail: { key: 'token' } }));
   }, [updateTokenStatus]);
+
+  // --- Testing functions ---
+  const clearAccessTokenOnly = useCallback(async () => {
+    // This function is intended for testing/debugging ONLY.
+    // It clears the access token but leaves the refresh token.
+    console.warn('[GmailPermissionsProvider] TEST: Clearing access token only.');
+    await clearAccessTokenOnlyInStorage();
+    updateTokenStatus(); // Refresh UI state
+    window.dispatchEvent(new CustomEvent(TOKEN_CHANGE_EVENT, { detail: { key: 'token' } }));
+  }, [updateTokenStatus]);
+
+  const expireAccessToken = useCallback(async () => {
+    // This function is intended for testing/debugging ONLY.
+    // It sets the current access token to expire in 1 minute.
+    console.warn('[GmailPermissionsProvider] TEST: Expiring access token in 1 minute.');
+    await expireAccessTokenInStorage(); // Assumes this function modifies the stored token's expiry
+    updateTokenStatus(); // Refresh UI state
+    window.dispatchEvent(new CustomEvent(TOKEN_CHANGE_EVENT, { detail: { key: 'token' } }));
+  }, [updateTokenStatus]);
+  // --- End Testing functions ---
 
   // Check if token can survive a given duration
   const canTokenSurvive = useCallback((durationMs: number): boolean => {
@@ -423,13 +487,34 @@ const requestPermissions = useCallback(async () => {
     return canTokenSurvive(durationMs) ? 'will_survive' : 'will_expire';
   }, [tokenStatus.isValid, canTokenSurvive]);
 
-  // Get access token for API calls
-  const getAccessToken = useCallback(async (): Promise<string> => {
-    const token = getStoredToken();
-    if (!token?.accessToken) {
-      throw new Error('No access token available');
+  // Get access token for API calls (uses the lib's getAccessToken)
+  const getAccessTokenForAPI = useCallback(async (): Promise<string> => {
+    try {
+      return await libGetAccessToken();
+    } catch (error) {
+      updateTokenStatus();
+      throw error;
     }
-    return token.accessToken;
+  }, [updateTokenStatus]);
+
+  // Force refresh access token for API calls (uses the lib's forceRefreshAccessToken)
+  const forceRefreshAccessTokenForAPI = useCallback(async (): Promise<string> => {
+    try {
+      return await libForceRefreshAccessToken();
+    } catch (error) {
+      updateTokenStatus();
+      throw error;
+    }
+  }, [updateTokenStatus]);
+
+  // Peek access token (uses the lib's peekAccessToken)
+  const peekAccessTokenForContext = useCallback(() => {
+    return libPeekAccessToken();
+  }, []);
+
+  // Get token time remaining (uses the lib's tokenTimeRemaining)
+  const tokenTimeRemainingForContext = useCallback(() => {
+    return libTokenTimeRemaining();
   }, []);
 
   const contextValue: GmailPermissionsContextType = {
@@ -444,7 +529,14 @@ const requestPermissions = useCallback(async () => {
     tokenStatus,
     canTokenSurvive,
     getTokenRunStatus,
-    getAccessToken
+    getAccessToken: getAccessTokenForAPI,
+    forceRefreshAccessToken: forceRefreshAccessTokenForAPI,
+    peekAccessToken: peekAccessTokenForContext,
+    tokenTimeRemaining: tokenTimeRemainingForContext,
+    hasRefreshToken: libHasRefreshToken(),
+    clearAccessTokenOnly,
+    expireAccessToken,
+    refreshTokenState: getRefreshTokenState(),
   };
 
   return (

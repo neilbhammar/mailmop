@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useGmailStats } from '@/hooks/useGmailStats';
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
-import { getStoredToken } from '@/lib/gmail/tokenStorage';
+import { peekAccessToken } from '@/lib/gmail/token';
 import { useActionStats } from '@/hooks/useActionStats';
 import { useUser } from '@supabase/auth-helpers-react';
 import { cn } from '@/lib/utils';
 import { GMAIL_STATS_UPDATED_EVENT, GmailStats, getStoredGmailStats } from '@/lib/gmail/fetchGmailStats';
 
 export default function InboxStats() {
-  const token = getStoredToken();
+  const peek = peekAccessToken();
   const { tokenStatus } = useGmailPermissions();
-  const { stats: gmailStats, isLoading: gmailLoading, refreshStats, error } = useGmailStats(token?.accessToken);
+  const { stats: gmailStats, isLoading: gmailLoading, refreshStats, error } = useGmailStats(peek?.accessToken);
   const [forceUpdate, setForceUpdate] = useState(0);
   const user = useUser();
   const { stats: actionStats, isLoading: actionsLoading } = useActionStats(user?.id);
@@ -20,10 +20,10 @@ export default function InboxStats() {
   // 2. We don't have stats yet
   // 3. Force update was triggered
   useEffect(() => {
-    if (token?.accessToken && tokenStatus.state === 'valid' && (!gmailStats || error)) {
-      refreshStats(token.accessToken);
+    if (peek?.accessToken && tokenStatus.state === 'valid' && (!gmailStats || error)) {
+      refreshStats(peek.accessToken);
     }
-  }, [token?.accessToken, tokenStatus.state, gmailStats, error, refreshStats, forceUpdate]);
+  }, [peek?.accessToken, tokenStatus.state, gmailStats, error, refreshStats, forceUpdate]);
 
   // Listen for Gmail stats updates
   useEffect(() => {

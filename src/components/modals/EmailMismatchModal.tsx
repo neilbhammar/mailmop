@@ -1,5 +1,5 @@
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
-import { clearToken } from '@/lib/gmail/tokenStorage';
+import { revokeAndClearToken } from '@/lib/gmail/token';
 
 interface EmailMismatchModalProps {
   supabaseEmail: string;
@@ -9,8 +9,8 @@ interface EmailMismatchModalProps {
 export function EmailMismatchModal({ supabaseEmail, gmailEmail }: EmailMismatchModalProps) {
   const { requestPermissions } = useGmailPermissions();
 
-  const handleRetry = () => {
-    clearToken(); // Clear the invalid token
+  const handleRetry = async () => {
+    await revokeAndClearToken(); // Clear the invalid token
     requestPermissions(); // Try again with login_hint
   };
 

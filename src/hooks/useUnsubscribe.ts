@@ -21,32 +21,71 @@ export interface UnsubscribeHookParams {
   senderEmail: string;
 }
 
+// Add ReauthModalState, similar to other hooks
+interface ReauthModalState {
+  isOpen: boolean;
+  type: 'expired'; // For unsubscribe, 'expired' is usually the only relevant type
+}
+
 export function useUnsubscribe() {
   const { user } = useAuth();
-  const { getAccessToken, tokenStatus, requestPermissions } = useGmailPermissions();
+  const {
+    getAccessToken,
+    hasRefreshToken: isGmailConnected,
+  } = useGmailPermissions();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Add reauthModal state
+  const [reauthModal, setReauthModal] = useState<ReauthModalState>({
+    isOpen: false,
+    type: 'expired',
+  });
+
+  // Add closeReauthModal function
+  const closeReauthModal = useCallback(() => {
+    console.log('[Unsubscribe] Closing reauth modal');
+    setReauthModal({ isOpen: false, type: 'expired' });
+  }, []);
 
   const run = useCallback(async (params: UnsubscribeHookParams, methodDetails: UnsubscribeMethodDetails): Promise<{ success: boolean; error: string | null }> => {
     setIsLoading(true);
     setError(null);
-    let errorMessage: string | null = null;
+    let operationErrorMessage: string | null = null;
     console.log(`useUnsubscribe: Unsubscribing from ${params.senderEmail} using ${methodDetails.type}: ${methodDetails.value}`);
 
     if (!user?.id) {
-      errorMessage = "User not authenticated";
+      operationErrorMessage = "User not authenticated";
       toast.error("User not authenticated for unsubscribe action.");
       setIsLoading(false);
-      return { success: false, error: errorMessage };
+      setError(operationErrorMessage);
+      return { success: false, error: operationErrorMessage };
     }
 
-    if (tokenStatus.state === 'expired') {
-      errorMessage = "Gmail token expired. Please re-authenticate.";
-      toast.error(errorMessage, {
-        action: { label: "Reconnect", onClick: () => requestPermissions() },
-      });
-      setIsLoading(false);
-      return { success: false, error: errorMessage };
+    let acquiredAccessToken: string | null = null;
+
+    if (methodDetails.type === "mailto" && !methodDetails.requiresPost) {
+      if (!isGmailConnected) {
+        operationErrorMessage = "Gmail not connected. Please reconnect to send unsubscribe email.";
+        toast.error(operationErrorMessage);
+        setIsLoading(false);
+        setError(operationErrorMessage);
+        return { success: false, error: operationErrorMessage };
+      }
+      try {
+        acquiredAccessToken = await getAccessToken();
+        if (!acquiredAccessToken) {
+          throw new Error("Failed to retrieve a valid access token from getAccessToken.");
+        }
+        console.log("[useUnsubscribe] Access token for mailto acquired.");
+      } catch (tokenError: any) {
+        operationErrorMessage = tokenError.message || "Gmail authentication failed. Please reconnect.";
+        toast.error(operationErrorMessage);
+        setIsLoading(false);
+        setError(operationErrorMessage);
+        // Set reauthModal state on token failure
+        setReauthModal({ isOpen: true, type: 'expired' }); 
+        return { success: false, error: operationErrorMessage };
+      }
     }
 
     let success = false;
@@ -54,10 +93,9 @@ export function useUnsubscribe() {
 
     try {
       if (methodDetails.type === "url") {
-        if (!methodDetails.value || typeof methodDetails.value !== 'string' || !methodDetails.value.toLowerCase().startsWith('http')) {
-          console.error("[useUnsubscribe] Invalid URL detected:", methodDetails.value);
-          errorMessage = "Invalid or missing unsubscribe URL.";
-          throw new Error(errorMessage);
+        if (!methodDetails.value || !methodDetails.value.toLowerCase().startsWith('http')) {
+          operationErrorMessage = "Invalid or missing unsubscribe URL.";
+          throw new Error(operationErrorMessage);
         }
         
         console.log("[useUnsubscribe] Attempting window.open for URL:", methodDetails.value);
@@ -77,26 +115,21 @@ export function useUnsubscribe() {
             success = true;
         }
       } else if (methodDetails.type === "mailto") {
-        const accessToken = await getAccessToken();
-        console.log("[useUnsubscribe] Access token for mailto:", accessToken ? accessToken.substring(0, 20) + '...' : 'No token');
-        
         const gapiInstance = (window as any).gapi;
-        if (gapiInstance && gapiInstance.client && accessToken) {
+        if (gapiInstance && gapiInstance.client && acquiredAccessToken) {
           try {
-            gapiInstance.client.setToken({ access_token: accessToken });
+            gapiInstance.client.setToken({ access_token: acquiredAccessToken });
             console.log("[useUnsubscribe] Explicitly set GAPI client token for send call.");
             const currentGapiToken = gapiInstance.client.getToken();
             console.log("[useUnsubscribe] Current GAPI client token after setToken:", currentGapiToken ? currentGapiToken.access_token.substring(0,20) + '...': 'No token in GAPI client');
           } catch (e) {
             console.error("[useUnsubscribe] Error setting GAPI token:", e)
           }
-        } else if (!accessToken) {
-            console.warn("[useUnsubscribe] No access token retrieved for mailto, GAPI token not set.")
-        }
-
-        if (!accessToken && !methodDetails.requiresPost) {
-          errorMessage = "Could not retrieve Gmail access token for sending email.";
-          throw new Error(errorMessage);
+        } else if (acquiredAccessToken && !gapiInstance?.client) {
+             console.warn("[useUnsubscribe] GAPI client not available to set token, though token was acquired.")
+        } else if (!acquiredAccessToken && !methodDetails.requiresPost){
+            operationErrorMessage = "Access token not available for sending email.";
+            throw new Error(operationErrorMessage);
         }
 
         if (methodDetails.requiresPost) {
@@ -105,13 +138,17 @@ export function useUnsubscribe() {
           actionEndType = 'success'; 
           success = true; 
         } else {
+          if (!acquiredAccessToken) {
+            operationErrorMessage = "Access token is required for sending email but was not available.";
+            throw new Error(operationErrorMessage);
+          }
           const mailtoParts = parseMailto(methodDetails.value);
           if (!mailtoParts || !mailtoParts.to) {
-            errorMessage = `Invalid mailto link or missing recipient: ${methodDetails.value}`;
-            throw new Error(errorMessage);
+            operationErrorMessage = `Invalid mailto link or missing recipient: ${methodDetails.value}`;
+            throw new Error(operationErrorMessage);
           }
           await sendUnsubEmail({
-            accessToken: accessToken!, 
+            accessToken: acquiredAccessToken!,
             to: mailtoParts.to,
             subject: mailtoParts.subject || "Unsubscribe",
             body: mailtoParts.body || "Please unsubscribe me from this mailing list.",
@@ -142,26 +179,33 @@ export function useUnsubscribe() {
       console.error("Caught Error Object:", err);
       console.error("Error Message:", err.message);
       console.error("Current success flag before catch:", success);
-      console.error("Current errorMessage before catch:", errorMessage);
+      console.error("Current errorMessage before catch:", operationErrorMessage);
       
-      const finalErrorMessage = errorMessage || err.message || "Failed to process unsubscribe request.";
+      const finalErrorMessage = operationErrorMessage || err.message || "Failed to process unsubscribe request.";
       console.error("Final error message determined:", finalErrorMessage);
       
       actionEndType = 'runtime_error';
       success = false; 
+      setError(finalErrorMessage);
       
       console.log("Toasting general error:", finalErrorMessage);
       toast.error(finalErrorMessage); 
     } finally {
       setIsLoading(false);
-      setError(errorMessage);
     }
-    return { success, error: errorMessage };
-  }, [user, getAccessToken, tokenStatus, requestPermissions]);
+    return { success, error: operationErrorMessage };
+  }, [
+    user,
+    getAccessToken,
+    isGmailConnected,
+  ]);
 
   return {
     run,
     isLoading,
     error,
+    // Return new modal state and function
+    reauthModal,
+    closeReauthModal,
   };
 } 

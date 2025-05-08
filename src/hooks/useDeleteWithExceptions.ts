@@ -69,8 +69,8 @@ export interface SenderToDelete {
 /** State for the re-authentication modal */
 interface ReauthModalState {
   isOpen: boolean;
-  type: 'expired' | 'will_expire_during_operation';
-  eta?: string;
+  type: 'expired'; // Simplified type
+  eta?: string; // Keep eta for context if needed
 }
 
 // --- Helper Functions ---
@@ -79,13 +79,15 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export function useDeleteWithExceptions() {
   const { user } = useAuth();
   const {
-    tokenStatus,
     getAccessToken,
-    requestPermissions,
+    forceRefreshAccessToken,
+    peekAccessToken,
+    tokenTimeRemaining,
+    hasRefreshToken: isGmailConnected,
     isClientLoaded
+    // Removed requestPermissions as it's not directly called now
   } = useGmailPermissions();
 
-  // State for overall progress visible to the UI
   const [progress, setProgress] = useState<DeletingProgress>({
     status: 'idle',
     progressPercent: 0,
@@ -93,54 +95,36 @@ export function useDeleteWithExceptions() {
     emailsDeletedSoFar: 0,
   });
 
-  // State for managing the re-authentication dialog
   const [reauthModal, setReauthModal] = useState<ReauthModalState>({
     isOpen: false,
     type: 'expired',
   });
 
-  // Use a ref to keep track of the Supabase action log ID
   const actionLogIdRef = useRef<string | null>(null);
-  // Ref to signal cancellation to the running background process
   const isCancelledRef = useRef<boolean>(false);
 
-  /**
-   * Updates the progress state and optionally logs progress
-   */
   const updateProgress = useCallback(
     (newProgress: Partial<DeletingProgress>) => {
-      setProgress((prev) => {
-        const updated = { ...prev, ...newProgress };
-        return updated;
-      });
+      setProgress((prev) => ({ ...prev, ...newProgress }));
     },
     []
   );
 
-  /** Closes the re-authentication modal */
   const closeReauthModal = useCallback(() => {
     console.log('[DeleteWithExceptions] Closing reauth modal');
     setReauthModal((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
-  /**
-   * Cancels an ongoing deletion process.
-   */
   const cancelDelete = useCallback(async () => {
     console.log('[DeleteWithExceptions] Cancellation requested');
     isCancelledRef.current = true;
-    updateProgress({ status: 'cancelled', progressPercent: 0 });
+    updateProgress({ status: 'cancelled' }); // Pass partial object
     setReauthModal({ isOpen: false, type: 'expired' });
 
-    // Log cancellation to Supabase if an action was started
     const logId = actionLogIdRef.current;
     if (logId) {
       try {
-        await completeActionLog(
-          logId,
-          'user_stopped',
-          progress.emailsDeletedSoFar
-        );
+        await completeActionLog(logId, 'user_stopped', progress.emailsDeletedSoFar);
         completeLocalActionLog('user_stopped', 'User cancelled the deletion');
         console.log('[DeleteWithExceptions] Logged cancellation');
       } catch (error) {
@@ -151,9 +135,6 @@ export function useDeleteWithExceptions() {
     }
   }, [progress.emailsDeletedSoFar, updateProgress]);
 
-  /**
-   * Starts the email deletion process with filtering.
-   */
   const startDeleteWithExceptions = useCallback(
     async (
       senders: SenderToDelete[],
@@ -162,29 +143,43 @@ export function useDeleteWithExceptions() {
       console.log('[DeleteWithExceptions] Starting filtered deletion for senders:', senders);
       console.log('[DeleteWithExceptions] Using filter rules:', filterRules);
       isCancelledRef.current = false;
+      updateProgress({ status: 'preparing', progressPercent: 0, emailsDeletedSoFar: 0 });
 
-      // --- Basic Checks ---
+      // --- 0. Basic Checks --- 
       if (!user?.id) {
         toast.error('You must be logged in to delete emails.');
+        updateProgress({ status: 'error', error: 'User not logged in.' });
         return { success: false };
       }
       if (!senders || senders.length === 0) {
         toast.warning('No senders selected for deletion.');
+        updateProgress({ status: 'idle' });
         return { success: false };
       }
-
-      // --- Preparation Phase ---
-      updateProgress({ status: 'preparing', progressPercent: 0, emailsDeletedSoFar: 0 });
-      
       if (!isClientLoaded) {
-        console.error('[DeleteWithExceptions] Gmail API client is not loaded yet.');
-        toast.error('Gmail client not ready', {
-          description: 'Please wait a moment and try again.'
-        });
+        toast.error('Gmail client not ready', { description: 'Please wait a moment and try again.' });
         updateProgress({ status: 'error', error: 'Gmail client not loaded.' });
         return { success: false };
       }
-      
+
+      // --- 1. Initial Token & Connection Check ---
+      if (!isGmailConnected) {
+        console.log('[DeleteWithExceptions] No Gmail connection, showing reauth modal.');
+        setReauthModal({ isOpen: true, type: 'expired' });
+        updateProgress({ status: 'error', error: 'Gmail not connected.' });
+        return { success: false };
+      }
+      try {
+        await getAccessToken(); // Verify refresh token validity
+        console.log('[DeleteWithExceptions] Initial access token validated/acquired.');
+      } catch (error) {
+        console.error('[DeleteWithExceptions] Failed to validate/acquire initial token:', error);
+        setReauthModal({ isOpen: true, type: 'expired' });
+        updateProgress({ status: 'error', error: 'Gmail authentication failed.' });
+        return { success: false };
+      }
+
+      // --- 2. Calculate Estimates --- 
       const totalEmailsEstimate = senders.reduce((sum, s) => sum + s.count, 0);
       updateProgress({ totalEmailsToProcess: totalEmailsEstimate });
 
@@ -196,29 +191,15 @@ export function useDeleteWithExceptions() {
       const formattedEta = formatDuration(estimatedRuntimeMs);
       updateProgress({ eta: formattedEta });
 
-      // --- Token & Permission Checks ---
-      if (tokenStatus.state !== 'valid' && tokenStatus.state !== 'expiring_soon') {
-        if (tokenStatus.state === 'expired') {
-          setReauthModal({ isOpen: true, type: 'expired' });
-          updateProgress({ status: 'idle' });
-          return { success: false };
-        } else {
-          toast.error('Gmail connection error. Please reconnect.', {
-            description: `Token state is ${tokenStatus.state}. Please grant permissions or reconnect.`,
-            action: { label: 'Reconnect', onClick: () => requestPermissions() }
-          });
-          updateProgress({ status: 'error', error: `Gmail token state: ${tokenStatus.state}` });
-          return { success: false };
-        }
+      // Removed pre-operation token expiry checks
+      if (estimatedRuntimeMs > (55 * 60 * 1000)) {
+         toast.warning("Long Deletion Detected", {
+           description: `Deleting these emails may take ${formattedEta}.`, 
+           duration: 8000 
+         });
       }
 
-      if (tokenStatus.timeRemaining < estimatedRuntimeMs) {
-        setReauthModal({ isOpen: true, type: 'will_expire_during_operation', eta: formattedEta });
-        updateProgress({ status: 'idle' });
-        return { success: false };
-      }
-
-      // --- Logging Initialization ---
+      // --- 3. Logging Initialization ---
       const clientActionId = uuidv4();
       createLocalActionLog({
         clientActionId,
@@ -235,38 +216,32 @@ export function useDeleteWithExceptions() {
           user_id: user.id,
           type: 'delete_with_exceptions',
           status: 'started',
-          filters: {
-            senders: senders.map(s => s.email),
-            rules: filterRules,
-            estimatedCount: totalEmailsEstimate
-          },
+          filters: { senders: senders.map(s => s.email), rules: filterRules, estimatedCount: totalEmailsEstimate },
           estimated_emails: totalEmailsEstimate,
         });
         supabaseLogId = actionLog.id;
         actionLogIdRef.current = supabaseLogId ?? null;
-        updateSupabaseLogId(supabaseLogId!);
+        updateSupabaseLogId(supabaseLogId!); 
       } catch (error) {
         console.error('[DeleteWithExceptions] Failed to create action log:', error);
-        toast.error('Failed to start deletion process.');
         updateProgress({ status: 'error', error: 'Failed to log action start.' });
         clearCurrentActionLog();
         return { success: false };
       }
 
-      // --- Execution Phase ---
+      // --- 4. Execution Phase ---
       updateProgress({ status: 'deleting', progressPercent: 0 });
       await updateActionLog(supabaseLogId!, { status: 'deleting' });
 
-      // Run the actual deletion in the background
       (async () => {
         let totalSuccessfullyDeleted = 0;
         let errorMessage: string | undefined;
         let endType: ActionEndType = 'success';
+        let currentAccessToken: string;
 
         try {
           for (const sender of senders) {
             if (isCancelledRef.current) {
-              console.log(`[DeleteWithExceptions] Cancellation detected before processing ${sender.email}`);
               endType = 'user_stopped';
               break;
             }
@@ -290,41 +265,38 @@ export function useDeleteWithExceptions() {
 
             do {
               if (isCancelledRef.current) {
-                console.log(`[DeleteWithExceptions] Cancellation detected during batch processing`);
                 endType = 'user_stopped';
                 break;
               }
 
-              const currentTokenStatus = tokenStatus;
-              if (currentTokenStatus.timeRemaining < TWO_MINUTES_MS) {
-                console.warn('[DeleteWithExceptions] Token expiring soon, pausing for reauth');
-                const remainingEmails = totalEmailsEstimate - totalSuccessfullyDeleted;
-                const remainingTimeMs = estimateRuntimeMs({ 
-                  operationType: 'delete', 
-                  emailCount: remainingEmails, 
-                  mode: 'single' 
-                });
-                setReauthModal({ 
-                  isOpen: true, 
-                  type: 'will_expire_during_operation', 
-                  eta: formatDuration(remainingTimeMs) 
-                });
-                throw new Error("Token expired during operation. Please re-authenticate and try again.");
+              // --- Token Check & Acquisition before batch ---
+              const tokenDetails = peekAccessToken();
+              const timeRemaining = tokenTimeRemaining();
+              try {
+                if (tokenDetails && timeRemaining < TWO_MINUTES_MS) {
+                  console.warn(`[DeleteWithExceptions] Token expiring soon, forcing refresh...`);
+                  currentAccessToken = await forceRefreshAccessToken();
+                } else {
+                  currentAccessToken = await getAccessToken(); 
+                }
+              } catch (tokenError) {
+                console.error(`[DeleteWithExceptions] Token acquisition failed:`, tokenError);
+                setReauthModal({ isOpen: true, type: 'expired' });
+                throw new Error('Gmail authentication failed during deletion.');
               }
+              // ---------------------------------------------
 
               batchFetchAttempts++;
               console.log(`[DeleteWithExceptions] Fetching message IDs batch (Attempt ${batchFetchAttempts})`);
 
               try {
-                const accessToken = await getAccessToken();
-                const { messageIds, nextPageToken: newPageToken } = await fetchMessageIds(
-                  accessToken,
+                const { messageIds, nextPageToken: newPageTokenResult } = await fetchMessageIds(
+                  currentAccessToken,
                   query,
                   nextPageToken,
                   DELETION_BATCH_SIZE
                 );
-
-                nextPageToken = newPageToken;
+                nextPageToken = newPageTokenResult;
 
                 if (messageIds.length === 0) {
                   console.log(`[DeleteWithExceptions] No more message IDs found.`);
@@ -332,8 +304,7 @@ export function useDeleteWithExceptions() {
                 }
 
                 console.log(`[DeleteWithExceptions] Found ${messageIds.length} IDs. Attempting batch delete...`);
-
-                await batchDeleteMessages(accessToken, messageIds);
+                await batchDeleteMessages(currentAccessToken, messageIds);
 
                 senderDeletedCount += messageIds.length;
                 totalSuccessfullyDeleted += messageIds.length;
@@ -368,7 +339,9 @@ export function useDeleteWithExceptions() {
                 break;
               }
 
-            } while (nextPageToken && endType === 'success');
+            } while (nextPageToken && endType === 'success' && !isCancelledRef.current);
+
+            // Do NOT mark sender action taken for filtered deletions
 
             if (endType !== 'success' && endType !== 'user_stopped') {
               break;
@@ -379,13 +352,7 @@ export function useDeleteWithExceptions() {
           console.log(`\n[DeleteWithExceptions] Process finished. End type: ${endType}`);
           console.log(`[DeleteWithExceptions] Total emails deleted: ${totalSuccessfullyDeleted}`);
 
-          await completeActionLog(
-            supabaseLogId!,
-            endType,
-            totalSuccessfullyDeleted,
-            errorMessage
-          );
-
+          await completeActionLog(supabaseLogId!, endType, totalSuccessfullyDeleted, errorMessage);
           completeLocalActionLog(endType, errorMessage);
 
           updateProgress({
@@ -397,13 +364,9 @@ export function useDeleteWithExceptions() {
           });
 
           if (endType === 'success') {
-            toast.success('Filtered Deletion Complete', {
-              description: `Successfully deleted ${totalSuccessfullyDeleted.toLocaleString()} emails from ${senders.length} sender(s).`
-            });
+            toast.success('Filtered Deletion Complete', { description: `Successfully deleted ${totalSuccessfullyDeleted.toLocaleString()} matching emails from ${senders.length} sender(s).` });
           } else if (endType === 'user_stopped') {
-            toast.info('Deletion Cancelled', {
-              description: `Deletion stopped after ${totalSuccessfullyDeleted.toLocaleString()} emails.`
-            });
+            toast.info('Deletion Cancelled', { description: `Deletion stopped after ${totalSuccessfullyDeleted.toLocaleString()} emails.` });
           }
 
         } catch (processError: any) {
@@ -420,26 +383,25 @@ export function useDeleteWithExceptions() {
             }
           }
 
-          updateProgress({
-            status: 'error',
-            error: errorMessage,
-            currentSender: undefined,
-          });
+          updateProgress({ status: 'error', error: errorMessage, currentSender: undefined });
           toast.error('Deletion Failed', { description: errorMessage });
         } finally {
           actionLogIdRef.current = null;
         }
       })();
 
-      return { success: true };
+      return { success: true }; // Indicates process started
     },
+    // --- Dependencies --- 
     [
       user?.id,
-      tokenStatus,
-      updateProgress,
+      isClientLoaded,
+      isGmailConnected,
       getAccessToken,
-      requestPermissions,
-      isClientLoaded
+      forceRefreshAccessToken,
+      peekAccessToken,
+      tokenTimeRemaining,
+      updateProgress,
     ]
   );
 

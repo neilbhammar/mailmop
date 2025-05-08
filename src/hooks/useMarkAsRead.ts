@@ -13,7 +13,10 @@ import { toast } from 'sonner';
 
 // --- Contexts & Hooks ---
 import { useAuth } from '@/context/AuthProvider';
-import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
+import {
+  useGmailPermissions,
+  // TypesTokenStatus // Avoid importing unused types if TokenStatus isn't used directly
+} from '@/context/GmailPermissionsProvider';
 
 // --- API/Helper Functions ---
 import { estimateRuntimeMs, formatDuration } from '@/lib/utils/estimateRuntime';
@@ -68,7 +71,7 @@ export interface SenderToMark {
 /** State for the re-authentication modal */
 interface ReauthModalState {
   isOpen: boolean;
-  type: 'expired' | 'will_expire_during_operation';
+  type: 'expired'; // Simplified type
   eta?: string;
 }
 
@@ -99,10 +102,13 @@ async function batchMarkAsRead(accessToken: string, messageIds: string[]) {
 export function useMarkAsRead() {
   const { user } = useAuth();
   const {
-    tokenStatus,
     getAccessToken,
-    requestPermissions,
+    forceRefreshAccessToken,
+    peekAccessToken,
+    tokenTimeRemaining,
+    hasRefreshToken: isGmailConnected, // Alias for clarity
     isClientLoaded
+    // requestPermissions, // No longer directly called from here for reauth trigger
   } = useGmailPermissions();
 
   // State for progress visible to the UI
@@ -147,7 +153,7 @@ export function useMarkAsRead() {
     console.log('[MarkAsRead] Cancellation requested');
     isCancelledRef.current = true;
     updateProgress({ status: 'cancelled', progressPercent: 0 });
-    setReauthModal({ isOpen: false, type: 'expired' });
+    setReauthModal({ isOpen: false, type: 'expired' }); // Ensure type is 'expired'
 
     // Log cancellation to Supabase if an action was started
     const logId = actionLogIdRef.current;
@@ -209,27 +215,24 @@ export function useMarkAsRead() {
       const formattedEta = formatDuration(estimatedRuntimeMs);
       updateProgress({ eta: formattedEta });
 
-      // --- Token & Permission Checks ---
-      if (tokenStatus.state !== 'valid' && tokenStatus.state !== 'expiring_soon') {
-        if (tokenStatus.state === 'expired') {
-          setReauthModal({ isOpen: true, type: 'expired' });
-          updateProgress({ status: 'idle' });
-          return { success: false };
-        } else {
-          toast.error('Gmail connection error. Please reconnect.', {
-            description: `Token state is ${tokenStatus.state}. Please grant permissions or reconnect.`,
-            action: { label: 'Reconnect', onClick: () => requestPermissions() }
-          });
-          updateProgress({ status: 'error', error: `Gmail token state: ${tokenStatus.state}` });
-          return { success: false };
-        }
-      }
-
-      if (tokenStatus.timeRemaining < estimatedRuntimeMs) {
-        setReauthModal({ isOpen: true, type: 'will_expire_during_operation', eta: formattedEta });
-        updateProgress({ status: 'idle' });
+      // --- Token & Permission Checks (New Strategy) ---
+      if (!isGmailConnected) {
+        console.log('[MarkAsRead] No Gmail connection (no refresh token), showing reauth modal.');
+        setReauthModal({ isOpen: true, type: 'expired', eta: formattedEta });
+        updateProgress({ status: 'error', error: 'Gmail not connected. Please reconnect.' });
         return { success: false };
       }
+
+      try {
+        await getAccessToken(); // Verify refresh token validity and get initial access token
+        console.log('[MarkAsRead] Initial access token validated/acquired.');
+      } catch (error) {
+        console.error('[MarkAsRead] Failed to validate/acquire initial token:', error);
+        setReauthModal({ isOpen: true, type: 'expired', eta: formattedEta });
+        updateProgress({ status: 'error', error: 'Gmail authentication failed. Please reconnect.' });
+        return { success: false };
+      }
+      // Removed pre-operation token expiry check based on estimatedRuntimeMs
 
       // --- Logging Initialization ---
       const clientActionId = uuidv4();
@@ -274,6 +277,7 @@ export function useMarkAsRead() {
         let totalMarkedAsRead = 0;
         let errorMessage: string | undefined;
         let endType: ActionEndType = 'success';
+        let currentAccessToken: string; // To store the token for the current batch
 
         try {
           for (const sender of senders) {
@@ -304,30 +308,43 @@ export function useMarkAsRead() {
                 break;
               }
 
-              const currentTokenStatus = tokenStatus;
-              if (currentTokenStatus.timeRemaining < TWO_MINUTES_MS) {
-                console.warn('[MarkAsRead] Token expiring soon, pausing for reauth');
-                const remainingEmails = totalToProcess - totalMarkedAsRead;
-                const remainingTimeMs = estimateRuntimeMs({ 
+              // --- Token Check & Acquisition before batch (New Strategy) ---
+              const tokenDetails = peekAccessToken();
+              const timeRemaining = tokenTimeRemaining();
+              try {
+                if (tokenDetails && timeRemaining < TWO_MINUTES_MS) {
+                  console.warn(`[MarkAsRead] Token expiring soon (in ${formatDuration(timeRemaining)}), forcing refresh...`);
+                  currentAccessToken = await forceRefreshAccessToken();
+                } else {
+                  currentAccessToken = await getAccessToken(); // Gets from memory or refreshes if expired
+                }
+                console.log(`[MarkAsRead] Token acquired for batch processing sender: ${sender.email}`);
+              } catch (tokenError: any) {
+                console.error(`[MarkAsRead] Token acquisition failed for batch processing ${sender.email}:`, tokenError);
+                // Determine remaining ETA for the modal if needed
+                const remainingEmailsForEta = totalToProcess - totalMarkedAsRead;
+                const remainingTimeMsForEta = estimateRuntimeMs({ 
                   operationType: 'mark', 
-                  emailCount: remainingEmails, 
+                  emailCount: remainingEmailsForEta, 
                   mode: 'single' 
                 });
                 setReauthModal({ 
                   isOpen: true, 
-                  type: 'will_expire_during_operation', 
-                  eta: formatDuration(remainingTimeMs) 
+                  type: 'expired', // Simplified type
+                  eta: formatDuration(remainingTimeMsForEta) 
                 });
-                throw new Error("Token expired during operation. Please re-authenticate and try again.");
+                // This error will be caught by the main try-catch block of the async IIFE
+                throw new Error("Gmail authentication failed during operation. Please re-authenticate."); 
               }
-
+              // ---------------------------------------------
+              
               batchFetchAttempts++;
               console.log(`[MarkAsRead] Fetching message IDs batch (Attempt ${batchFetchAttempts})`);
 
               try {
-                const accessToken = await getAccessToken();
+                // Use currentAccessToken obtained above
                 const { messageIds, nextPageToken: newPageToken } = await fetchMessageIds(
-                  accessToken,
+                  currentAccessToken,
                   query,
                   nextPageToken,
                   FETCH_BATCH_SIZE
@@ -345,7 +362,8 @@ export function useMarkAsRead() {
                 // Process in chunks of MODIFY_BATCH_SIZE
                 for (let i = 0; i < messageIds.length; i += MODIFY_BATCH_SIZE) {
                   const batch = messageIds.slice(i, i + MODIFY_BATCH_SIZE);
-                  await batchMarkAsRead(accessToken, batch);
+                  // Use currentAccessToken obtained above
+                  await batchMarkAsRead(currentAccessToken, batch);
                   
                   totalMarkedAsRead += batch.length;
                   const overallProgress = totalToProcess > 0
@@ -441,11 +459,15 @@ export function useMarkAsRead() {
     },
     [
       user?.id,
-      tokenStatus,
+      // tokenStatus, // Removed
       updateProgress,
       getAccessToken,
-      requestPermissions,
-      isClientLoaded
+      // requestPermissions, // Removed
+      isClientLoaded,
+      isGmailConnected, // Added
+      forceRefreshAccessToken, // Added
+      peekAccessToken, // Added
+      tokenTimeRemaining // Added
     ]
   );
 

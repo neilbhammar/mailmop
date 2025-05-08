@@ -8,6 +8,10 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
+import { revokeAndClearToken } from '@/lib/gmail/token'
+
+// Set this to true to see testing buttons
+const testing = false;
 
 interface RevokeAccessDialogProps {
   open: boolean
@@ -15,12 +19,31 @@ interface RevokeAccessDialogProps {
 }
 
 export function RevokeAccessDialog({ open, onOpenChange }: RevokeAccessDialogProps) {
-  const { clearToken } = useGmailPermissions()
-
   const handleRevoke = async () => {
-    await clearToken()
+    await revokeAndClearToken()
     onOpenChange(false)
   }
+
+  // TODO: Implement these functions in GmailPermissionsProvider or token.ts
+  const { clearAccessTokenOnly, expireAccessToken } = useGmailPermissions();
+
+  const handleClearAccessToken = async () => {
+    if (clearAccessTokenOnly) {
+      await clearAccessTokenOnly();
+      // Optionally add some user feedback, e.g., a toast message
+      console.log("Access token cleared (testing only)");
+    }
+    // onOpenChange(false); // Decide if dialog should close
+  };
+
+  const handleExpireAccessToken = async () => {
+    if (expireAccessToken) {
+      await expireAccessToken();
+      // Optionally add some user feedback
+      console.log("Access token set to expire in 1 min (testing only)");
+    }
+    // onOpenChange(false); // Decide if dialog should close
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -46,6 +69,24 @@ export function RevokeAccessDialog({ open, onOpenChange }: RevokeAccessDialogPro
           >
             Revoke Access
           </Button>
+          {testing && (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleClearAccessToken}
+                className="bg-yellow-100 hover:bg-yellow-200 border-yellow-500 text-yellow-700"
+              >
+                Clear Access Token Only (Test)
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleExpireAccessToken}
+                className="bg-orange-100 hover:bg-orange-200 border-orange-500 text-orange-700"
+              >
+                Expire Access Token (Test)
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

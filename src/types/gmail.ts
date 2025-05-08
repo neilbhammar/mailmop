@@ -7,7 +7,7 @@ export interface TokenStatus {
   isValid: boolean;
   expiresAt: number | null;
   timeRemaining: number;
-  state: 'valid' | 'expiring_soon' | 'expired';
+  state: 'valid' | 'expiring_soon' | 'expired' | 'no_connection' | 'initializing';
 }
 
 // Runtime status for token operations

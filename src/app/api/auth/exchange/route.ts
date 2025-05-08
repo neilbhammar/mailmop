@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       secure: true,            // Only sends cookie over HTTPS
       sameSite: 'lax',        // Provides some protection against cross-site request forgery
       path: '/',              // Cookie is available everywhere on our site
-      maxAge: 60 * 60 * 24 * 30 // Cookie lasts for 30 days
+      maxAge: 60 * 60 * 24 * 180 // Cookie lasts for 180 days
     });
 
     return response;

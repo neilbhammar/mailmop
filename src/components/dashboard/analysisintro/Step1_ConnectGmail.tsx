@@ -4,7 +4,7 @@ import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
 import { CheckIcon, ChevronRightIcon, ShieldIcon, MailIcon, SparklesIcon, TrashIcon, BanIcon, ExternalLinkIcon, RefreshCw } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getStoredToken } from '@/lib/gmail/tokenStorage'
+import { getAccessToken } from '@/lib/gmail/token'
 import { fetchGmailStats } from '@/lib/gmail/fetchGmailStats'
 
 interface Step1Props {
@@ -25,13 +25,13 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
       const success = await requestPermissions()
       if (success) {
         // Fetch Gmail stats before proceeding to the next step
-        const token = getStoredToken();
-        if (token?.accessToken) {
+        const accessToken = await getAccessToken().catch(() => null);
+        if (accessToken) {
           // Show loading state while fetching stats
           setFetchingStats(true);
           try {
             // Fetch and store the stats in localStorage
-            await fetchGmailStats(token.accessToken);
+            await fetchGmailStats(accessToken);
             // Now proceed to next step
             onNext();
           } catch (error) {

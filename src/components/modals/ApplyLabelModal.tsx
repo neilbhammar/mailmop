@@ -37,14 +37,18 @@ import { Check, ChevronsUpDown, Mail, Plus, PlusCircle, Tag, X, Loader2, Chevron
 import { cn } from "@/lib/utils"
 import { fetchLabels, getStoredLabels } from "@/lib/gmail/fetchLabels"
 import { createSimpleLabel } from "@/lib/gmail/createLabel"
-import { getStoredToken } from "@/lib/gmail/tokenStorage"
-import { GmailLabel } from "@/types/gmail"
+import { getAccessToken as libGetAccessToken } from '@/lib/gmail/token'
+import { GmailLabel, TokenStatus } from "@/types/gmail"
 import { toast } from "sonner"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 // Add new imports for hooks
 import { useModifyLabel } from "@/hooks/useModifyLabel"
 import { useCreateFilter } from "@/hooks/useCreateFilter"
+
+// Import for reauth dialog
+import { ReauthDialog } from '@/components/modals/ReauthDialog';
+import { useGmailPermissions } from '@/context/GmailPermissionsProvider'; // Import the hook
 
 interface ApplyLabelModalProps {
   open: boolean
@@ -72,6 +76,13 @@ type SelectedLabel = {
   isNew?: boolean;
 };
 
+// ReauthModalState - can be defined here or imported if global
+interface ReauthModalState {
+  isOpen: boolean;
+  type: 'expired' | 'will_expire_during_operation';
+  eta?: string;
+}
+
 // Label sections for organization
 type LabelSection = {
   title: string;
@@ -95,6 +106,9 @@ export function ApplyLabelModal({
   const { startModifyLabel, progress: modifyProgress } = useModifyLabel()
   const { startCreateFilter, progress: filterProgress } = useCreateFilter()
   
+  // Get GmailPermissions context
+  const { getAccessToken, tokenStatus } = useGmailPermissions();
+
   // State for the modal controls
   const [actionType, setActionType] = useState<'add' | 'remove'>('add')
   const [selectedLabels, setSelectedLabels] = useState<SelectedLabel[]>([])
@@ -110,6 +124,12 @@ export function ApplyLabelModal({
   ])
   const [inputFocused, setInputFocused] = useState(false)
   
+  // State for reauth modal
+  const [reauthModal, setReauthModal] = useState<ReauthModalState>({
+    isOpen: false,
+    type: 'expired',
+  });
+
   // Ref for the input field and container
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -130,6 +150,8 @@ export function ApplyLabelModal({
       setIsProcessing(false)
       setSearchValue("")
       setInputFocused(false)
+      // Close reauth modal if it was open
+      setReauthModal(prev => ({ ...prev, isOpen: false }));
     }
   }, [open])
   
@@ -159,14 +181,26 @@ export function ApplyLabelModal({
       }
       
       // Get token
-      const token = getStoredToken();
-      if (!token) {
+      let accessTokenForFetch: string | null = null;
+      try {
+        accessTokenForFetch = await getAccessToken();
+      } catch (error) {
+        console.error("Error getting access token for fetching labels:", error);
+        toast.error("Gmail authentication failed. Please reconnect.");
+        setReauthModal({ isOpen: true, type: 'expired' });
+        setIsLoadingLabels(false); // Ensure loading state is reset
+        return;
+      }
+
+      if (!accessTokenForFetch) { // Should be redundant if getAccessToken throws on failure
         toast.error("Your Gmail session has expired. Please reconnect.");
+        setReauthModal({ isOpen: true, type: 'expired' });
+        setIsLoadingLabels(false);
         return;
       }
       
       // Fetch fresh labels
-      const labels = await fetchLabels(token.accessToken);
+      const labels = await fetchLabels(accessTokenForFetch);
       setAvailableLabels(labels);
     } catch (error) {
       console.error("Error fetching labels:", error);
@@ -243,14 +277,26 @@ export function ApplyLabelModal({
     setIsCreatingLabel(true);
     try {
       // Get token
-      const token = getStoredToken();
-      if (!token) {
+      let accessTokenForCreate: string | null = null;
+      try {
+        accessTokenForCreate = await getAccessToken();
+      } catch (error) {
+        console.error("Error getting access token for creating label:", error);
+        toast.error("Gmail authentication failed. Please reconnect.");
+        setReauthModal({ isOpen: true, type: 'expired' });
+        setIsCreatingLabel(false); // Ensure loading state is reset
+        return;
+      }
+
+      if (!accessTokenForCreate) { // Should be redundant
         toast.error("Your Gmail session has expired. Please reconnect.");
+        setReauthModal({ isOpen: true, type: 'expired' });
+        setIsCreatingLabel(false);
         return;
       }
       
       // Create the label
-      const newLabel = await createSimpleLabel(token.accessToken, searchValue.trim());
+      const newLabel = await createSimpleLabel(accessTokenForCreate, searchValue.trim());
       
       if (newLabel) {
         // Add to available labels
@@ -413,6 +459,13 @@ export function ApplyLabelModal({
   const systemSection = labelSections.find(s => s.type === 'system');
   // Find a user label section
   const userSection = labelSections.find(s => s.type === 'user');
+
+  // Callback to close reauth modal
+  const closeReauthModal = () => {
+    setReauthModal(prev => ({ ...prev, isOpen: false }));
+    // Optionally, re-attempt the action that failed, or prompt user to retry manually
+    // For simplicity, here we just close it. The user might need to retry the operation.
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -714,6 +767,13 @@ export function ApplyLabelModal({
           </Button>
         </DialogFooter>
       </DialogContent>
+      {/* Add ReauthDialog to the modal */}
+      <ReauthDialog
+        open={reauthModal.isOpen}
+        onOpenChange={(isOpen) => setReauthModal(prev => ({ ...prev, isOpen }))}
+        type={reauthModal.type}
+        eta={reauthModal.eta}
+      />
     </Dialog>
   )
 } 

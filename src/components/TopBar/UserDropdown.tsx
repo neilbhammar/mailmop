@@ -21,7 +21,7 @@ export function UserDropdown({ user }: UserDropdownProps) {
   const [showSignOutDialog, setShowSignOutDialog] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const { plan } = useAuth()
-  const { tokenStatus, requestPermissions } = useGmailPermissions()
+  const { tokenStatus, requestPermissions, hasRefreshToken } = useGmailPermissions()
   const avatarUrl = user.user_metadata?.avatar_url
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -135,7 +135,7 @@ export function UserDropdown({ user }: UserDropdownProps) {
               {/* Gmail Access Button - Show either Revoke or Reconnect */}
               <button
                 onClick={() => {
-                  if (tokenStatus.state === 'valid') {
+                  if (hasRefreshToken) {
                     setShowRevokeDialog(true)
                     setIsOpen(false)
                   } else {
@@ -145,12 +145,12 @@ export function UserDropdown({ user }: UserDropdownProps) {
                 }}
                 className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
-                {tokenStatus.state === 'valid' ? (
+                {hasRefreshToken ? (
                   <RefreshCwOff className="w-4 h-4 mr-3" />
                 ) : (
                   <RefreshCcw className="w-4 h-4 mr-3" />
                 )}
-                {tokenStatus.state === 'valid' ? 'Revoke Gmail Access' : 'Reconnect Gmail'}
+                {hasRefreshToken ? 'Revoke Gmail Access' : 'Reconnect Gmail'}
               </button>
 
               {/* Share Feedback */}

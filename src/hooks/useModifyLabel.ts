@@ -10,7 +10,10 @@ import { toast } from 'sonner';
 
 // --- Contexts & Hooks ---
 import { useAuth } from '@/context/AuthProvider';
-import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
+import {
+  useGmailPermissions,
+  // TypesTokenStatus // Avoid importing unused types if TokenStatus isn't used directly
+} from '@/context/GmailPermissionsProvider';
 
 // --- API/Helper Functions ---
 import { estimateRuntimeMs, formatDuration } from '@/lib/utils/estimateRuntime';
@@ -72,7 +75,7 @@ export interface ModifyLabelOptions {
 /** State for the re-authentication modal */
 interface ReauthModalState {
   isOpen: boolean;
-  type: 'expired' | 'will_expire_during_operation';
+  type: 'expired'; // Simplified type
   eta?: string;
 }
 
@@ -82,10 +85,13 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export function useModifyLabel() {
   const { user } = useAuth();
   const {
-    tokenStatus,
     getAccessToken,
-    requestPermissions,
+    forceRefreshAccessToken,
+    peekAccessToken,
+    tokenTimeRemaining,
+    hasRefreshToken: isGmailConnected, // Alias for clarity
     isClientLoaded
+    // requestPermissions, // No longer directly called from here for reauth trigger
   } = useGmailPermissions();
 
   // State for progress visible to the UI
@@ -130,7 +136,7 @@ export function useModifyLabel() {
     console.log('[ModifyLabel] Cancellation requested');
     isCancelledRef.current = true;
     updateProgress({ status: 'cancelled', progressPercent: 0 });
-    setReauthModal({ isOpen: false, type: 'expired' });
+    setReauthModal({ isOpen: false, type: 'expired' }); // Ensure type is 'expired'
 
     // Log cancellation to Supabase if an action was started
     const logId = actionLogIdRef.current;
@@ -192,27 +198,24 @@ export function useModifyLabel() {
       const formattedEta = formatDuration(estimatedRuntimeMs);
       updateProgress({ eta: formattedEta });
 
-      // --- Token & Permission Checks ---
-      if (tokenStatus.state !== 'valid' && tokenStatus.state !== 'expiring_soon') {
-        if (tokenStatus.state === 'expired') {
-          setReauthModal({ isOpen: true, type: 'expired' });
-          updateProgress({ status: 'idle' });
-          return { success: false };
-        } else {
-          toast.error('Gmail connection error. Please reconnect.', {
-            description: `Token state is ${tokenStatus.state}. Please grant permissions or reconnect.`,
-            action: { label: 'Reconnect', onClick: () => requestPermissions() }
-          });
-          updateProgress({ status: 'error', error: `Gmail token state: ${tokenStatus.state}` });
-          return { success: false };
-        }
-      }
-
-      if (tokenStatus.timeRemaining < estimatedRuntimeMs) {
-        setReauthModal({ isOpen: true, type: 'will_expire_during_operation', eta: formattedEta });
-        updateProgress({ status: 'idle' });
+      // --- Token & Permission Checks (New Strategy) ---
+      if (!isGmailConnected) {
+        console.log('[ModifyLabel] No Gmail connection (no refresh token), showing reauth modal.');
+        setReauthModal({ isOpen: true, type: 'expired', eta: formattedEta });
+        updateProgress({ status: 'error', error: 'Gmail not connected. Please reconnect.' });
         return { success: false };
       }
+
+      try {
+        await getAccessToken(); // Verify refresh token validity and get initial access token
+        console.log('[ModifyLabel] Initial access token validated/acquired.');
+      } catch (error) {
+        console.error('[ModifyLabel] Failed to validate/acquire initial token:', error);
+        setReauthModal({ isOpen: true, type: 'expired', eta: formattedEta });
+        updateProgress({ status: 'error', error: 'Gmail authentication failed. Please reconnect.' });
+        return { success: false };
+      }
+      // Removed pre-operation token expiry check based on estimatedRuntimeMs
 
       // --- Logging Initialization ---
       const clientActionId = uuidv4();
@@ -259,6 +262,7 @@ export function useModifyLabel() {
         let totalProcessed = 0;
         let errorMessage: string | undefined;
         let endType: ActionEndType = 'success';
+        let currentAccessToken: string; // To store the token for the current batch
 
         try {
           for (const sender of options.senders) {
@@ -289,30 +293,41 @@ export function useModifyLabel() {
                 break;
               }
 
-              const currentTokenStatus = tokenStatus;
-              if (currentTokenStatus.timeRemaining < TWO_MINUTES_MS) {
-                console.warn('[ModifyLabel] Token expiring soon, pausing for reauth');
-                const remainingEmails = totalToProcess - totalProcessed;
-                const remainingTimeMs = estimateRuntimeMs({ 
-                  operationType: 'mark', 
-                  emailCount: remainingEmails, 
+              // --- Token Check & Acquisition before batch (New Strategy) ---
+              const tokenDetails = peekAccessToken();
+              const timeRemaining = tokenTimeRemaining();
+              try {
+                if (tokenDetails && timeRemaining < TWO_MINUTES_MS) {
+                  console.warn(`[ModifyLabel] Token expiring soon (in ${formatDuration(timeRemaining)}), forcing refresh...`);
+                  currentAccessToken = await forceRefreshAccessToken();
+                } else {
+                  currentAccessToken = await getAccessToken(); // Gets from memory or refreshes if expired
+                }
+                console.log(`[ModifyLabel] Token acquired for batch processing sender: ${sender.email}`);
+              } catch (tokenError: any) {
+                console.error(`[ModifyLabel] Token acquisition failed for batch processing ${sender.email}:`, tokenError);
+                const remainingEmailsForEta = totalToProcess - totalProcessed;
+                const remainingTimeMsForEta = estimateRuntimeMs({ 
+                  operationType: 'mark', // Assuming 'mark' is generic enough for ETA here
+                  emailCount: remainingEmailsForEta, 
                   mode: 'single' 
                 });
                 setReauthModal({ 
                   isOpen: true, 
-                  type: 'will_expire_during_operation', 
-                  eta: formatDuration(remainingTimeMs) 
+                  type: 'expired', // Simplified type
+                  eta: formatDuration(remainingTimeMsForEta) 
                 });
-                throw new Error("Token expired during operation. Please re-authenticate and try again.");
+                throw new Error("Gmail authentication failed during operation. Please re-authenticate."); 
               }
+              // ---------------------------------------------
 
               batchFetchAttempts++;
               console.log(`[ModifyLabel] Fetching message IDs batch (Attempt ${batchFetchAttempts})`);
 
               try {
-                const accessToken = await getAccessToken();
+                // Use currentAccessToken obtained above
                 const { messageIds, nextPageToken: newPageToken } = await fetchMessageIds(
-                  accessToken,
+                  currentAccessToken,
                   query,
                   nextPageToken,
                   FETCH_BATCH_SIZE
@@ -327,8 +342,9 @@ export function useModifyLabel() {
 
                 console.log(`[ModifyLabel] Found ${messageIds.length} messages. Modifying labels...`);
 
+                // Use currentAccessToken obtained above
                 const failedBatches = await processBatchModifyLabels(
-                  accessToken,
+                  currentAccessToken,
                   messageIds,
                   {
                     addLabelIds: options.actionType === 'add' ? options.labelIds : undefined,
@@ -434,11 +450,15 @@ export function useModifyLabel() {
     },
     [
       user?.id,
-      tokenStatus,
+      // tokenStatus, // Removed
       updateProgress,
       getAccessToken,
-      requestPermissions,
-      isClientLoaded
+      // requestPermissions, // Removed
+      isClientLoaded,
+      isGmailConnected, // Added
+      forceRefreshAccessToken, // Added
+      peekAccessToken, // Added
+      tokenTimeRemaining // Added
     ]
   );
 
