@@ -295,7 +295,9 @@ export function useAnalysisOperations() {
             if (existing) {
               existing.count++;
               if (sender.isUnread) existing.unread_count++;
-              if (new Date(sender.date) > new Date(existing.lastDate)) existing.lastDate = sender.date;
+              if (!sender.isDateFromFallback && new Date(sender.date) > new Date(existing.lastDate)) {
+                existing.lastDate = sender.date;
+              }
               existing.hasUnsubscribe = existing.hasUnsubscribe || sender.hasUnsubscribe;
               if (sender.unsubscribe) existing.unsubscribe = { ...existing.unsubscribe, ...sender.unsubscribe };
             } else {
@@ -304,7 +306,7 @@ export function useAnalysisOperations() {
                 senderName: sender.name,
                 count: 1,
                 unread_count: sender.isUnread ? 1 : 0,
-                lastDate: sender.date,
+                lastDate: sender.isDateFromFallback ? '' : sender.date,
                 analysisId,
                 hasUnsubscribe: sender.hasUnsubscribe,
                 unsubscribe: sender.unsubscribe

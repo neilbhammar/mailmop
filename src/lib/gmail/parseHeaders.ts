@@ -13,6 +13,7 @@ interface ParsedSender {
   };
   subject?: string;
   messageId: string;
+  isDateFromFallback?: boolean;
 }
 
 /**
@@ -79,12 +80,24 @@ export function parseHeaders(metadata: GmailMessageMetadata): ParsedSender {
   // Parse Date
   const dateHeader = getHeader('Date');
   if (!dateHeader) {
-    if (ENABLE_GMAIL_DEBUG) {
-      console.warn(`[Gmail Debug] Missing Date header for message ${metadata.id}, using current date`);
+    if (metadata.internalDate) {
+      // Use internalDate as fallback (it's a timestamp in milliseconds)
+      result.date = new Date(parseInt(metadata.internalDate)).toISOString();
+      result.isDateFromFallback = true;
+      if (ENABLE_GMAIL_DEBUG) {
+        console.warn(`[Gmail Debug] Missing Date header for message ${metadata.id}, using internalDate: ${result.date}`);
+      }
+    } else {
+      // Last resort: use current date but mark it
+      result.date = new Date().toISOString();
+      result.isDateFromFallback = true;
+      if (ENABLE_GMAIL_DEBUG) {
+        console.warn(`[Gmail Debug] Missing both Date header and internalDate for message ${metadata.id}, using current date`);
+      }
     }
-    result.date = new Date().toISOString();
   } else {
     result.date = dateHeader;
+    result.isDateFromFallback = false;
   }
 
   // Parse Subject (optional)
