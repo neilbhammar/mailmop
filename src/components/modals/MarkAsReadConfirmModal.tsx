@@ -9,6 +9,7 @@ import {
   DialogTitle
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { MailOpen } from "lucide-react"
 
 interface MarkAsReadConfirmModalProps {
   /**
@@ -101,9 +102,14 @@ export function MarkAsReadConfirmModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl bg-white border border-slate-200 shadow-lg">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            {getTitle()}
-          </DialogTitle>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+              <MailOpen className="h-4 w-4 text-blue-600" />
+            </div>
+            <DialogTitle className="text-xl font-semibold">
+              {getTitle()}
+            </DialogTitle>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4">

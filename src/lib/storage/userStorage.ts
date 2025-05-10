@@ -4,7 +4,7 @@ import { clearSenderAnalysis } from "./senderAnalysis";
 const GMAIL_STATS_KEY = 'mailmop:gmail-stats';
 
 /**
- * Clears all user data from localStorage, sessionStorage, and IndexedDB
+3 * Clears all user data from localStorage, sessionStorage, IndexedDB, and attempts to clear HttpOnly cookie.
  */
 export async function clearAllUserData() {
   console.log('[Storage] Clearing all user data...');
@@ -17,8 +17,26 @@ export async function clearAllUserData() {
   
   // Clear IndexedDB data
   await clearSenderAnalysis();
+
+  // Attempt to clear the HttpOnly session cookie by calling the revoke endpoint
+  try {
+    console.log('[Storage] Attempting to revoke server session and clear HttpOnly cookie...');
+    const response = await fetch('/api/auth/revoke', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json', // Though body is empty, standard to include
+      },
+    });
+    if (response.ok) {
+      console.log('[Storage] Server session revoke request successful.');
+    } else {
+      console.warn('[Storage] Server session revoke request failed:', response.statusText);
+    }
+  } catch (error) {
+    console.error('[Storage] Error calling /api/auth/revoke:', error);
+  }
   
-  console.log('[Storage] All user data cleared');
+  console.log('[Storage] All user data cleared (including attempt to clear HttpOnly cookie)');
 }
 
 /**

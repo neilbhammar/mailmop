@@ -80,9 +80,9 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
   return (
     <div className="fixed inset-0" style={{ zIndex: 50 }}>
-      {/* Simpler semi-transparent overlay without excessive blur */}
+      {/* Semi-transparent overlay with standard black/50 color matching shadcn Dialog */}
       <div 
-        className="fixed inset-0 bg-gray-800/70"
+        className="fixed inset-0 bg-black/50"
         style={{ 
           zIndex: 50,
           position: 'fixed',
@@ -206,7 +206,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                   id="feedback-content"
                   value={feedbackContent}
                   onChange={handleTextChange}
-                  placeholder="Tell us what's on your mind..."
+                  placeholder="Share what's on your mind..."
                   className="w-full h-[210px] px-3 py-2 text-gray-700 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-100 focus:border-transparent resize-none"
                 />
                 

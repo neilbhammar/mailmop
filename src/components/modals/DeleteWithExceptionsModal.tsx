@@ -811,10 +811,14 @@ export function DeleteWithExceptionsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white max-h-[90vh] flex flex-col">
         <DialogHeader className="pb-1">
-          <DialogTitle className="text-xl font-semibold flex items-center">
-            <Trash2 className="h-5 w-5 mr-2 text-red-600" />
-            Delete from {senderDisplay}
-          </DialogTitle>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+              <Trash2 className="h-4 w-4 text-red-600" />
+            </div>
+            <DialogTitle className="text-xl font-semibold">
+              Delete from {senderDisplay}
+            </DialogTitle>
+          </div>
         </DialogHeader>
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">

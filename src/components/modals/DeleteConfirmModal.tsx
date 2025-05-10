@@ -9,6 +9,7 @@ import {
   DialogTitle
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Trash2 } from "lucide-react"
 
 interface DeleteConfirmModalProps {
   /**
@@ -108,9 +109,14 @@ export function DeleteConfirmModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl bg-white border border-slate-200 shadow-lg">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            {title}
-          </DialogTitle>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+              <Trash2 className="h-4 w-4 text-red-600" />
+            </div>
+            <DialogTitle className="text-xl font-semibold">
+              {title}
+            </DialogTitle>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4">
