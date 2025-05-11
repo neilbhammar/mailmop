@@ -38,8 +38,8 @@ const createTestAction = (type: ActionType = 'analysis', processed?: number, tot
   const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
 
   let targetSenders: string[] | undefined = undefined;
-  if (type !== 'analysis' && randomStatus !== 'completed') {
-    const numSenders = Math.floor(Math.random() * 3) + 1; // 1 to 3 senders
+  if (type !== 'analysis') {
+    const numSenders = Math.floor(Math.random() * 24) + 1; // 1 to 3 senders
     targetSenders = Array.from({ length: numSenders }, (_, i) => `sender${i+1}@example.com`);
   }
 
@@ -213,7 +213,7 @@ export default function ProcessQueue() {
           </div>
         </div>
       </div>
-      <div className="flex items-center flex-shrink-0 ml-3">
+      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
         <ChevronDownIcon className="h-4 w-4 text-slate-400 flex-shrink-0" />
       </div>
     </div>
@@ -288,7 +288,7 @@ export default function ProcessQueue() {
                           )}>
                             {getActionDisplayTitle(actionItem)}
                           </span>
-                          {actionItem.type !== 'analysis' && actionItem.targetSenders && actionItem.targetSenders.length > 0 && !isCompleted && (
+                          {actionItem.type !== 'analysis' && actionItem.targetSenders && actionItem.targetSenders.length > 0 && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <button className="p-0.5 rounded hover:bg-slate-200 flex-shrink-0">
