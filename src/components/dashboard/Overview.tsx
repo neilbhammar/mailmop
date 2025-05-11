@@ -1,6 +1,7 @@
 import React from 'react';
 import InboxStats from './overview/InboxStats';
 import ReanalyzeButton from './overview/ReanalyzeButton';
+import ProcessQueue from './overview/ProcessQueue';
 
 export default function Overview() {
   return (
@@ -13,8 +14,15 @@ export default function Overview() {
         <ReanalyzeButton />
       </div>
 
-      {/* Stats Section */}
-      <InboxStats />
+      {/* Stats and Queue Section */}
+      <div className="mt-0 flex items-center">
+        <div className="flex-1">
+          <InboxStats />
+        </div>
+        <div className="flex justify-end items-center h-[60px]">
+          <ProcessQueue />
+        </div>
+      </div>
     </div>
   );
 }
