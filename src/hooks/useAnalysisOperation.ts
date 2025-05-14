@@ -86,6 +86,30 @@ function dispatchStatusChange() {
   window.dispatchEvent(new Event('mailmop:analysis-status-change'));
 }
 
+// Helper function to send desktop notification
+function sendDesktopNotification(title: string, options?: NotificationOptions) {
+  if (!('Notification' in window)) {
+    console.log('[Analysis] Desktop notifications not supported by this browser.');
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    const notification = new Notification(title, { ...options, icon: '/favicon.png' });
+    notification.onclick = () => {
+      // Focus the window when notification is clicked
+      window.focus();
+      // Potentially navigate to a relevant page or close notification
+      notification.close();
+    };
+    console.log(`[Analysis] Desktop notification sent: ${title}`);
+  } else if (Notification.permission === 'denied') {
+    console.log('[Analysis] Desktop notification permission has been denied.');
+  } else {
+    // 'default' state - permission not yet asked or explicitly denied.
+    // The UI should ideally handle requesting permission at an appropriate time.
+    console.log('[Analysis] Desktop notification permission not yet granted (is default).');
+  }
+}
+
 // Simple sleep function for delays
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -95,6 +119,7 @@ export function useAnalysisOperations() {
     progress: 0
   });
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null); // Ref for Wake Lock
 
   const updateProgress = useCallback((newProgress: AnalysisProgress | ((prev: AnalysisProgress) => AnalysisProgress)) => {
     setProgress(prevProgress => {
@@ -143,6 +168,18 @@ export function useAnalysisOperations() {
   const startAnalysis = useCallback(async (options: AnalysisOptions) => {
     updateProgress({ status: 'preparing', progress: 0 });
     console.log('[Analysis] Preparing analysis...');
+
+    // 0. Request Notification permission if in 'default' state.
+    if ('Notification' in window && Notification.permission === 'default') {
+      console.log('[Analysis] Notification permission is default, requesting...');
+      try {
+        const permissionResult = await Notification.requestPermission();
+        console.log(`[Analysis] Notification permission request result: ${permissionResult}`);
+        // The sendDesktopNotification function will check the permission status again before sending.
+      } catch (error) {
+        console.error('[Analysis] Error requesting notification permission:', error);
+      }
+    }
 
     // 1. Check basic Gmail connection (refresh token presence)
     if (!isGmailConnected) {
@@ -257,11 +294,33 @@ export function useAnalysisOperations() {
       console.log('[Analysis] Creating and playing silent audio for anti-throttling...');
       audioRef.current = new Audio('/sample.mp3'); // Assuming silent.mp3 is in public folder
       audioRef.current.loop = true;
-      audioRef.current.volume = .15; // Ensure it's truly silent
+      audioRef.current.volume = .2; // Ensure it's truly silent
       audioRef.current.play().catch(error => {
         console.warn('[Analysis] Silent audio playback failed. This might be due to browser autoplay restrictions or other media issues. Analysis will continue, but background throttling might occur.', error);
         // Don't nullify audioRef.current here, as stopSilentAudio will handle it
       });
+    }
+
+    // Request Wake Lock
+    if ('wakeLock' in navigator && !wakeLockRef.current) {
+      try {
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+        console.log('[Analysis] Screen Wake Lock Acquired.');
+        wakeLockRef.current.addEventListener('release', () => {
+          console.log('[Analysis] Screen Wake Lock was released externally (e.g., page hidden).');
+          // If analysis is still ongoing and wakeLockRef.current exists, it means it was released by the browser.
+          // We set it to null so we know we don't hold the lock anymore.
+          // Re-acquiring might be an option if the page becomes visible again, but for now, just note it.
+          if (wakeLockRef.current) { // Check if it wasn't already released by our code
+            wakeLockRef.current = null;
+          }
+        });
+      } catch (err: any) {
+        console.error(`[Analysis] Screen Wake Lock API error: ${err.name}, ${err.message}`);
+        wakeLockRef.current = null; // Ensure it's null if request failed
+      }
+    } else if (!('wakeLock' in navigator)) {
+      console.log('[Analysis] Screen Wake Lock API not supported by this browser.');
     }
     
     // Start the batch processing in the background
@@ -358,11 +417,17 @@ export function useAnalysisOperations() {
            await completeActionLog(supabaseLogId, 'user_stopped', totalProcessed);
            completeAnalysis('user_stopped');
            updateProgress({ status: 'cancelled', progress: progress.progress }); // Keep current progress on cancel
+           sendDesktopNotification('MailMop: Analysis Cancelled', {
+             body: `The analysis was stopped after processing approximately ${totalProcessed.toLocaleString()} emails.`,
+           });
         } else {
           console.log('\n[Analysis] Analysis successfully completed!');
           await completeActionLog(supabaseLogId, 'success', totalProcessed);
           completeAnalysis('success');
           updateProgress({ status: 'completed', progress: 100 });
+          sendDesktopNotification('MailMop: Analysis Complete!', {
+            body: `Successfully processed ${totalProcessed.toLocaleString()} emails. Click to view your results.`,
+          });
         }
 
       } catch (error) {
@@ -372,9 +437,23 @@ export function useAnalysisOperations() {
         await completeActionLog(supabaseLogId, 'runtime_error', totalProcessed, errorMessage);
         completeAnalysis('runtime_error', errorMessage);
         updateProgress({ status: 'error', progress: totalProcessed > 0 ? progress.progress : 0, error: errorMessage });
+        sendDesktopNotification('MailMop: Analysis Error', {
+          body: `An error occurred: ${errorMessage}. Please try again or contact support.`,
+        });
       } finally {
         // Ensure silent audio is stopped regardless of how the async operation concludes
         stopSilentAudio();
+        // Release Wake Lock
+        if (wakeLockRef.current) {
+          try {
+            await wakeLockRef.current.release();
+            console.log('[Analysis] Screen Wake Lock Released in finally block.');
+          } catch (err: any) {
+            console.error(`[Analysis] Error releasing Screen Wake Lock: ${err.name}, ${err.message}`);
+          } finally {
+            wakeLockRef.current = null; // Ensure it's null even if release throws
+          }
+        }
       }
     })();
 
@@ -400,6 +479,17 @@ export function useAnalysisOperations() {
     console.log('[Analysis] Cancellation signal sent.');
     // Stop silent audio on explicit cancellation
     stopSilentAudio();
+    // Release Wake Lock on cancellation
+    if (wakeLockRef.current) {
+      try {
+        await wakeLockRef.current.release();
+        console.log('[Analysis] Screen Wake Lock Released due to cancellation.');
+      } catch (err: any) {
+        console.error(`[Analysis] Error releasing Screen Wake Lock on cancellation: ${err.name}, ${err.message}`);
+      } finally {
+        wakeLockRef.current = null;
+      }
+    }
   }, [updateProgress, stopSilentAudio]);
 
   return {

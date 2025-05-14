@@ -19,6 +19,10 @@ const nunito = Nunito({
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={nunito.className}>
+      <head>
+        <title>MailMop</title>
+        <link rel="icon" href="/favicon.png" />
+      </head>
       <body>
         <AuthProvider>
           <GmailPermissionsProvider>

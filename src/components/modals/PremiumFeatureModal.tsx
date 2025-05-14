@@ -162,7 +162,7 @@ export function PremiumFeatureModal({
           className="w-full max-w-xs px-6 py-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-md hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-blue-500/40 hover:brightness-110 transition-all duration-300 flex items-center justify-center group relative overflow-hidden text-base mt-4 mb-2 transform hover:scale-105"
         >
           <span className="relative z-10">
-            Upgrade to Premium <span className='text-sm opacity-80 ml-0.5'>( $1.50/mo )</span>
+            Upgrade to Premium <span className='text-sm opacity-80 ml-0.5'>( $1.75/mo )</span>
           </span>
           <Rocket className="ml-2 h-5 w-5 transform transition-transform relative z-10 group-hover:rotate-[15deg]" />
         </Button>
