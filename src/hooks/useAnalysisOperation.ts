@@ -1,4 +1,4 @@
-import { useState, useCallback, ReactNode } from 'react';
+import { useState, useCallback, ReactNode, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   clearSenderAnalysis, 
@@ -94,6 +94,7 @@ export function useAnalysisOperations() {
     status: 'idle',
     progress: 0
   });
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const updateProgress = useCallback((newProgress: AnalysisProgress | ((prev: AnalysisProgress) => AnalysisProgress)) => {
     setProgress(prevProgress => {
@@ -128,6 +129,17 @@ export function useAnalysisOperations() {
     setReauthModal(prev => ({ ...prev, isOpen: false }));
   }, []);
 
+  const stopSilentAudio = useCallback(() => {
+    if (audioRef.current) {
+      console.log('[Analysis] Stopping silent audio...');
+      audioRef.current.pause();
+      // Release the audio file and abort network activity
+      audioRef.current.src = ''; 
+      audioRef.current.load(); 
+      audioRef.current = null;
+    }
+  }, []);
+
   const startAnalysis = useCallback(async (options: AnalysisOptions) => {
     updateProgress({ status: 'preparing', progress: 0 });
     console.log('[Analysis] Preparing analysis...');
@@ -137,6 +149,7 @@ export function useAnalysisOperations() {
       console.log('[Analysis] No Gmail connection (no refresh token), requesting reauth via modal.');
       setReauthModal({ isOpen: true, type: 'expired' });
       updateProgress({ status: 'error', error: 'Gmail not connected. Please reconnect.', progress: 0 });
+      stopSilentAudio(); // Stop audio if it was somehow started
       return { success: false };
     }
 
@@ -149,16 +162,19 @@ export function useAnalysisOperations() {
       console.error('[Analysis] Failed to get initial access token:', error);
       setReauthModal({ isOpen: true, type: 'expired' });
       updateProgress({ status: 'error', error: 'Gmail authentication failed. Please reconnect.', progress: 0 });
+      stopSilentAudio();
       return { success: false };
     }
 
     // 3. Pre-flight checks (User, Stats)
     if (!stats?.totalEmails) {
       updateProgress({ status: 'error', error: 'Unable to determine inbox size. Please try again.', progress: 0 });
+      stopSilentAudio();
       return { success: false };
     }
     if (!user?.id) {
       updateProgress({ status: 'error', error: 'User not authenticated.', progress: 0 });
+      stopSilentAudio();
       return { success: false };
     }
 
@@ -235,6 +251,18 @@ export function useAnalysisOperations() {
     await updateActionLog(supabaseLogId, { status: 'analyzing' });
 
     console.log('[Analysis] Pre-flight checks passed, proceeding with background analysis');
+    
+    // Start silent audio playback
+    if (!audioRef.current) {
+      console.log('[Analysis] Creating and playing silent audio for anti-throttling...');
+      audioRef.current = new Audio('/sample.mp3'); // Assuming silent.mp3 is in public folder
+      audioRef.current.loop = true;
+      audioRef.current.volume = .15; // Ensure it's truly silent
+      audioRef.current.play().catch(error => {
+        console.warn('[Analysis] Silent audio playback failed. This might be due to browser autoplay restrictions or other media issues. Analysis will continue, but background throttling might occur.', error);
+        // Don't nullify audioRef.current here, as stopSilentAudio will handle it
+      });
+    }
     
     // Start the batch processing in the background
     (async () => {
@@ -344,6 +372,9 @@ export function useAnalysisOperations() {
         await completeActionLog(supabaseLogId, 'runtime_error', totalProcessed, errorMessage);
         completeAnalysis('runtime_error', errorMessage);
         updateProgress({ status: 'error', progress: totalProcessed > 0 ? progress.progress : 0, error: errorMessage });
+      } finally {
+        // Ensure silent audio is stopped regardless of how the async operation concludes
+        stopSilentAudio();
       }
     })();
 
@@ -357,7 +388,8 @@ export function useAnalysisOperations() {
     peekAccessToken, 
     tokenTimeRemaining, 
     isGmailConnected,
-    updateProgress
+    updateProgress,
+    stopSilentAudio
   ]);
 
   const cancelAnalysis = useCallback(async () => {
@@ -366,7 +398,9 @@ export function useAnalysisOperations() {
     setReauthModal({ isOpen: false, type: 'expired' }); // Close reauth modal if open
     // Logging of cancellation will be handled in the batch loop when it terminates.
     console.log('[Analysis] Cancellation signal sent.');
-  }, [updateProgress]);
+    // Stop silent audio on explicit cancellation
+    stopSilentAudio();
+  }, [updateProgress, stopSilentAudio]);
 
   return {
     progress,

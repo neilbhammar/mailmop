@@ -53,7 +53,7 @@ export default function LandingFooter() {
                 <ul className="space-y-3">
                   <li>
                     <a 
-                      href="mailto:support@mailmop.app" 
+                      href="mailto:hi@mailmop.app" 
                       className="text-gray-500 hover:text-blue-600 text-sm flex items-center"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

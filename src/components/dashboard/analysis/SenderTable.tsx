@@ -385,12 +385,12 @@ export function SenderTable({
   onDeleteSingleSender,
   onDeleteWithExceptions,
   onMarkSingleSenderRead,
+  onApplyLabelSingle,
   onBlockSingleSender,
   onUnsubscribeSingleSender
 }: SenderTableProps) {
-  // Get senders and filter based on search term and unread status
   const { senders: allSenders, isLoading, isAnalyzing } = useSenderData();
-  const { viewMultipleSendersInGmail } = useViewInGmail();
+  const { viewSenderInGmail, viewMultipleSendersInGmail } = useViewInGmail();
   const senders = useFilteredSenders(allSenders, searchTerm, showUnreadOnly);
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'count', desc: true }
@@ -637,27 +637,42 @@ export function SenderTable({
     },
     {
       id: "actions",
-      header: () => <div className="text-right"></div>,
+      header: () => <div className="text-right text-slate-600 font-normal pr-1">Actions</div>,
       cell: ({ row }) => (
-        <ActionWrapper 
-          sender={row.original} 
-          onDropdownOpen={handleDropdownOpen}
-          onDeleteSingleSender={onDeleteSingleSender}
-          onDeleteWithExceptions={onDeleteWithExceptions}
-          onMarkSingleSenderRead={onMarkSingleSenderRead}
-          onApplyLabelSingle={(email) => {
-            // Find the sender to get the email count
-            const sender = senders.find(s => s.email === email);
-            if (sender) {
-              handleOpenApplyLabelModal([email], sender.count); // Open modal for single sender
-            }
-          }}
-          onBlockSingleSender={onBlockSingleSender}
-          onUnsubscribeSingleSender={onUnsubscribeSingleSender}
+        <RowActions
+          onBlock={onBlockSingleSender}
+          onApplyLabel={onApplyLabelSingle || (() => console.warn('onApplyLabelSingle not provided to SenderTable'))}
+          onDelete={onDeleteSingleSender || (() => console.warn('onDeleteSingleSender not provided'))}
+          onDeleteWithExceptions={onDeleteWithExceptions || (() => console.warn('onDeleteWithExceptions not provided'))}
+          onUnsubscribe={onUnsubscribeSingleSender || (() => console.warn('onUnsubscribeSingleSender not provided'))}
+          onMarkUnread={
+            onMarkSingleSenderRead 
+              ? (email) => onMarkSingleSenderRead(email) 
+              : (() => console.warn('onMarkSingleSenderRead not provided'))
+          }
+          onViewInGmail={viewSenderInGmail || (() => console.warn('viewSenderInGmail not provided'))}
+          sender={row.original}
+          onDropdownOpen={(email) => handleDropdownOpen(email)}
         />
-      )
+      ),
+      enableSorting: false,
+      enableHiding: false
     }
-  ], [selectedEmails, handleCheckboxChange, clearSelections, handleDropdownOpen, onDeleteSingleSender, onDeleteWithExceptions, onMarkSingleSenderRead, showUnreadOnly, onUnsubscribeSingleSender])
+  ], [
+    senders, 
+    selectedEmails, 
+    sorting, 
+    clearSelections, 
+    handleCheckboxChange, 
+    onDeleteSingleSender, 
+    onDeleteWithExceptions, 
+    onMarkSingleSenderRead, 
+    onBlockSingleSender, 
+    onUnsubscribeSingleSender, 
+    onApplyLabelSingle, 
+    viewSenderInGmail,
+    handleDropdownOpen,
+  ]);
 
   // Initialize and configure the table
   const table = useReactTable({

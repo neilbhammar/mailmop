@@ -3,13 +3,13 @@
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
+  DialogDescription
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Star, Check, X } from "lucide-react"
+import { ArrowRightIcon } from "@radix-ui/react-icons"
+import { ExternalLink, X, Trash2, BellOff, MailOpen, Ban, Tag, FilterIcon, Sparkles, Rocket } from "lucide-react"
 
 interface PremiumFeatureModalProps {
   /**
@@ -65,112 +65,120 @@ export function PremiumFeatureModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl p-0 rounded-lg overflow-hidden bg-white">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Premium Features</DialogTitle>
+      {/* Modal background gradient applied, dot pattern div removed */}
+      <DialogContent className="sm:max-w-2xl p-8 md:p-10 rounded-xl overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col items-center text-center">
+        {/* Accessible Title and Description (Visually Hidden) */}
+        <DialogHeader>
+          <DialogTitle className="sr-only">Upgrade to MailMop Premium to Use {formattedFeatureName}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Instantly unlock {formattedFeatureName} and our full suite of one-click actions to save hundreds of hours. Cheaper than a donut.
+          </DialogDescription>
         </DialogHeader>
         
-        <div className="flex flex-col md:flex-row">
-          {/* Left side - purple background with illustration */}
-          <div className="bg-indigo-600 p-8 flex flex-col justify-center items-center md:w-1/2 relative">
-            <button 
-              onClick={handleClose}
-              className="absolute right-4 top-4 text-white/70 hover:text-white transition-colors"
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-white mb-4">
-                <span className="block">Unlock the</span>
-                <span className="text-teal-300">full power</span>
-                <span className="block">of MailMop</span>
-              </h2>
-              
-              <p className="text-white/90 mt-4 max-w-sm mx-auto">
-                Unlock advanced email management. Boost your productivity, streamline your 
-                inbox, and experience the future of email efficiency today.
-              </p>
-            </div>
-            
-            {/* Illustration - simplified box representation */}
-            <div className="relative w-64 h-64">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-40 w-40 bg-indigo-800 rounded-xl relative overflow-hidden">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-white text-5xl">∞</div>
-                  </div>
-                </div>
-                <div className="absolute top-0 right-0 h-16 w-16 bg-red-400 rounded-lg"></div>
-                <div className="absolute bottom-0 left-0 h-16 w-16 bg-teal-300 rounded-lg"></div>
-                <div className="absolute top-20 -left-4 h-12 w-12 bg-amber-400 rounded-lg"></div>
-                <div className="absolute bottom-16 -right-8 h-10 w-10 bg-sky-400 rounded-lg"></div>
-              </div>
+        {/* Close button */}
+        <button 
+          onClick={handleClose}
+          className="absolute right-4 top-4 z-50 bg-white/70 backdrop-blur-sm rounded-full p-1.5 text-gray-500 hover:text-gray-800 hover:bg-white transition-colors border border-gray-200 shadow-sm"
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        
+        {/* Main Title - Icon removed, "Use" capitalized */}
+        <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2 mt-6 flex items-center justify-center">
+          Upgrade to Use {formattedFeatureName}
+        </h2>
+
+        {/* Subtitle/Description - Wider max-width */}
+        <p className="text-gray-600 text-base md:text-lg mb-8 max-w-lg">
+          Instantly unlock <strong>{formattedFeatureName}</strong> and our full suite of one-click actions to save hundreds of hours. Cheaper than a donut.
+        </p>
+
+        {/* Visual Showcase: Removed 'group' from here */}
+        <div className="relative mx-auto h-40 md:h-48 my-6 w-full max-w-xs">
+          {/* Aura Rings Behind Central Icon - Removed group-hover effects, retain pulse */}
+          <div className="absolute inset-0 flex items-center justify-center z-0">
+            <div className="w-48 h-48 md:w-56 md:h-56 bg-blue-400/5 rounded-full animate-pulse-slow delay-300 transition-all duration-300"></div>
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center z-0">
+            <div className="w-56 h-56 md:w-64 md:h-64 bg-blue-300/5 rounded-full animate-pulse-slow transition-all duration-300"></div>
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center z-0">
+            <div className="w-64 h-64 md:w-72 md:h-72 bg-blue-200/5 rounded-full animate-pulse-slow delay-500 transition-all duration-300"></div>
+          </div>
+
+          {/* Central Icon Container - ensure it's above aura rings with z-10 */}
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <div className="w-32 h-32 md:w-36 md:h-36 bg-blue-50 rounded-2xl border-2 border-blue-200 shadow-xl flex flex-col items-center justify-center p-4 text-center transform transition-all duration-300 group-hover:scale-105">
+              { featureName.toLowerCase() === "delete" && <Trash2 className="w-10 h-10 md:w-12 md:h-12 text-blue-500 mb-2"/> }
+              { featureName.toLowerCase() === "block sender" && <Ban className="w-10 h-10 md:w-12 md:h-12 text-blue-500 mb-2"/> }
+              { featureName.toLowerCase() === "unsubscribe" && <BellOff className="w-10 h-10 md:w-12 md:h-12 text-blue-500 mb-2"/> }
+              { featureName.toLowerCase() === "mark as read" && <MailOpen className="w-10 h-10 md:w-12 md:h-12 text-blue-500 mb-2"/> }
+              { featureName.toLowerCase() === "apply labels" && <Tag className="w-10 h-10 md:w-12 md:h-12 text-blue-500 mb-2"/> }
+              { featureName.toLowerCase() === "delete with exceptions" && <FilterIcon className="w-10 h-10 md:w-12 md:h-12 text-blue-500 mb-2"/> }
+              { !["delete", "block sender", "unsubscribe", "mark as read", "apply labels", "delete with exceptions"].includes(featureName.toLowerCase()) && <Sparkles className="w-10 h-10 md:w-12 md:h-12 text-blue-500 mb-2"/> }
+              <p className="text-xs md:text-sm font-medium text-blue-700">{formattedFeatureName}</p>
             </div>
           </div>
-          
-          {/* Right side - white background with features */}
-          <div className="bg-white p-8 md:w-1/2 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center space-x-2 mb-6">
-                <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
-                <h3 className="text-xl font-semibold">Unlock premium features</h3>
-              </div>
-              
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-teal-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <span>One-click delete across your entire inbox</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-teal-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <span>Bulk actions for faster cleanup</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-teal-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <span>Smart filters and recommendations</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-teal-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <span>Advanced analytics and insights</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-teal-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <span>Automatic sender categorization</span>
-                </li>
-              </ul>
-              
-              <div className="bg-slate-50 p-4 rounded-md text-sm text-slate-700 mb-6">
-                <p>
-                <span className="font-medium">Tip:</span> You can still delete or modify emails from {senderCount > 1 ? 'these senders' : 'this sender'}  directly in Gmail without upgrading.
-                </p>
-              </div>
+
+          {/* Floating badges will render on top of aura if positioned correctly within this parent or with higher z-index */}
+          {/* Subtle floating cards - Added individual hover effects */}
+          <div className="absolute top-0 left-1/4 transform -translate-x-1/2 -translate-y-1/4 opacity-95 hover:opacity-100 transition-all duration-200 ease-in-out z-20 group hover:scale-105 hover:-translate-y-1">
+            <div className="bg-white/95 group-hover:bg-white backdrop-blur-sm rounded-lg shadow-md group-hover:shadow-lg p-2.5 max-w-[140px] border border-gray-100 transition-all duration-200 ease-in-out">
+              <div className="flex items-center"><div className="w-5 h-5 rounded-full bg-red-50 flex items-center justify-center mr-1.5 flex-shrink-0"><Trash2 className="w-3 h-3 text-red-500" /></div><span className="text-xs font-medium text-gray-700">Delete</span></div>
             </div>
-            
-            <div className="space-y-4">
-              <Button
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-12"
-                onClick={() => window.location.href = '/dashboard/upgrade'}
-              >
-                See pricing
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={handleViewInGmail}
-                className="w-full text-slate-700 border-slate-300 hover:bg-slate-50 h-12"
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                View in Gmail
-              </Button>
-              
-              <p className="text-center text-xs text-slate-500">
-                Some plans don't include all features. Review and upgrade to the plan that best fits your needs.
-              </p>
+          </div>
+          <div className="absolute bottom-0 right-1/4 transform translate-x-1/2 translate-y-1/4 opacity-95 hover:opacity-100 transition-all duration-200 ease-in-out z-20 group hover:scale-105 hover:-translate-y-1">
+            <div className="bg-white/95 group-hover:bg-white backdrop-blur-sm rounded-lg shadow-md group-hover:shadow-lg p-2.5 max-w-[140px] border border-gray-100 transition-all duration-200 ease-in-out">
+              <div className="flex items-center"><div className="w-5 h-5 rounded-full bg-purple-50 flex items-center justify-center mr-1.5 flex-shrink-0"><Ban className="w-3 h-3 text-purple-500" /></div><span className="text-xs font-medium text-gray-700">Block</span></div>
+            </div>
+          </div>
+          <div className="absolute top-0 right-1/4 transform translate-x-1/2 -translate-y-1/4 opacity-95 hover:opacity-100 transition-all duration-200 ease-in-out z-20 group hover:scale-105 hover:-translate-y-1">
+            <div className="bg-white/95 group-hover:bg-white backdrop-blur-sm rounded-lg shadow-md group-hover:shadow-lg p-2.5 max-w-[140px] border border-gray-100 transition-all duration-200 ease-in-out">
+              <div className="flex items-center"><div className="w-5 h-5 rounded-full bg-indigo-50 flex items-center justify-center mr-1.5 flex-shrink-0"><BellOff className="w-3 h-3 text-indigo-500" /></div><span className="text-xs font-medium text-gray-700">Unsubscribe</span></div>
+            </div>
+          </div>
+          <div className="absolute bottom-0 left-1/4 transform -translate-x-1/2 translate-y-1/4 opacity-95 hover:opacity-100 transition-all duration-200 ease-in-out z-20 group hover:scale-105 hover:-translate-y-1">
+            <div className="bg-white/95 group-hover:bg-white backdrop-blur-sm rounded-lg shadow-md group-hover:shadow-lg p-2.5 max-w-[140px] border border-gray-100 transition-all duration-200 ease-in-out">
+              <div className="flex items-center"><div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center mr-1.5 flex-shrink-0"><MailOpen className="w-3 h-3 text-green-500" /></div><span className="text-xs font-medium text-gray-700">Mark Read</span></div>
+            </div>
+          </div>
+          <div className="absolute top-1/2 left-0 transform -translate-x-[30%] -translate-y-1/2 opacity-95 hover:opacity-100 transition-all duration-200 ease-in-out z-20 group hover:scale-105 hover:-translate-y-1">
+            <div className="bg-white/95 group-hover:bg-white backdrop-blur-sm rounded-lg shadow-md group-hover:shadow-lg p-2.5 max-w-[140px] border border-gray-100 transition-all duration-200 ease-in-out">
+              <div className="flex items-center"><div className="w-5 h-5 rounded-full bg-sky-50 flex items-center justify-center mr-1.5 flex-shrink-0"><Tag className="w-3 h-3 text-sky-500" /></div><span className="text-xs font-medium text-gray-700">Labels</span></div>
+            </div>
+          </div>
+          {/* New "Delete with exceptions" Badge */}
+          <div className="absolute top-1/2 right-0 transform translate-x-[30%] -translate-y-1/2 opacity-95 hover:opacity-100 transition-all duration-200 ease-in-out z-20 group hover:scale-105 hover:-translate-y-1">
+            <div className="bg-white/95 group-hover:bg-white backdrop-blur-sm rounded-lg shadow-md group-hover:shadow-lg p-2.5 max-w-[140px] border border-gray-100 transition-all duration-200 ease-in-out">
+              <div className="flex items-center"><div className="w-5 h-5 rounded-full bg-amber-50 flex items-center justify-center mr-1.5 flex-shrink-0"><FilterIcon className="w-3 h-3 text-amber-600" /></div><span className="text-xs font-medium text-gray-700">Exceptions</span></div>
             </div>
           </div>
         </div>
+
+        {/* Upgrade Button - Updated text and hover effects */}
+        <Button 
+          onClick={() => window.location.href = '/dashboard/upgrade'}
+          className="w-full max-w-xs px-6 py-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-md hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-blue-500/40 hover:brightness-110 transition-all duration-300 flex items-center justify-center group relative overflow-hidden text-base mt-4 mb-2 transform hover:scale-105"
+        >
+          <span className="relative z-10">
+            Upgrade to Premium <span className='text-sm opacity-80 ml-0.5'>( $1.50/mo )</span>
+          </span>
+          <Rocket className="ml-2 h-5 w-5 transform transition-transform relative z-10 group-hover:rotate-[15deg]" />
+        </Button>
+        <p className="text-xs text-gray-500 mb-8">Billed annually</p>
+
+        {/* Alternative Action Text - Updated Copy and Wider max-width, formatted feature name */}
+        <p className="text-sm text-gray-600 max-w-lg">
+          Prefer the manual route? You can still {formattedFeatureName.toLowerCase()}
+          <button 
+            onClick={handleViewInGmail}
+            className="text-blue-600 hover:text-blue-700 underline font-medium ml-1"
+          >
+            directly in Gmail
+          </button>.
+        </p>
+        
       </DialogContent>
     </Dialog>
   )

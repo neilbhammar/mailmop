@@ -25,6 +25,7 @@ export default function Home() {
   const heroBgCircle1Ref = useRef<HTMLDivElement>(null)
   const lenisInstanceRef = useRef<Lenis | null>(null)
   const [videoModalOpen, setVideoModalOpen] = useState(false)
+  const popSoundRef = useRef<HTMLAudioElement | null>(null);
   
   // Stats state
   const [stats, setStats] = useState({
@@ -187,9 +188,9 @@ export default function Home() {
       } else {
         left = 70 + Math.random() * 30;
       }
-      const bottom = -150 - Math.random() * 80; // Start a bit higher
+      const bottom = -30 - Math.random() * 80; // Start a bit higher
       const duration = 12 + Math.random() * 8 // Faster float: 12-20s
-      const delay = Math.random() * 1.5;
+      const delay = Math.random() * 0.01;
       const xOffset = -25 + Math.random() * 50 
       const rotate1 = -8 + Math.random() * 16 
       const rotate2 = -8 + Math.random() * 16 
@@ -262,6 +263,14 @@ export default function Home() {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const _ = bubble.offsetHeight; 
 
+        // Play pop sound
+        if (popSoundRef.current) {
+          popSoundRef.current.currentTime = 0; // Rewind to the start
+          popSoundRef.current.play().catch(error => {
+            console.warn('Bubble pop sound playback failed:', error);
+          });
+        }
+
         // Now, set the desired transition for the pop animation itself
         // This ensures the subsequent style changes for popping are animated smoothly
         bubble.style.transition = 'transform 0.05s ease-out, opacity 0.05s ease-out, border-radius 0.05s ease-out, filter 0.05s ease-out, background 0.05s ease-out, box-shadow 0.05s ease-out';
@@ -318,6 +327,15 @@ export default function Home() {
     
     for (let i = 0; i < bubbleCount; i++) {
       createBubble(container, i)
+    }
+
+    // Initialize the pop sound if it hasn't been already
+    if (!popSoundRef.current) {
+      const audio = new Audio('/bubble.mp3'); // Assumes bubble.mp3 is in /public
+      audio.volume = 0.2; // Adjust volume as needed (0.0 to 1.0)
+      audio.preload = 'auto';
+      audio.load(); // Start loading the audio file
+      popSoundRef.current = audio;
     }
 
     return () => {

@@ -22,6 +22,7 @@ import { BlockSenderModal } from '@/components/modals/BlockSenderModal'
 import { useUnsubscribe, UnsubscribeMethodDetails } from '@/hooks/useUnsubscribe'
 import { getUnsubscribeMethod } from '@/lib/gmail/getUnsubscribeMethod'
 import { ConfirmUnsubscribeModal } from '@/components/modals/ConfirmUnsubscribeModal'
+import { ApplyLabelModal } from "@/components/modals/ApplyLabelModal"
 
 // Create a custom type for the selection count change handler
 // that includes our viewInGmail extension
@@ -121,6 +122,16 @@ export default function AnalysisView() {
     senderEmail: string;
     methodDetails: UnsubscribeMethodDetails;
   } | null>(null);
+
+  // Add state for ApplyLabelModal
+  const [isApplyLabelModalOpen, setIsApplyLabelModalOpen] = useState(false);
+  const [emailsToApplyLabelTo, setEmailsToApplyLabelTo] = useState<string[]>([]);
+
+  // Calculate emailCount for ApplyLabelModal
+  const emailCountForApplyLabel = useMemo(() => {
+    if (emailsToApplyLabelTo.length === 0) return 0;
+    return emailsToApplyLabelTo.reduce((total, email) => total + (emailCountMap[email] || 0), 0); // Default to 0 if no count found
+  }, [emailsToApplyLabelTo, emailCountMap]);
 
   // Wrapper function for setSelectedCount that keeps track of table actions
   const handleSelectedCountChange: SelectionCountHandler = useCallback((count: number) => {
@@ -352,17 +363,28 @@ export default function AnalysisView() {
     }
   }, [emailsToMark, emailCountMap, startMarkAsRead]);
 
-  const handleApplyLabelSingle = useCallback((email: string) => {
-    console.log("Apply Label for single sender:", email);
-    // TODO: Implement premium check for Apply Label
-    // TODO: If premium, open ApplyLabelModal for single sender
-  }, []);
-
+  // Handler for BULK Apply Label action (called from AnalysisHeader)
   const handleApplyLabelBulk = useCallback(() => {
-    console.log("Apply Label for BULK senders:", Array.from(selectedEmails));
-    // TODO: Implement premium check for Apply Label
-    // TODO: If premium, open ApplyLabelModal for bulk senders
-  }, [selectedEmails]);
+    if (selectedEmails.size === 0) {
+      toast.warning('No senders selected');
+      return;
+    }
+    if (checkFeatureAccess('apply_label', selectedEmails.size)) {
+      setEmailsToApplyLabelTo(Array.from(selectedEmails));
+      setIsApplyLabelModalOpen(true);
+    }
+    // If not premium, hook handles PremiumFeatureModal. No activeSingleSender for bulk.
+  }, [selectedEmails, checkFeatureAccess, setIsApplyLabelModalOpen, setEmailsToApplyLabelTo]);
+
+  // Handler for SINGLE Apply Label action (to be passed to SenderTable -> RowActions)
+  const handleApplyLabelSingle = useCallback((email: string) => {
+    if (checkFeatureAccess('apply_label', 1)) {
+      setEmailsToApplyLabelTo([email]);
+      setIsApplyLabelModalOpen(true);
+    } else {
+      setActiveSingleSender(email); // For PremiumFeatureModal's "View in Gmail"
+    }
+  }, [checkFeatureAccess, setIsApplyLabelModalOpen, setEmailsToApplyLabelTo, setActiveSingleSender]);
 
   // Placeholder handler for Unsubscribe
   const handleUnsubscribeSingleSender = useCallback(async (email: string) => {
@@ -404,25 +426,20 @@ export default function AnalysisView() {
   }, [checkFeatureAccess, senders, setActiveSingleSender, unsubscribeHook]);
 
   // Handler for block sender (single and bulk)
-  const handleBlockSender = useCallback((emails: string[]) => {
-    if (emails.length === 0) {
-      // ... existing code ...
+  const handleBlockSenders = useCallback(() => {
+    if (selectedEmails.size === 0) {
+      toast.warning('No senders selected');
+      return;
     }
-  }, []);
-
-  const handleApplyLabel = () => {
-    console.log(`Apply label to ${selectedCount} senders`);
-    // Call the dynamically attached function on the handleSelectedCountChange object
-    if (handleSelectedCountChange.applyLabelBulk) {
-      handleSelectedCountChange.applyLabelBulk();
+    // Check for premium access before proceeding
+    if (checkFeatureAccess('block_sender', selectedEmails.size)) {
+      // Premium access granted, proceed to open block confirm modal
+      setEmailsToBlock(Array.from(selectedEmails));
+      setIsBlockModalOpen(true);
     }
-  }
-
-  const handleBlockSenders = () => {
-    if (selectedEmails.size === 0) return;
-    setEmailsToBlock(Array.from(selectedEmails));
-    setIsBlockModalOpen(true);
-  }
+    // If not premium, usePremiumFeature hook handles opening the PremiumFeatureModal
+    // For bulk actions, we don't need to set activeSingleSender as viewInGmail will use selectedEmails
+  }, [selectedEmails, checkFeatureAccess, setEmailsToBlock, setIsBlockModalOpen]);
 
   const handleBlockConfirm = async () => {
     // The actual blocking is handled inside the modal
@@ -433,9 +450,17 @@ export default function AnalysisView() {
 
   // Add handler for single sender block
   const handleBlockSingleSender = useCallback((email: string) => {
-    setEmailsToBlock([email]);
-    setIsBlockModalOpen(true);
-  }, []);
+    // Check for premium access before proceeding
+    if (checkFeatureAccess('block_sender', 1)) {
+      // Premium access granted, proceed to open block confirm modal
+      setEmailsToBlock([email]);
+      setIsBlockModalOpen(true);
+    } else {
+      // Not premium, usePremiumFeature hook has opened the modal.
+      // Set the active single sender for the "View in Gmail" option in PremiumFeatureModal.
+      setActiveSingleSender(email);
+    }
+  }, [checkFeatureAccess, setEmailsToBlock, setIsBlockModalOpen, setActiveSingleSender]);
 
   // --- NEW: Logic to disable bulk delete button ---
   const isBulkDeleteDisabled = useMemo(() => {
@@ -488,7 +513,7 @@ export default function AnalysisView() {
         isDeleteDisabled={isBulkDeleteDisabled}
         onMarkAllAsRead={handleMarkAllRead}
         onDeleteWithExceptions={handleDeleteWithExceptions}
-        onApplyLabel={handleApplyLabel}
+        onApplyLabel={handleApplyLabelBulk}
         onBlockSenders={handleBlockSenders}
         onSearchChange={setSearchTerm}
         onToggleUnreadOnly={setShowUnreadOnly}
@@ -506,6 +531,7 @@ export default function AnalysisView() {
             onMarkSingleSenderRead={handleMarkSingleSenderRead}
             onBlockSingleSender={handleBlockSingleSender}
             onUnsubscribeSingleSender={handleUnsubscribeSingleSender}
+            onApplyLabelSingle={handleApplyLabelSingle}
           />
         </div>
       </div>
@@ -542,7 +568,7 @@ export default function AnalysisView() {
       <PremiumFeatureModal
         open={isPremiumModalOpen}
         onOpenChange={setIsPremiumModalOpen}
-        featureName={currentFeature || 'delete'}
+        featureName={currentFeature || 'action'}
         senderCount={itemCount}
         onViewInGmail={handleViewInGmail}
       />
@@ -607,6 +633,36 @@ export default function AnalysisView() {
         onConfirm={handleBlockConfirm}
         senders={emailsToBlock}
         emailCountMap={emailCountMap}
+      />
+
+      {/* Apply Label Modal (State managed in AnalysisView) */}
+      <ApplyLabelModal
+        open={isApplyLabelModalOpen}
+        onOpenChange={setIsApplyLabelModalOpen}
+        senders={emailsToApplyLabelTo}
+        senderCount={emailsToApplyLabelTo.length}
+        emailCount={emailCountForApplyLabel}
+        onConfirm={async (options: { 
+          actionType: "add" | "remove"; 
+          labelIds: string[]; 
+          labelNames: string[]; 
+          createNewLabels: string[]; 
+          applyToFuture: boolean; 
+        }) => {
+          // Placeholder for actual label application logic
+          // This would typically involve calling a hook like useApplyLabel
+          console.log('ApplyLabelModal confirmed with options:', options);
+          console.log('Applying to senders:', emailsToApplyLabelTo);
+          
+          // Simulate async operation for type compatibility
+          await new Promise(resolve => setTimeout(resolve, 100)); 
+
+          // Logic after label is applied successfully (e.g., refetch data, show toast)
+          toast.success(`Labels ${options.actionType === 'add' ? 'applied' : 'removed'} for ${emailsToApplyLabelTo.length} sender(s).`);
+          setSelectedEmails(new Set());
+          setEmailsToApplyLabelTo([]);
+          setIsApplyLabelModalOpen(false); // Close modal after confirm
+        }}
       />
     </div>
   )
