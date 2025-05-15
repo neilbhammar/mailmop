@@ -1,6 +1,7 @@
 'use client'
 
 import { LockClosedIcon } from '@radix-ui/react-icons'
+import { MessageSquareLock, RefreshCwOff } from 'lucide-react'
 
 export default function LandingPrivacy() {
   const gridSize = 20; // Define grid size for easier modification
@@ -52,8 +53,8 @@ export default function LandingPrivacy() {
                 <LockClosedIcon className="h-8 w-8 text-white" />
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Built for Privacy</h2>
-              <p className="text-xl text-blue-100 mb-8 max-w-3xl">
-                I built MailMop to be privacy-first. I didn't want my sensitive email data being stored on sketchy servers or sold to advertisers. With MailMop, your emails never leave your browser. We use restricted Gmail scope's and passed Google's CASA 2 Security Audit for complete privacy and security.
+              <p className="text-xl text-blue-100 mb-8 max-w-4xl">
+                I built MailMop to be privacy-first. I didn't want my (or your) sensitive email data being stored on sketchy servers or sold to advertisers. With MailMop, your emails never leave your browser.
               </p>
             </div>
             
@@ -66,15 +67,13 @@ export default function LandingPrivacy() {
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">Client-Side Processing</h3>
                 <p className="text-blue-200 text-sm">
-                  All processing happens in your browser, never on our servers.
+                  All processing and storage happens in your browser, never on our servers.
                 </p>
               </div>
               
               <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all duration-300 shadow-lg hover:shadow-blue-500/30">
                 <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center mb-4 border border-white/20">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  <MessageSquareLock className="h-6 w-6 text-white" />
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">Metadata Only</h3>
                 <p className="text-blue-200 text-sm">
@@ -84,9 +83,7 @@ export default function LandingPrivacy() {
               
               <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all duration-300 shadow-lg hover:shadow-blue-500/30">
                 <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center mb-4 border border-white/20">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
+                  <RefreshCwOff className="h-6 w-6 text-white" />
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">Revoke Anytime</h3>
                 <p className="text-blue-200 text-sm">

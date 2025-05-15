@@ -2,6 +2,7 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
@@ -52,6 +53,12 @@ export function ReauthDialog({
     <Dialog open={open} onOpenChange={isLoading ? undefined : onOpenChange} modal>
       <DialogContent className="max-w-lg bg-gradient-to-b from-blue-50 to-white shadow-xl border-none p-0 overflow-hidden rounded-xl">
         <DialogHeader className="pt-8 px-8 pb-0">
+          <DialogTitle className="sr-only">
+            {isExpired 
+              ? 'Gmail Connection Expired'
+              : 'Gmail Connection Expiring Soon'
+            }
+          </DialogTitle>
           <div className={cn(
             "mx-auto flex h-16 w-16 items-center justify-center rounded-full mb-6 transition-all duration-500",
             isExpired ? "bg-red-100" : "bg-amber-100"

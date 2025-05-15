@@ -12,7 +12,7 @@ export default function LandingPricing({ signIn }: LandingPricingProps) {
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Cheaper than More Gmail Storage</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Cheaper than more Gmail Storage</h2>
             <p className="text-lg text-gray-600 max-w-4xl mx-auto">
               MailMop is source-available and can be self-hosted for free. These plans are for the hosted version.
             </p>
@@ -59,8 +59,8 @@ export default function LandingPricing({ signIn }: LandingPricingProps) {
                 <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded">In Beta</span>
               </div>
               <div className="mb-6">
-                <div className="text-3xl font-bold">$1.75<span className="text-base font-normal text-gray-500">/month</span></div>
-                <div className="text-gray-500">Billed annually ($21/year)</div>
+                <div className="text-3xl font-bold">$1.89<span className="text-base font-normal text-gray-500">/month</span></div>
+                <div className="text-gray-500">Billed annually ($22.68/year)</div>
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex">
