@@ -54,6 +54,7 @@ interface GmailPermissionsContextType extends GmailPermissionState {
   clearAccessTokenOnly: () => Promise<void>;
   expireAccessToken: () => Promise<void>;
   refreshTokenState: 'unknown' | 'present' | 'absent';
+  hideMismatchModal: () => void;
 }
 
 const GmailPermissionsContext = createContext<GmailPermissionsContextType | null>(null);
@@ -100,6 +101,11 @@ export function GmailPermissionsProvider({
   const [isGmailClientInitialized, setIsGmailClientInitialized] = useState(false);
   const [shouldShowMismatchModal, setShouldShowMismatchModal] = useState(false);
   const [gmailEmail, setGmailEmail] = useState<string | null>(null);
+
+  // Function to hide the mismatch modal
+  const hideMismatchModal = useCallback(() => {
+    setShouldShowMismatchModal(false);
+  }, []);
 
   // Combined client loaded state
   const isClientLoaded = isGsiLoaded && isApiClientLoaded && isGmailClientInitialized;
@@ -537,6 +543,7 @@ export function GmailPermissionsProvider({
     clearAccessTokenOnly,
     expireAccessToken,
     refreshTokenState: getRefreshTokenState(),
+    hideMismatchModal,
   };
 
   return (

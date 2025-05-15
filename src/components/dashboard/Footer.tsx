@@ -6,15 +6,15 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
   
   return (
-    <footer className="w-full max-w-7xl mx-auto pt-1 pb-0 px-4 text-center text-xs text-slate-300">
+    <footer className="w-full max-w-7xl mx-auto pt-1 pb-0 px-4 text-center text-xs text-slate-500 dark:text-slate-400">
       <div className="flex flex-wrap items-center justify-center gap-x-3">
         <span>© {currentYear} MailMop. All rights reserved</span>
         <div className="flex items-center gap-x-2">
-          <Link href="/privacy" className="hover:text-slate-500 transition-colors">
+          <Link href="/privacy" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
             Privacy
           </Link>
           <span>•</span>
-          <Link href="/terms" className="hover:text-slate-500 transition-colors">
+          <Link href="/terms" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
             Terms
           </Link>
           <span>•</span>
@@ -22,7 +22,7 @@ export default function Footer() {
             href="https://github.com/neilbhammar/mailmop" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="hover:text-slate-500 transition-colors"
+            className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
           >
             GitHub
           </a>

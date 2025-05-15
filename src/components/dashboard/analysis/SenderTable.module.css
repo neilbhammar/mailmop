@@ -2,7 +2,7 @@
 .scrollbarCustom {
   /* Firefox */
   scrollbar-width: thin;
-  scrollbar-color: #ced7e3 transparent;
+  scrollbar-color: #ced7e3 transparent; /* Light mode: slate-300 */
   
   /* Enable hardware acceleration for smoother scrolling */
   transform: translateZ(0);
@@ -29,7 +29,7 @@
 }
 
 .scrollbarCustom::-webkit-scrollbar-thumb {
-  background-color: #ced7e3;
+  background-color: #ced7e3; /* Light mode: slate-300 */
   border-radius: 4px;
   border: 2px solid transparent;
   background-clip: content-box;
@@ -37,10 +37,28 @@
 }
 
 .scrollbarCustom::-webkit-scrollbar-thumb:hover {
-  background-color: #CBD5E1;
+  background-color: #CBD5E1; /* Light mode: slate-400 */
 }
 
 /* When scrolling */
 .scrollbarCustom:active::-webkit-scrollbar-thumb {
-  background-color: #94A3B8;
+  background-color: #94A3B8; /* Light mode: slate-500 */
+}
+
+/* Dark mode scrollbar styles */
+/* Targets .scrollbarCustom when html has class "dark" */
+:global(html.dark) .scrollbarCustom {
+  scrollbar-color: #4A5568 transparent; /* Dark mode: slate-600 */
+}
+
+:global(html.dark) .scrollbarCustom::-webkit-scrollbar-thumb {
+  background-color: #4A5568; /* Dark mode: slate-600 */
+}
+
+:global(html.dark) .scrollbarCustom::-webkit-scrollbar-thumb:hover {
+  background-color: #2D3748; /* Dark mode: slate-700 */
+}
+
+:global(html.dark) .scrollbarCustom:active::-webkit-scrollbar-thumb {
+  background-color: #1A202C; /* Dark mode: slate-800 */
 } 

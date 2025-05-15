@@ -43,11 +43,11 @@ export function RowActions({
   // Base styles for icon buttons
   const iconButtonStyles = cn(
     // Default state - low opacity, slate color
-    "inline-flex items-center justify-center h-8 w-8 rounded-md text-slate-600 opacity-40",
+    "inline-flex items-center justify-center h-8 w-8 rounded-md text-slate-600 dark:text-slate-400 opacity-40 dark:opacity-70",
     // Row hover state - full opacity
     "group-hover:opacity-100",
     // Button hover state - blue background
-    "hover:bg-blue-50 hover:text-blue-600",
+    "hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-slate-700 dark:hover:text-blue-400",
     // Transition
     "transition-all duration-150"
   )
@@ -55,11 +55,11 @@ export function RowActions({
   // Base styles for the unsubscribe text button
   const unsubscribeStyles = cn(
     // Default state - low opacity, slate color
-    "inline-flex items-center justify-center text-sm px-3 py-1.5 rounded-md text-slate-600 opacity-40 font-medium",
+    "inline-flex items-center justify-center text-sm px-3 py-1.5 rounded-md text-slate-600 dark:text-slate-400 opacity-40 dark:opacity-70 font-medium",
     // Row hover state - full opacity, blue text
-    "group-hover:opacity-100 group-hover:text-blue-600",
+    "group-hover:opacity-100 group-hover:text-blue-600 dark:group-hover:text-blue-400",
     // Button hover state - blue background
-    "hover:bg-blue-50",
+    "hover:bg-blue-50 dark:hover:bg-slate-700",
     // Transition
     "transition-all duration-150"
   )
@@ -81,7 +81,7 @@ export function RowActions({
                 tabIndex={0}
                 className={cn(
                   unsubscribeStyles,
-                  isActionTaken('unsubscribe') && "opacity-40 cursor-not-allowed hover:bg-transparent group-hover:text-slate-400"
+                  isActionTaken('unsubscribe') && "opacity-40 dark:opacity-30 cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent group-hover:text-slate-400 dark:group-hover:text-slate-500"
                 )}
                 onClick={() => !isActionTaken('unsubscribe') && onUnsubscribe(sender.email)}
               >
@@ -134,8 +134,8 @@ export function RowActions({
               tabIndex={0}
               className={cn(
                 iconButtonStyles,
-                "hover:bg-red-50 hover:text-red-600 group-hover:text-red-600",
-                isActionTaken('delete') && "opacity-40 cursor-not-allowed hover:bg-transparent group-hover:text-slate-400"
+                "hover:bg-red-50 hover:text-red-600 group-hover:text-red-600 dark:hover:bg-red-700/20 dark:hover:text-red-400 dark:group-hover:text-red-400",
+                isActionTaken('delete') && "opacity-40 dark:opacity-30 cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent group-hover:text-slate-400 dark:group-hover:text-slate-500"
               )}
               onClick={() => !isActionTaken('delete') && onDelete(sender.email)}
             >
@@ -205,14 +205,14 @@ export function RowActions({
         </TooltipProvider>
         <DropdownMenuContent 
           align="end" 
-          className="w-56 bg-white rounded-lg border border-gray-100 shadow-md z-50 py-1"
+          className="w-56 bg-white dark:bg-slate-800 rounded-lg border border-gray-100 dark:border-slate-700 shadow-md z-50 py-1"
         >
           <DropdownMenuItem 
             onSelect={(e) => {
               e.preventDefault();
               onDeleteWithExceptions(sender.email);
             }}
-            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50 cursor-pointer"
+            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer"
           >
             <PencilOff className="h-4 w-4 mr-2 shrink-0" />
             <span>Delete with Exceptions</span>
@@ -222,7 +222,7 @@ export function RowActions({
               e.preventDefault();
               onApplyLabel(sender.email);
             }}
-            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50 cursor-pointer"
+            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer"
           >
             <Tag className="h-4 w-4 mr-2" />
             <span>Apply Label</span>
@@ -230,8 +230,8 @@ export function RowActions({
           <DropdownMenuItem 
             onClick={handleBlock}
             className={cn(
-              "flex items-center w-full px-4 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50 cursor-pointer",
-              isActionTaken('block') && "opacity-40 cursor-not-allowed data-[highlighted]:bg-white"
+              "flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer",
+              isActionTaken('block') && "opacity-40 cursor-not-allowed data-[highlighted]:bg-white dark:data-[highlighted]:bg-slate-800"
             )}
           >
             <Ban className="h-4 w-4 mr-2" />

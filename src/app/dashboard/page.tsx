@@ -30,7 +30,7 @@ export default function Dashboard() {
   }, [user, router, checked])
 
   if (!checked || !user) {
-    return <div>Checking session...</div>
+    return <div className="text-gray-700 dark:text-slate-300">Checking session...</div>
   }
 
   return (

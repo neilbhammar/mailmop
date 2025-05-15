@@ -17,7 +17,7 @@ const faqs = [
     id: 'safety',
     question: "How do I know that MailMop is safe?",
     answer: "Good question! You can actually read through all of our code here. We're also undergoing Google's CASA security assesment.",
-    answerWithLink: <>Good question! You can actually read through all of our code <a href="https://github.com/neilbhammar/mailmop" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700">here</a>. We're also undergoing Google's CASA security assesment.</>
+    answerWithLink: <>Good question! You can actually read through all of our code <a href="https://github.com/neilbhammar/mailmop" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-500">here</a>. We're also undergoing Google's CASA security assesment.</>
   },
   {
     id: 'paid-plan',
@@ -44,21 +44,21 @@ export default function LandingFaq() {
   };
 
   return (
-    <section id="faq" className="py-16 md:py-20 bg-white">
+    <section id="faq" className="py-16 md:py-20 bg-white dark:bg-slate-900">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 dark:text-slate-100">Frequently Asked Questions</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto dark:text-slate-300">
               Everything you need to know about MailMop
             </p>
           </div>
           
-          <div className="max-w-3xl mx-auto border-t border-gray-100">
+          <div className="max-w-3xl mx-auto border-t border-gray-100 dark:border-slate-700">
             {faqs.map((faq) => (
               <div 
                 key={faq.id}
-                className="border-b border-gray-100 last:border-b-0"
+                className="border-b border-gray-100 last:border-b-0 dark:border-slate-700"
               >
                 <button
                   onClick={() => toggleQuestion(faq.id)}
@@ -66,8 +66,8 @@ export default function LandingFaq() {
                   aria-expanded={openId === faq.id}
                   aria-controls={`answer-${faq.id}`}
                 >
-                  <h3 className="text-lg font-medium text-gray-900 pr-8 group-hover:text-blue-600 transition-colors">{faq.question}</h3>
-                  <span className={`flex items-center justify-center h-6 w-6 text-gray-400 transition-transform duration-200 ${openId === faq.id ? 'transform rotate-45' : ''}`}>
+                  <h3 className="text-lg font-medium text-gray-900 pr-8 group-hover:text-blue-600 transition-colors dark:text-slate-100 dark:group-hover:text-blue-400">{faq.question}</h3>
+                  <span className={`flex items-center justify-center h-6 w-6 text-gray-400 transition-transform duration-200 dark:text-slate-500 ${openId === faq.id ? 'transform rotate-45' : ''}`}>
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M7 0V14M0 7H14" stroke="currentColor" strokeWidth="2" />
                     </svg>
@@ -79,7 +79,7 @@ export default function LandingFaq() {
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${openId === faq.id ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
                   aria-hidden={openId !== faq.id}
                 >
-                  <div className="pb-6 text-base text-gray-600 pr-12">
+                  <div className="pb-6 text-base text-gray-600 pr-12 dark:text-slate-300">
                     {faq.answerWithLink ? faq.answerWithLink : faq.answer}
                   </div>
                 </div>

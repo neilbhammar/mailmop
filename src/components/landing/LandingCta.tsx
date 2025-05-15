@@ -12,10 +12,10 @@ export default function LandingCta({ signIn }: LandingCtaProps) {
   return (
     <section className="py-16 md:py-20 overflow-hidden">
       <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 relative overflow-hidden p-12 shadow-xl">
+        <div className="max-w-6xl mx-auto rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-800 relative overflow-hidden p-12 shadow-xl dark:shadow-blue-900/50">
           {/* Mail-themed decorative elements (existing) */}
-          <div className="absolute -z-10 -right-20 -top-10 w-72 h-72 bg-blue-500/20 rounded-full filter blur-3xl opacity-80 animate-pulse-slow"></div>
-          <div className="absolute -z-10 -left-20 -bottom-10 w-72 h-72 bg-indigo-500/20 rounded-full filter blur-3xl opacity-80 animate-pulse-slower"></div>
+          <div className="absolute -z-10 -right-20 -top-10 w-72 h-72 bg-blue-500/20 dark:bg-blue-400/10 rounded-full filter blur-3xl opacity-80 dark:opacity-60 animate-pulse-slow"></div>
+          <div className="absolute -z-10 -left-20 -bottom-10 w-72 h-72 bg-indigo-500/20 dark:bg-indigo-400/10 rounded-full filter blur-3xl opacity-80 dark:opacity-60 animate-pulse-slower"></div>
           
           {/* Floating envelopes (existing - slightly adjusted opacity/stroke for better blend) */}
           <div className="absolute top-1/4 right-10 text-white/5 animate-float-delayed opacity-60">
@@ -30,7 +30,7 @@ export default function LandingCta({ signIn }: LandingCtaProps) {
           </div>
           
           {/* Pulsing Dot Grid Background */}
-          <div className="absolute inset-0 opacity-15 pointer-events-none">
+          <div className="absolute inset-0 opacity-15 dark:opacity-20 pointer-events-none">
             <div className="absolute inset-0 w-full h-full grid" style={{gridTemplateColumns: `repeat(${gridSize}, 1fr)`, gridTemplateRows: `repeat(${gridSize}, 1fr)`}}>
               {Array(gridSize * gridSize).fill(0).map((_, index) => {
                 const rowIndex = Math.floor(index / gridSize);
@@ -55,11 +55,14 @@ export default function LandingCta({ signIn }: LandingCtaProps) {
           </div>
           
           <div className="text-center relative z-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Ready to clean up your inbox?</h2>
-            <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-white dark:text-white mb-4">Ready to clean up your inbox?</h2>
+            <p className="text-xl text-blue-100 dark:text-blue-200 mb-8 max-w-2xl mx-auto">
               Take control of your Gmail and reclaim your focus. Free to get started.
             </p>
-            <button onClick={signIn} className="px-8 py-3 bg-white text-blue-600 font-semibold rounded-md hover:bg-blue-50 transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 group flex items-center mx-auto">
+            <button 
+              onClick={signIn} 
+              className="px-8 py-3 bg-white text-blue-600 font-semibold rounded-md hover:bg-blue-50 dark:bg-slate-50 dark:text-blue-600 dark:hover:bg-slate-200 transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 group flex items-center mx-auto"
+            >
               Join the Waitlist
               <ArrowRightIcon className="ml-2 h-5 w-5 transform group-hover:translate-x-1 transition-transform" />
             </button>
@@ -70,11 +73,11 @@ export default function LandingCta({ signIn }: LandingCtaProps) {
         @keyframes pulseDotAnimation {
           0%, 100% {
             transform: scale(0.5);
-            opacity: 0.3;
+            opacity: 0.3; /* Base opacity for light mode */
           }
           50% {
             transform: scale(1.2);
-            opacity: 0.7; // Slightly less opacity for CTA dots as bg is darker
+            opacity: 0.7; /* Base opacity for light mode */
           }
         }
         .dot-pulse {

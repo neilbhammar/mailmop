@@ -46,24 +46,25 @@ export function GmailConnectionStatus() {
   // Helper for status styling
   const getStatusStyles = () => {
     if (refreshTokenState === 'unknown') {
-      return "border-gray-100 text-gray-500 cursor-default"; // Neutral style for initializing
+      // Neutral style for initializing
+      return "border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 cursor-default"; 
     }
     if (hasRefreshToken) { // refreshTokenState === 'present'
-      return "border-gray-100 text-gray-600 cursor-default"; 
+      return "border-gray-100 dark:border-slate-700 text-gray-600 dark:text-slate-300 cursor-default"; 
     }
     // refreshTokenState === 'absent'
-    return "border-red-100 text-red-600 hover:bg-red-50 cursor-pointer";
+    return "border-red-200 dark:border-red-500/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer";
   }
 
   const getStatusDot = () => {
     if (refreshTokenState === 'unknown') {
-      return "bg-gray-400"; // Neutral dot for initializing
+      return "bg-gray-400 dark:bg-slate-500"; // Neutral dot for initializing
     }
     if (hasRefreshToken) { // refreshTokenState === 'present'
-      return "bg-green-500";
+      return "bg-green-500 dark:bg-green-400";
     }
     // refreshTokenState === 'absent'
-    return "bg-red-500";
+    return "bg-red-500 dark:bg-red-400";
   }
 
   const getStatusText = () => {
@@ -102,7 +103,7 @@ export function GmailConnectionStatus() {
             <div className={cn(
               "absolute w-1.5 h-1.5 rounded-full animate-ping opacity-75",
               // Pulse is red for absent, gray for unknown
-              refreshTokenState === 'absent' ? "bg-red-500" : "bg-gray-400"
+              refreshTokenState === 'absent' ? "bg-red-500 dark:bg-red-400" : "bg-gray-400 dark:bg-slate-500"
             )} />
           )}
         </div>
@@ -111,16 +112,16 @@ export function GmailConnectionStatus() {
 
       {/* Custom hover tooltip */}
       {isHovered && (
-        <div className="absolute left-0 top-full mt-1 z-50 w-64 p-4 bg-white text-gray-600 text-sm rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+        <div className="absolute left-0 top-full mt-1 z-50 w-64 p-4 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-sm rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-slate-900/50 border border-transparent dark:border-slate-700">
           <div className="relative">
-            <div className="font-medium mb-1">
+            <div className="font-medium mb-1 text-gray-700 dark:text-slate-100">
               {refreshTokenState === 'unknown'
                 ? "Checking Gmail Connection..."
                 : hasRefreshToken 
                   ? "Gmail Connection Status" 
                   : "Gmail Connection Required"}
             </div>
-            <div className="text-gray-500 text-xs">
+            <div className="text-gray-500 dark:text-slate-400 text-xs">
               {refreshTokenState === 'unknown'
                 ? "Please wait while we verify your Gmail connection."
                 : !hasRefreshToken // refreshTokenState === 'absent'

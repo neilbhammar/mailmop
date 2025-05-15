@@ -116,7 +116,7 @@ export function AnalysisHeader({
       {/* Header and bulk actions row */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-8">
-          <h1 className="text-xl font-bold">Sender Analysis</h1>
+          <h1 className="text-xl font-bold dark:text-slate-100">Sender Analysis</h1>
           
           {hasSelection && (
             <BulkActionsBar
@@ -144,14 +144,14 @@ export function AnalysisHeader({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
             >
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.3-4.3" />
             </svg>
             <Input 
               placeholder="Search senders..." 
-              className="w-[240px] h-9 text-sm bg-white border-slate-200 placeholder:text-slate-400 focus-visible:ring-slate-100 pl-9"
+              className="w-[240px] h-9 text-sm bg-white dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:ring-slate-100 dark:focus-visible:ring-slate-600 dark:text-slate-200 pl-9"
               value={searchTerm}
               onChange={handleSearchChange}
             />
@@ -161,35 +161,38 @@ export function AnalysisHeader({
               <Button 
                 variant="outline" 
                 size="icon"
-                className="h-9 w-9 border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-600"
+                className="h-9 w-9 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[260px] bg-white border border-slate-200 shadow-lg py-2">
+            <DropdownMenuContent align="end" className="w-[260px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg dark:shadow-slate-900/50 py-2">
               <DropdownMenuItem 
-                className="flex items-center justify-between cursor-pointer px-3 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50"
-                onSelect={handleUnreadOnlyToggle}
+                className="flex items-center justify-between cursor-pointer px-3 py-2 text-sm text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70"
+                onSelect={(event) => {
+                  event.preventDefault();
+                  handleUnreadOnlyToggle();
+                }}
               >
                 <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-slate-500 mr-2" />
-                  <span className="text-sm text-slate-700">Unread Senders Only</span>
+                  <Mail className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-2" />
+                  <span className="text-sm text-slate-700 dark:text-slate-200">Unread Senders Only</span>
                 </div>
                 <span className={cn(
                   "px-2 py-0.5 text-xs font-medium rounded-md",
                   showUnreadOnly 
-                    ? "bg-blue-100 text-blue-700" 
-                    : "bg-slate-100 text-slate-600"
+                    ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300" 
+                    : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
                 )}>
                   {showUnreadOnly ? 'On' : 'Off'}
                 </span>
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className="flex items-center gap-2 cursor-pointer px-3 py-2 text-sm text-gray-700 bg-white data-[highlighted]:bg-gray-50"
+                className="flex items-center gap-2 cursor-pointer px-3 py-2 text-sm text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70"
                 onSelect={() => exportToCSV(senders)}
                 disabled={isExporting || senders.length === 0}
               >
-                <Download className="h-4 w-4 text-slate-500 mr-2" />
+                <Download className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-2" />
                 <span className="text-sm">
                   {isExporting ? 'Exporting...' : 'Export CSV'}
                 </span>
@@ -200,7 +203,7 @@ export function AnalysisHeader({
       </div>
 
       {/* Analysis info row - always present */}
-      <div className="text-sm text-slate-500 flex items-center gap-2">
+      <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
         <AnalysisTooltip />
         <span className="pb-[2px]">| {getStatusMessage()}</span>
       </div>

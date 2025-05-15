@@ -47,10 +47,10 @@ export function RevokeAccessDialog({ open, onOpenChange }: RevokeAccessDialogPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white p-6 gap-6 max-w-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] duration-200">
+      <DialogContent className="bg-white dark:bg-slate-800 p-6 gap-6 max-w-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] duration-200">
         <DialogHeader className="gap-3">
-          <DialogTitle className="text-xl">Revoke Gmail Access</DialogTitle>
-          <DialogDescription className="text-gray-600 text-sm leading-normal">
+          <DialogTitle className="text-xl dark:text-slate-100">Revoke Gmail Access</DialogTitle>
+          <DialogDescription className="text-gray-600 dark:text-slate-400 text-sm leading-normal">
             This will remove MailMop's access to your Gmail account. You'll need to reconnect to continue using MailMop.
           </DialogDescription>
         </DialogHeader>
@@ -58,14 +58,14 @@ export function RevokeAccessDialog({ open, onOpenChange }: RevokeAccessDialogPro
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="bg-gray-100 hover:bg-gray-200 border-0"
+            className="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-300 border-0"
           >
             Cancel
           </Button>
           <Button
             variant="destructive"
             onClick={handleRevoke}
-            className="bg-white border border-red-600 text-red-600 hover:bg-red-50"
+            className="bg-white dark:bg-transparent border border-red-600 text-red-600 dark:text-red-500 dark:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 dark:hover:text-red-400"
           >
             Revoke Access
           </Button>
@@ -74,14 +74,14 @@ export function RevokeAccessDialog({ open, onOpenChange }: RevokeAccessDialogPro
               <Button
                 variant="outline"
                 onClick={handleClearAccessToken}
-                className="bg-yellow-100 hover:bg-yellow-200 border-yellow-500 text-yellow-700"
+                className="bg-yellow-100 hover:bg-yellow-200 border-yellow-500 text-yellow-700 dark:bg-yellow-700/30 dark:hover:bg-yellow-700/40 dark:border-yellow-500/70 dark:text-yellow-300"
               >
                 Clear Access Token Only (Test)
               </Button>
               <Button
                 variant="outline"
                 onClick={handleExpireAccessToken}
-                className="bg-orange-100 hover:bg-orange-200 border-orange-500 text-orange-700"
+                className="bg-orange-100 hover:bg-orange-200 border-orange-500 text-orange-700 dark:bg-orange-700/30 dark:hover:bg-orange-700/40 dark:border-orange-500/70 dark:text-orange-300"
               >
                 Expire Access Token (Test)
               </Button>

@@ -238,11 +238,11 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
       
       <div className="h-full w-full flex items-center">
         {/* Left side - Visualization */}
-        <div className="hidden md:flex md:w-1/2 h-full bg-slate-50 items-center justify-center p-6">
+        <div className="hidden md:flex md:w-1/2 h-full bg-slate-50 dark:bg-slate-800/70 items-center justify-center p-6">
           <div className="w-full max-w-lg flex flex-col">
             {/* Keep tab open notice - Made more prominent */}
             <motion.div 
-              className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex items-center shadow-sm mb-6"
+              className="bg-amber-50 dark:bg-amber-500/10 border-2 border-amber-300 dark:border-amber-500/30 rounded-xl p-4 flex items-center shadow-sm mb-6"
               initial={{ opacity: 0.9 }}
               animate={{ 
                 opacity: [0.9, 1, 0.9]
@@ -250,50 +250,50 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
               transition={{ duration: 4, repeat: Infinity }}
             >
               <div className="flex-shrink-0 mr-4">
-                <div className="bg-amber-100 p-2 rounded-full">
-                  <AlertCircleIcon size={22} className="text-amber-600" />
+                <div className="bg-amber-100 dark:bg-amber-500/20 p-2 rounded-full">
+                  <AlertCircleIcon size={22} className="text-amber-600 dark:text-amber-400" />
                 </div>
               </div>
               <div>
-                <h3 className="font-medium text-amber-900 text-base">Keep this tab open during analysis</h3>
-                <p className="text-sm text-amber-800 mt-0.5">
+                <h3 className="font-medium text-amber-900 dark:text-amber-200 text-base">Keep this tab open during analysis</h3>
+                <p className="text-sm text-amber-800 dark:text-amber-300 mt-0.5">
                   You can use other browser tabs while we work in the background
                 </p>
               </div>
             </motion.div>
             
-            <div className="rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden">
+            <div className="rounded-2xl bg-white dark:bg-slate-700/50 shadow-lg dark:shadow-slate-900/30 border border-gray-100 dark:border-slate-700 overflow-hidden">
               <div className="p-6">
                 {/* Static sample display instead of overly dynamic animation */}
                 <div className="space-y-5">             
                   {/* Static loading indicator with simpler animation */}
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="font-medium text-gray-700">Analyzing {!isLoading && stats?.totalEmails && (
+                      <span className="font-medium text-gray-700 dark:text-slate-200">Analyzing {!isLoading && stats?.totalEmails && (
                         <span>{getRoundedEmailCount().toLocaleString()}</span>
                       )} emails in real-time</span>
-                      <span className="text-gray-500">Sample results</span>
+                      <span className="text-gray-500 dark:text-slate-400">Sample results</span>
                     </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full w-2/3 bg-blue-500 rounded-full" />
+                    <div className="h-2 bg-gray-100 dark:bg-slate-600 rounded-full overflow-hidden">
+                      <div className="h-full w-2/3 bg-blue-500 dark:bg-blue-400 rounded-full" />
                     </div>
                   </div>
                   
                   {/* Sample senders with frequency - Static sample */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-medium text-gray-700">Top Senders Identified</h4>
-                      <div className="px-2 py-0.5 bg-green-100 rounded text-xs font-medium text-green-800 flex items-center gap-1">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-slate-200">Top Senders Identified</h4>
+                      <div className="px-2 py-0.5 bg-green-100 dark:bg-green-500/10 rounded text-xs font-medium text-green-800 dark:text-green-300 flex items-center gap-1">
                         <span className="relative flex h-2 w-2">
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 dark:bg-green-400"></span>
                         </span>
                         Sample
                       </div>
                     </div>
                     
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="border border-gray-200 dark:border-slate-600 rounded-lg overflow-hidden">
                       {/* Table header - Simplified with flex layout */}
-                      <div className="flex items-center bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500">
+                      <div className="flex items-center bg-gray-50 dark:bg-slate-600/40 px-3 py-2 text-xs font-medium text-gray-500 dark:text-slate-400">
                         <div className="w-1/5">Name</div>
                         <div className="w-1/5">Email</div>
                         <div className="w-1/5 text-center">Count</div>
@@ -304,32 +304,32 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
                       {sampleSenders.map((sender, idx) => (
                         <div
                           key={`sender-${idx}`}
-                          className="flex items-center px-3 py-3 border-t border-gray-100 hover:bg-gray-50"
+                          className="flex items-center px-3 py-3 border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/30"
                         >
-                          <div className="w-1/5 text-gray-500 text-xs truncate">
+                          <div className="w-1/5 text-gray-500 dark:text-slate-400 text-xs truncate">
                             {sender.name}
                           </div>
-                          <div className="w-1/5 text-gray-500 text-xs truncate">
+                          <div className="w-1/5 text-gray-500 dark:text-slate-400 text-xs truncate">
                             {sender.email}
                           </div>
-                          <div className="w-1/5 text-gray-500 text-center text-xs truncate">
+                          <div className="w-1/5 text-gray-500 dark:text-slate-400 text-center text-xs truncate">
                             {sender.count}
                           </div>
                           <div className="w-2/5 flex items-left justify-start space-x-3">
-                            <button className="text-blue-600 text-xs font-medium">
+                            <button className="text-blue-600 dark:text-blue-400 text-xs font-medium hover:text-blue-700 dark:hover:text-blue-300">
                               Unsubscribe
                             </button>
                             <div className="flex items-center space-x-2">
-                              <button className="text-gray-400 hover:text-gray-500">
+                              <button className="text-gray-400 dark:text-slate-500 hover:text-gray-500 dark:hover:text-slate-400">
                                 <ExternalLinkIcon size={15} />
                               </button>
-                              <button className="text-gray-400 hover:text-gray-500">
+                              <button className="text-gray-400 dark:text-slate-500 hover:text-gray-500 dark:hover:text-slate-400">
                                 <TrashIcon size={15} />
                               </button>
-                              <button className="text-gray-400 hover:text-gray-500">
+                              <button className="text-gray-400 dark:text-slate-500 hover:text-gray-500 dark:hover:text-slate-400">
                                 <MailIcon size={15} />
                               </button>
-                              <button className="text-gray-400 hover:text-gray-500">
+                              <button className="text-gray-400 dark:text-slate-500 hover:text-gray-500 dark:hover:text-slate-400">
                                 <MoreHorizontalIcon size={15} />
                               </button>
                             </div>
@@ -344,7 +344,7 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
             
             {/* Message at the bottom - Simplified animation */}
             <div className="mt-6 text-center">
-              <div className="inline-flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full">
+              <div className="inline-flex items-center gap-1.5 text-xs bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded-full">
                 <SparklesIcon size={12} />
                 <span>Analysis happens locally in your browser for privacy</span>
               </div>
@@ -357,15 +357,15 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
           <div className="w-full max-w-md flex flex-col">
             {/* Header */}
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
-                <SparklesIcon className="h-8 w-8 text-blue-500" />
+              <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-slate-700 flex items-center justify-center">
+                <SparklesIcon className="h-8 w-8 text-blue-500 dark:text-blue-400" />
               </div>
             </div>
             
             {/* Title and description */}
             <div className="text-center mb-3">
-              <h1 className="text-2xl font-semibold text-gray-900 mb-2">Ready to analyze your inbox</h1>
-              <p className="text-gray-600">
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-2">Ready to analyze your inbox</h1>
+              <p className="text-gray-600 dark:text-slate-400">
                 {!isLoading && stats?.emailAddress ? (
                   <>Analyzing {stats.emailAddress} with {stats.totalEmails?.toLocaleString()} emails</>
                 ) : (
@@ -375,43 +375,43 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
             </div>
             
             {/* Analysis Options */}
-            <div className="bg-white-50 rounded-xl mb-4">
+            <div className="bg-white-50 dark:bg-slate-800/50 rounded-xl mb-4">
               <div className="py-3 px-6 space-y-4">
                 
                 <div className="space-y-3">
-                  <label className="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer transition-colors hover:border-blue-200 hover:bg-blue-50">
+                  <label className="flex items-center p-3 bg-white dark:bg-slate-700/50 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer transition-colors hover:border-blue-200 dark:hover:border-blue-500/70 hover:bg-blue-50 dark:hover:bg-blue-500/20">
                     <input 
                       type="radio" 
                       name="analysis-type" 
-                      className="w-4 h-4 text-blue-500 focus:ring-blue-400 border-gray-300" 
+                      className="w-4 h-4 text-blue-500 dark:text-blue-400 focus:ring-blue-400 dark:focus:ring-blue-300 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-offset-white dark:focus:ring-offset-slate-800"
                       checked={!unsubscribeOnly}
                       onChange={() => setUnsubscribeOnly(false)}
                     />
                     <div className="ml-3">
-                      <span className="font-medium text-gray-700">Full Inbox Analysis</span>
+                      <span className="font-medium text-gray-700 dark:text-slate-200">Full Inbox Analysis</span>
                       <div className="inline-flex items-center ml-2">
-                        <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Thorough</span>
+                        <span className="text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full">Thorough</span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-0.5">
+                      <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
                         Analyze all emails for maximum cleanup potential
                       </p>
                     </div>
                   </label>
                   
-                  <label className="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer transition-colors hover:border-blue-200 hover:bg-blue-50">
+                  <label className="flex items-center p-3 bg-white dark:bg-slate-700/50 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer transition-colors hover:border-blue-200 dark:hover:border-blue-500/70 hover:bg-blue-50 dark:hover:bg-blue-500/20">
                     <input 
                       type="radio" 
                       name="analysis-type" 
-                      className="w-4 h-4 text-blue-500 focus:ring-blue-400 border-gray-300" 
+                      className="w-4 h-4 text-blue-500 dark:text-blue-400 focus:ring-blue-400 dark:focus:ring-blue-300 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-offset-white dark:focus:ring-offset-slate-800"
                       checked={unsubscribeOnly}
                       onChange={() => setUnsubscribeOnly(true)}
                     />
                     <div className="ml-3">
-                      <span className="font-medium text-gray-700">Optimize for Speed</span>
+                      <span className="font-medium text-gray-700 dark:text-slate-200">Optimize for Speed</span>
                       <div className="inline-flex items-center ml-2">
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Faster</span>
+                        <span className="text-xs bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">Faster</span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-0.5">
+                      <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
                         Focus on emails with the word "unsubscribe"
                       </p>
                     </div>
@@ -419,9 +419,9 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
                 </div>
                 
                 <div className="flex items-center pt-2">
-                  <ClockIcon size={16} className="text-gray-400 flex-shrink-0" />
-                  <span className="ml-2 text-sm text-gray-500">
-                    Estimated time: <span className="font-medium text-gray-700">{getTimeEstimate()}</span>
+                  <ClockIcon size={16} className="text-gray-400 dark:text-slate-500 flex-shrink-0" />
+                  <span className="ml-2 text-sm text-gray-500 dark:text-slate-400">
+                    Estimated time: <span className="font-medium text-gray-700 dark:text-slate-200">{getTimeEstimate()}</span>
                   </span>
                 </div>
               </div>
@@ -436,7 +436,7 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
               <button
                 onClick={handleStartAnalysis}
                 disabled={isLoading || buttonState === 'preparing'}
-                className="relative w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-4 px-6 text-white font-medium shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+                className="relative w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-4 px-6 text-white font-medium shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-300 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed group"
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center">
@@ -483,21 +483,21 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
               <div className="flex items-center justify-center">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5">
-                    <ShieldIcon size={12} className="text-gray-400" />
-                    <p className="text-xs text-gray-500">
+                    <ShieldIcon size={12} className="text-gray-400 dark:text-slate-500" />
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
                       100% Private
                     </p>
                   </div>
-                  <span className="text-gray-300">•</span>
+                  <span className="text-gray-300 dark:text-slate-600">•</span>
                   <div className="flex items-center gap-1.5">
-                    <LaptopIcon size={12} className="text-gray-400" />
-                    <p className="text-xs text-gray-500">
+                    <LaptopIcon size={12} className="text-gray-400 dark:text-slate-500" />
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
                       Browser-Only
                     </p>
                   </div>
                 </div>
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-slate-400">
                 Your analysis will be ready in {getTimeEstimate()}. Do not close this tab.
               </p>
             </div>

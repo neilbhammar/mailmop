@@ -144,12 +144,12 @@ const DateInput = ({
     <div className="flex items-center gap-2 flex-1">
       <div className="relative flex-1 min-w-[180px]">
         <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-          <CalendarIcon className="h-4 w-4 text-gray-400" />
+          <CalendarIcon className="h-4 w-4 text-gray-400 dark:text-slate-400" />
         </div>
         <Input
           type="text"
           placeholder={condition.type === 'date-after' ? "Date after (MM/DD/YYYY)" : "Date before (MM/DD/YYYY)"}
-          className="pl-9 pr-3"
+          className="pl-9 pr-3 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 dark:placeholder-slate-500"
           value={inputValue}
           onChange={(e) => {
             const dateStr = e.target.value;
@@ -613,7 +613,7 @@ export function DeleteWithExceptionsModal({
             value={condition.value as string || ''}
             onChange={(e) => updateConditionValue(groupId, condition.id, e.target.value)}
             placeholder="Enter text..."
-            className="flex-1 min-w-[200px]"
+            className="flex-1 min-w-[200px] dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 dark:placeholder-slate-500"
           />
         );
       
@@ -707,25 +707,25 @@ export function DeleteWithExceptionsModal({
         className={cn(
           "relative group rounded-lg border flex items-start gap-2 p-3 transition-all outline-none",
           isSelected 
-            ? "border-blue-500 bg-blue-50 ring-0" 
-            : "border-gray-200 bg-white hover:border-gray-300"
+            ? "border-blue-500 bg-blue-50 ring-0 dark:border-blue-500 dark:bg-slate-700" 
+            : "border-gray-200 bg-white hover:border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600"
         )}
       >
         <div className={cn(
           "flex justify-center items-center h-8 w-8 rounded-full flex-shrink-0 transition-colors",
-          isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
+          isSelected ? "bg-blue-500 text-white dark:bg-blue-500 dark:text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:group-hover:bg-slate-600"
         )}>
           {icon}
         </div>
         <div className="text-left">
           <div className="flex items-center gap-1">
-            <p className="font-medium text-gray-900">{label}</p>
+            <p className="font-medium text-gray-900 dark:text-slate-100">{label}</p>
             {isSelected && (
-              <Check className="h-3.5 w-3.5 text-blue-500 ml-0.5" />
+              <Check className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400 ml-0.5" />
             )}
           </div>
           {description && (
-            <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{description}</p>
           )}
         </div>
       </button>
@@ -809,13 +809,13 @@ export function DeleteWithExceptionsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white dark:bg-slate-900 dark:border dark:border-slate-700 max-h-[90vh] flex flex-col">
         <DialogHeader className="pb-1">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
-              <Trash2 className="h-4 w-4 text-red-600" />
+            <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
+              <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
             </div>
-            <DialogTitle className="text-xl font-semibold">
+            <DialogTitle className="text-xl font-semibold dark:text-slate-100">
               Delete from {senderDisplay}
             </DialogTitle>
           </div>
@@ -825,14 +825,14 @@ export function DeleteWithExceptionsModal({
           {/* Filter Section */}
           <div className="flex-1 overflow-auto min-h-0 pt-3 px-0.5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-gray-700">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-slate-300">
                 Delete emails that match these criteria:
               </h3>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs text-blue-600 hover:text-blue-700 gap-1"
+                className="h-7 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-slate-700 gap-1"
                 onClick={handleModeSwitch}
               >
                 {advancedMode ? "Quick Filters" : "Advanced Filters"}
@@ -846,7 +846,7 @@ export function DeleteWithExceptionsModal({
                 <div className="space-y-2 mb-4">
                   <Label 
                     htmlFor="keyword-filter" 
-                    className="text-sm text-gray-600"
+                    className="text-sm text-gray-600 dark:text-slate-400"
                   >
                     Filter by Keywords
                   </Label>
@@ -861,18 +861,18 @@ export function DeleteWithExceptionsModal({
                         }))
                       }
                     >
-                      <SelectTrigger className="w-[140px] bg-white">
+                      <SelectTrigger className="w-[140px] bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="include">Contains</SelectItem>
-                        <SelectItem value="exclude">Doesn't contain</SelectItem>
+                      <SelectContent className="bg-white dark:bg-slate-800 dark:border-slate-600">
+                        <SelectItem value="include" className="dark:text-slate-300 dark:hover:bg-slate-700">Contains</SelectItem>
+                        <SelectItem value="exclude" className="dark:text-slate-300 dark:hover:bg-slate-700">Doesn't contain</SelectItem>
                       </SelectContent>
                     </Select>
                   
                     <div className="relative flex-1">
                       <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none">
-                        <Search className="h-3.5 w-3.5 text-gray-400" />
+                        <Search className="h-3.5 w-3.5 text-gray-400 dark:text-slate-500" />
                       </div>
                       <Input
                         id="keyword-filter"
@@ -880,7 +880,7 @@ export function DeleteWithExceptionsModal({
                         value={keywordFilter.text}
                         onChange={(e) => setKeywordFilter(prev => ({ ...prev, text: e.target.value }))}
                         placeholder="Enter keywords..."
-                        className="pl-7"
+                        className="pl-7 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300 dark:placeholder-slate-500"
                       />
                     </div>
                   </div>
@@ -928,16 +928,16 @@ export function DeleteWithExceptionsModal({
                   {ruleGroups.map((group, groupIndex) => (
                     <div 
                       key={group.id} 
-                      className="border border-gray-200 rounded-md p-3 bg-white shadow-sm mb-3"
+                      className="border border-gray-200 dark:border-slate-700 rounded-md p-3 bg-white dark:bg-slate-800 shadow-sm dark:shadow-md dark:shadow-black/20 mb-3"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           {groupIndex > 0 && (
-                            <Badge className="bg-orange-100 text-orange-800 uppercase text-xs">
+                            <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-300 uppercase text-xs">
                               OR
                             </Badge>
                           )}
-                          <h3 className="text-sm font-medium text-gray-700">
+                          <h3 className="text-sm font-medium text-gray-700 dark:text-slate-300">
                             {groupIndex === 0 ? "Where email:" : "Or where email:"}
                           </h3>
                         </div>
@@ -946,7 +946,7 @@ export function DeleteWithExceptionsModal({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 w-7 p-0 rounded-full text-gray-400 hover:text-red-600"
+                            className="h-7 w-7 p-0 rounded-full text-gray-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400 dark:hover:bg-slate-700"
                             onClick={() => removeRuleGroup(group.id)}
                           >
                             <X className="h-4 w-4" />
@@ -965,8 +965,8 @@ export function DeleteWithExceptionsModal({
                                   className={cn(
                                     "px-2 py-1 rounded text-xs font-medium",
                                     group.operator === 'and' 
-                                      ? "bg-blue-100 text-blue-700 hover:bg-blue-200" 
-                                      : "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                                      ? "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30" 
+                                      : "bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:hover:bg-orange-500/30"
                                   )}
                                 >
                                   {group.operator === 'and' ? 'AND' : 'OR'}
@@ -979,17 +979,17 @@ export function DeleteWithExceptionsModal({
                                 value={condition.type}
                                 onValueChange={(value) => updateConditionType(group.id, condition.id, value as ConditionType)} 
                               >
-                                <SelectTrigger className="min-w-[130px] bg-white">
+                                <SelectTrigger className="min-w-[130px] bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="bg-white">
-                                  <SelectItem value="contains">Contains</SelectItem>
-                                  <SelectItem value="not-contains">Doesn't contain</SelectItem>
-                                  <SelectItem value="date-after">Sent after</SelectItem>
-                                  <SelectItem value="date-before">Sent before</SelectItem>
-                                  <SelectItem value="is-unread">Is unread</SelectItem>
-                                  <SelectItem value="is-read">Is read</SelectItem>
-                                  <SelectItem value="has-attachment">Has attachment</SelectItem>
+                                <SelectContent className="bg-white dark:bg-slate-800 dark:border-slate-600">
+                                  <SelectItem value="contains" className="dark:text-slate-300 dark:hover:bg-slate-700">Contains</SelectItem>
+                                  <SelectItem value="not-contains" className="dark:text-slate-300 dark:hover:bg-slate-700">Doesn't contain</SelectItem>
+                                  <SelectItem value="date-after" className="dark:text-slate-300 dark:hover:bg-slate-700">Sent after</SelectItem>
+                                  <SelectItem value="date-before" className="dark:text-slate-300 dark:hover:bg-slate-700">Sent before</SelectItem>
+                                  <SelectItem value="is-unread" className="dark:text-slate-300 dark:hover:bg-slate-700">Is unread</SelectItem>
+                                  <SelectItem value="is-read" className="dark:text-slate-300 dark:hover:bg-slate-700">Is read</SelectItem>
+                                  <SelectItem value="has-attachment" className="dark:text-slate-300 dark:hover:bg-slate-700">Has attachment</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -1000,7 +1000,7 @@ export function DeleteWithExceptionsModal({
                               variant="ghost"
                               size="sm"
                               className={cn(
-                                "h-8 w-8 p-0 rounded-full text-gray-400 hover:text-red-600",
+                                "h-8 w-8 p-0 rounded-full text-gray-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400 dark:hover:bg-slate-700",
                                 group.conditions.length === 1 && groupIndex === 0 && "opacity-50 cursor-not-allowed"
                               )}
                               onClick={() => removeCondition(group.id, condition.id)}
@@ -1016,7 +1016,7 @@ export function DeleteWithExceptionsModal({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 text-xs gap-1 mt-3 w-full"
+                          className="h-8 text-xs gap-1 mt-3 w-full dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-slate-700"
                           onClick={() => addCondition(group.id)}
                         >
                           <Plus className="h-3.5 w-3.5" />
@@ -1030,7 +1030,7 @@ export function DeleteWithExceptionsModal({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-sm gap-1 mt-3 w-full"
+                  className="text-sm gap-1 mt-3 w-full dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-100"
                   onClick={addRuleGroup}
                 >
                   <PlusCircle className="h-3.5 w-3.5" />
@@ -1043,10 +1043,10 @@ export function DeleteWithExceptionsModal({
           {/* Current Filter Summary */}
           {hasValidFilters && (
             <div className="pt-3 pb-1">
-              <div className="bg-blue-50 border border-blue-100 rounded-md p-2.5">
+              <div className="bg-blue-50 border border-blue-100 dark:bg-blue-500/10 dark:border-blue-500/20 rounded-md p-2.5">
                 <div className="flex items-start">
-                  <Info className="h-4 w-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
-                  <div className="text-sm text-blue-700">
+                  <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 mr-2 flex-shrink-0" />
+                  <div className="text-sm text-blue-700 dark:text-blue-300">
                     <p className="font-medium">Applied Filters:</p>
                     <p className="mt-0.5">{getFilterSummary()}</p>
                   </div>
@@ -1057,20 +1057,20 @@ export function DeleteWithExceptionsModal({
         </div>
         
         {/* Action warning - always visible */}
-        <div className="bg-red-50 border border-red-100 rounded-md p-3 mt-3">
+        <div className="bg-red-50 border border-red-100 dark:bg-red-500/10 dark:border-red-500/20 rounded-md p-3 mt-3">
           <div className="flex items-start">
-            <Trash2 className="h-4 w-4 mr-2 flex-shrink-0 text-red-600 mt-0.5" />
+            <Trash2 className="h-4 w-4 mr-2 flex-shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
             <div className="w-full">
-              <p className="font-medium text-red-700 text-sm">
+              <p className="font-medium text-red-700 dark:text-red-300 text-sm">
                 {hasValidFilters 
                   ? `About to delete ${getFilterSummary()}`
                   : `About to delete all ${emailCount} emails`}
               </p>
-              <p className="text-xs text-red-600 mt-0.5">
+              <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
                 This action is permanent and cannot be undone.{" "}
                 <button
                   type="button"
-                  className="underline hover:text-red-800"
+                  className="underline hover:text-red-800 dark:hover:text-red-200"
                   onClick={() => {
                     handlePreview();
                   }}
@@ -1089,6 +1089,7 @@ export function DeleteWithExceptionsModal({
               variant="outline"
               onClick={() => onOpenChange(false)}
               size="sm"
+              className="dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-600"
             >
               Cancel
             </Button>
@@ -1096,7 +1097,7 @@ export function DeleteWithExceptionsModal({
           
           <Button
             type="button"
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-600 dark:text-red-100"
             disabled={isDeleting || (!hasValidFilters && emailCount > 100)}
             onClick={handleConfirm}
             size="sm"
