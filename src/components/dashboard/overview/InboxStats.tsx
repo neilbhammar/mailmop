@@ -3,7 +3,7 @@ import { useGmailStats } from '@/hooks/useGmailStats';
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
 import { peekAccessToken } from '@/lib/gmail/token';
 import { useActionStats } from '@/hooks/useActionStats';
-import { useUser } from '@supabase/auth-helpers-react';
+import { useAuth } from '@/context/AuthProvider';
 import { cn } from '@/lib/utils';
 import { GMAIL_STATS_UPDATED_EVENT, GmailStats, getStoredGmailStats } from '@/lib/gmail/fetchGmailStats';
 
@@ -12,7 +12,7 @@ export default function InboxStats() {
   const { tokenStatus } = useGmailPermissions();
   const { stats: gmailStats, isLoading: gmailLoading, refreshStats, error } = useGmailStats(peek?.accessToken);
   const [forceUpdate, setForceUpdate] = useState(0);
-  const user = useUser();
+  const { user } = useAuth();
   const { stats: actionStats, isLoading: actionsLoading } = useActionStats(user?.id);
 
   // Only refresh stats if we have a valid token and either:

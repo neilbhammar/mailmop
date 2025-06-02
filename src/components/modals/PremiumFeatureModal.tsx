@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { ArrowRightIcon } from "@radix-ui/react-icons"
 import { ExternalLink, X, Trash2, BellOff, MailOpen, Ban, Tag, FilterIcon, Sparkles, Rocket, PencilOff } from "lucide-react"
+import { useStripeCheckout } from "@/hooks/useStripeCheckout"
 
 interface PremiumFeatureModalProps {
   /**
@@ -53,6 +54,8 @@ export function PremiumFeatureModal({
   onViewInGmail,
   senderCount
 }: PremiumFeatureModalProps) {
+  const { redirectToCheckout } = useStripeCheckout()
+
   // Format feature name for display
   const formattedFeatureName = featureName
     .replace(/_/g, ' ')
@@ -69,6 +72,11 @@ export function PremiumFeatureModal({
   // Handle close modal
   const handleClose = () => {
     onOpenChange(false)
+  }
+
+  const handleUpgrade = async () => {
+    onOpenChange(false)
+    await redirectToCheckout()
   }
 
   return (
@@ -166,7 +174,7 @@ export function PremiumFeatureModal({
 
         {/* Upgrade Button - Updated text and hover effects */}
         <Button 
-          onClick={() => window.location.href = '/dashboard/upgrade'}
+          onClick={handleUpgrade}
           className="w-full max-w-xs px-6 py-6 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white font-semibold rounded-md hover:from-blue-700 hover:to-blue-800 dark:hover:from-blue-600 dark:hover:to-blue-700 shadow-lg hover:shadow-blue-500/40 dark:hover:shadow-blue-400/50 hover:brightness-110 transition-all duration-300 flex items-center justify-center group relative overflow-hidden text-base mt-4 mb-2 transform hover:scale-105"
         >
           <span className="relative z-10">
@@ -174,7 +182,7 @@ export function PremiumFeatureModal({
           </span>
           <Rocket className="ml-2 h-5 w-5 transform transition-transform relative z-10 group-hover:rotate-[15deg]" />
         </Button>
-        <p className="text-xs text-gray-500 dark:text-slate-500 mb-8">Billed annually. No auto-renewal</p>
+        <p className="text-xs text-gray-500 dark:text-slate-500 mb-8">Billed annually. No auto-renew.</p>
 
         {/* Alternative Action Text - Updated Copy and Wider max-width, formatted feature name */}
         <p className="text-sm text-gray-600 dark:text-slate-400 max-w-lg">

@@ -480,7 +480,7 @@ export function ApplyLabelModal({
             </DialogTitle>
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-            This will affect {emailCount.toLocaleString()} emails from {senderCount} {senderCount === 1 ? 'sender' : 'senders'}
+            This will affect emails from {senderCount} {senderCount === 1 ? 'sender' : 'senders'}
           </p>
         </DialogHeader>
 

@@ -104,10 +104,13 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     // Initial check
     checkAnalysisState();
 
-    // Handle window focus
+    // Handle window focus - only check state if we might have an active analysis
     const handleFocus = () => {
-      console.log('[Analysis] Window focused, checking state');
-      checkAnalysisState();
+      // Only check state on focus if we're currently analyzing or might have missed updates
+      if (isAnalyzing) {
+        console.log('[Analysis] Window focused during analysis, checking state');
+        checkAnalysisState();
+      }
     };
 
     // Handle analysis changes from other components

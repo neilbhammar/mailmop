@@ -8,9 +8,11 @@ import { useTheme } from 'next-themes'
 import { RevokeAccessDialog } from '../modals/RevokeAccessDialog'
 import { SignOutDialog } from '../modals/SignOutDialog'
 import { FeedbackModal } from '../modals/FeedbackModal'
+import { ManageSubscriptionModal } from '../modals/ManageSubscriptionModal'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useStripeCheckout } from '@/hooks/useStripeCheckout'
 
 interface UserDropdownProps {
   user: User
@@ -21,9 +23,11 @@ export function UserDropdown({ user }: UserDropdownProps) {
   const [showRevokeDialog, setShowRevokeDialog] = useState(false)
   const [showSignOutDialog, setShowSignOutDialog] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [showManageSubscriptionModal, setShowManageSubscriptionModal] = useState(false)
   const { plan } = useAuth()
   const { tokenStatus, requestPermissions, hasRefreshToken } = useGmailPermissions()
   const { theme, setTheme, resolvedTheme } = useTheme()
+  const { redirectToCheckout } = useStripeCheckout()
   const avatarUrl = user.user_metadata?.avatar_url
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -55,7 +59,6 @@ export function UserDropdown({ user }: UserDropdownProps) {
   }
 
   const getCurrentThemeIcon = () => {
-    // Use resolvedTheme to show the correct icon when theme is 'system'
     const current = theme === 'system' ? resolvedTheme : theme;
     if (current === 'light') return <Sun className="w-4 h-4 mr-3" />;
     if (current === 'dark') return <Moon className="w-4 h-4 mr-3" />;
@@ -68,18 +71,14 @@ export function UserDropdown({ user }: UserDropdownProps) {
     return 'System Default';
   };
 
-  const handleSubscription = () => {
+  const handleSubscription = async () => {
+    setIsOpen(false);
     if (plan === 'pro') {
-      toast.info("Subscription management coming soon!", {
-        description: "Need help with your subscription? Email help@mailmop.com"
-      })
+      setShowManageSubscriptionModal(true);
     } else {
-      toast.info("Pro plan coming soon!", {
-        description: "Want early access? Email help@mailmop.com"
-      })
+      await redirectToCheckout();
     }
-    setIsOpen(false)
-  }
+  };
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -89,7 +88,6 @@ export function UserDropdown({ user }: UserDropdownProps) {
         className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700"
       >
         <div className="flex items-center space-x-3">
-          {/* Avatar - using image if available, otherwise first letter */}
           {avatarUrl ? (
             <div className="relative w-8 h-8 rounded-full overflow-hidden ring-1 ring-gray-200 dark:ring-slate-600">
               <Image
@@ -99,7 +97,6 @@ export function UserDropdown({ user }: UserDropdownProps) {
                 height={32}
                 className="object-cover"
               />
-              {/* Light blue overlay for a bright, muted effect */}
               <div className="absolute inset-0 bg-blue-100/80 mix-blend-multiply" />
             </div>
           ) : (
@@ -108,7 +105,6 @@ export function UserDropdown({ user }: UserDropdownProps) {
             </div>
           )}
           
-          {/* Name and Email */}
           <div className="text-left">
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {user.user_metadata?.full_name || 'User'}
@@ -117,7 +113,6 @@ export function UserDropdown({ user }: UserDropdownProps) {
           </div>
         </div>
         
-        {/* Chevron */}
         <ChevronDown
           className={cn(
             "w-4 h-4 text-gray-400 transition-transform dark:text-gray-500",
@@ -137,7 +132,7 @@ export function UserDropdown({ user }: UserDropdownProps) {
             className="absolute left-[-1rem] right-[-1rem] mt-2 bg-white border-x border-b border-gray-100 rounded-b-lg shadow-md z-50 dark:bg-slate-800 dark:border-slate-700"
           >
             <div className="py-1">
-              {/* Manage Plan */}
+              {/* Manage Plan / Upgrade to Pro */}
               <button
                 onClick={handleSubscription}
                 className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-slate-700"
@@ -234,6 +229,14 @@ export function UserDropdown({ user }: UserDropdownProps) {
         isOpen={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}
       />
+
+      {/* Manage Subscription Modal (only rendered when needed) */}
+      {plan === 'pro' && (
+        <ManageSubscriptionModal
+          open={showManageSubscriptionModal}
+          onOpenChange={setShowManageSubscriptionModal}
+        />
+      )}
     </div>
   )
 } 

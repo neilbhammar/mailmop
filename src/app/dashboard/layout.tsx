@@ -48,9 +48,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // Main app content that may be blurred
   const mainContent = (
-    <div className="min-h-screen bg-white-50 dark:bg-slate-900">
+    <div className="bg-white-50 dark:bg-slate-900">
       <TopBar />
-      <main className="px-4 pt-2 pb-4">
+      <main className="px-4 pt-2">
         <div className="max-w-7xl mx-auto">
           {children}
         </div>

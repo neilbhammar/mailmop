@@ -2,7 +2,7 @@ import { useState, useRef, ChangeEvent } from 'react'
 import { Lightbulb } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/supabase/client'
-import { useUser } from '@supabase/auth-helpers-react'
+import { useAuth } from '@/context/AuthProvider'
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const [charCount, setCharCount] = useState(0)
   const maxCharCount = 500
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const user = useUser()
+  const { user } = useAuth()
 
   const handleTextChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value

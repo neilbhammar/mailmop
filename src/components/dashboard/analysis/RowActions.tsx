@@ -1,6 +1,6 @@
 "use client"
 
-import { Sender } from "./mockData"
+import { Sender } from "./SenderTable"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
@@ -17,9 +17,9 @@ interface RowActionsProps {
   sender: Sender
   onUnsubscribe: (email: string) => void
   onViewInGmail: (email: string) => void
-  onDelete: (email: string) => void
-  onMarkUnread: (email: string) => void
-  onDeleteWithExceptions: (email: string) => void
+  onDelete: (email: string, count?: number) => void
+  onMarkUnread: (email: string, unreadCount?: number) => void
+  onDeleteWithExceptions: (email: string, count?: number) => void
   onApplyLabel: (email: string) => void
   onBlock: (email: string) => void
   onDropdownOpen: (email: string) => void
@@ -137,7 +137,7 @@ export function RowActions({
                 "hover:bg-red-50 hover:text-red-600 group-hover:text-red-600 dark:hover:bg-red-700/20 dark:hover:text-red-400 dark:group-hover:text-red-400",
                 isActionTaken('delete') && "opacity-40 dark:opacity-30 cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent group-hover:text-slate-400 dark:group-hover:text-slate-500"
               )}
-              onClick={() => !isActionTaken('delete') && onDelete(sender.email)}
+              onClick={() => !isActionTaken('delete') && onDelete(sender.email, sender.count)}
             >
               <Trash2 className="h-4 w-4" />
             </div>
@@ -160,7 +160,7 @@ export function RowActions({
               className={iconButtonStyles}
               onClick={(e) => {
                 e.stopPropagation();
-                onMarkUnread(sender.email);
+                onMarkUnread(sender.email, sender.unread_count);
               }}
             >
               <MailOpen className="h-4 w-4" />
@@ -210,7 +210,7 @@ export function RowActions({
           <DropdownMenuItem 
             onSelect={(e) => {
               e.preventDefault();
-              onDeleteWithExceptions(sender.email);
+              onDeleteWithExceptions(sender.email, sender.count);
             }}
             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer"
           >

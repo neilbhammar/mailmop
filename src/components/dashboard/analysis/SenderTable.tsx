@@ -409,6 +409,10 @@ export function SenderTable({
   // Reference to the virtualized scrollable container
   const tableBodyRef = useRef<HTMLDivElement>(null);
   
+  // Scroll position preservation
+  const savedScrollPositionRef = useRef<number>(0);
+  const isRestoringScrollRef = useRef<boolean>(false);
+  
   // --- State for Apply Label Modal ---
   const [isApplyLabelModalOpen, setIsApplyLabelModalOpen] = useState(false);
   const [applyLabelModalData, setApplyLabelModalData] = useState<{ 
@@ -637,7 +641,7 @@ export function SenderTable({
     },
     {
       id: "actions",
-      header: () => <div className="text-right text-slate-600 font-normal pr-1 dark:text-slate-300">Actions</div>,
+      header: () => <div className="text-right text-slate-600 font-normal pr-1 dark:text-slate-300"></div>,
       cell: ({ row }) => (
         <RowActions
           onBlock={onBlockSingleSender}

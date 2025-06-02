@@ -91,7 +91,7 @@ export default function AnalysisView() {
   // Store the currently active single sender email for view in Gmail from premium modal
   const [activeSingleSender, setActiveSingleSender] = useState<string | null>(null)
 
-  const { senders } = useSenderData()
+  const { senders: allSenders } = useSenderData()
 
   // Add state for mark as read functionality
   const [isMarkAsReadModalOpen, setIsMarkAsReadModalOpen] = useState(false)
@@ -155,7 +155,7 @@ export default function AnalysisView() {
     
     // Get the selected senders with their unread counts
     selectedEmails.forEach(email => {
-      const sender = senders.find(s => s.email === email);
+      const sender = allSenders.find(s => s.email === email);
       if (sender) {
         unreadCounts[email] = sender.unread_count || 0;
       }
@@ -163,7 +163,7 @@ export default function AnalysisView() {
     
     // Only update unread counts map
     setUnreadCountMap(unreadCounts);
-  }, [selectedEmails, senders]);
+  }, [selectedEmails, allSenders]);
 
   // Set up a side effect to receive selected emails from the table
   useEffect(() => {
@@ -323,7 +323,7 @@ export default function AnalysisView() {
   // Handler for single sender mark as read
   const handleMarkSingleSenderRead = useCallback((email: string, unreadCount?: number) => {
     // Find the sender in our data to get the actual unread count
-    const sender = senders.find(s => s.email === email);
+    const sender = allSenders.find(s => s.email === email);
     
     // Only use unread count if it exists and is greater than 0
     const actualUnreadCount = (unreadCount ?? sender?.unread_count) || 0;
@@ -344,7 +344,7 @@ export default function AnalysisView() {
     } else {
       setActiveSingleSender(email);
     }
-  }, [checkFeatureAccess, senders]);
+  }, [checkFeatureAccess, allSenders]);
 
   // Handler for when mark as read is confirmed
   const handleMarkAsReadConfirm = useCallback(async () => {
@@ -389,7 +389,7 @@ export default function AnalysisView() {
   // Placeholder handler for Unsubscribe
   const handleUnsubscribeSingleSender = useCallback(async (email: string) => {
     if (checkFeatureAccess('unsubscribe', 1)) {
-      const sender = senders.find(s => s.email === email);
+      const sender = allSenders.find(s => s.email === email);
       if (!sender) {
         toast.error("Sender data not found for unsubscribe action.");
         return;
@@ -423,7 +423,7 @@ export default function AnalysisView() {
       // Premium modal was shown by checkFeatureAccess, store sender for potential view action
       setActiveSingleSender(email);
     }
-  }, [checkFeatureAccess, senders, setActiveSingleSender, unsubscribeHook]);
+  }, [checkFeatureAccess, allSenders, setActiveSingleSender, unsubscribeHook]);
 
   // Handler for block sender (single and bulk)
   const handleBlockSenders = useCallback(() => {
@@ -472,7 +472,7 @@ export default function AnalysisView() {
     // Rule 2: If one or more are selected, check if *all* of them have had delete taken
     
     // Find the sender data objects corresponding to the selected emails
-    const selectedSenderDataList = senders.filter(sender => 
+    const selectedSenderDataList = allSenders.filter(sender => 
       selectedEmails.has(sender.email)
     );
     
@@ -490,7 +490,7 @@ export default function AnalysisView() {
     // Disable the button if all selected senders have already had the action taken
     return allHaveDeleteTaken;
 
-  }, [selectedCount, selectedEmails, senders]); // Dependencies: count, emails, and the sender data itself
+  }, [selectedCount, selectedEmails, allSenders]); // Dependencies: count, emails, and the sender data itself
 
   // Show loading state if we're still preparing
   if (progress.status === 'preparing') {

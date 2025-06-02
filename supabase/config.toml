@@ -1,0 +1,23 @@
+# Supabase Configuration
+
+[auth]
+
+[functions.send-welcome-email]
+# Disable JWT verification for internal database trigger calls
+verify_jwt = false
+
+[functions.send-upgrade-thanks-email]
+# Disable JWT verification for internal database trigger calls
+verify_jwt = false
+
+[functions.send-premium-upsell-email]
+# Disable JWT verification for internal database trigger calls
+verify_jwt = false
+
+[functions.send-expiration-reminder-email]
+# Keep JWT verification enabled for this function (called by nightly-plan-check, not triggers)
+verify_jwt = true
+
+[functions.nightly-plan-check]
+# Keep JWT verification enabled for this function (called by cron, not triggers)
+verify_jwt = true 

@@ -6,7 +6,11 @@ export const getProfile = async (userId: string) => {
     .from('profiles')
     .select('*')
     .eq('user_id', userId)
-    .single()
+    .maybeSingle()
+
+  if (error && error.code === 'PGRST116') {
+    return { data: null, error: null }
+  }
 
   return { data: data as Profile | null, error }
 }

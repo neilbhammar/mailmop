@@ -3,7 +3,6 @@ import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
 import { useAuth } from '@/context/AuthProvider';
 import { toast } from 'sonner';
 import { createActionLog } from '@/supabase/actions/logAction';
-import { useUser } from '@supabase/auth-helpers-react';
 import { ActionType } from '@/types/actions';
 
 /**
@@ -16,20 +15,19 @@ import { ActionType } from '@/types/actions';
  * @returns Object containing functions to open Gmail searches and previews
  */
 export function useViewInGmail() {
-  const { user: authUser } = useAuth();
-  const supabaseUser = useUser();
+  const { user } = useAuth();
   
   /**
    * Helper function to determine the user email for constructing Gmail links.
    * Uses the Supabase authenticated user's email.
    */
   const determineUserEmailForGmailLink = useCallback(() => {
-    if (authUser?.email) {
-      return authUser.email;
+    if (user?.email) {
+      return user.email;
     }
-    console.error("[ViewInGmail] Critical: Supabase authenticated user's email is not available. Cannot construct Gmail link.");
+    console.error("[ViewInGmail] Critical: User email is not available. Cannot construct Gmail link.");
     return ''; // Fallback to empty string, which likely defaults to /u/0/
-  }, [authUser?.email]); // Dependency is the Supabase auth user's email
+  }, [user?.email]); // Dependency is the user's email
   
   /**
    * Log a view or preview action to Supabase
@@ -37,14 +35,14 @@ export function useViewInGmail() {
    * @param count Number of senders involved (for view) or 1 (for preview)
    */
   const logGmailAction = useCallback(async (type: ActionType, count: number) => {
-    if (!supabaseUser?.id) {
-      console.warn('Cannot log Gmail action: Supabase user ID not available.');
+    if (!user?.id) {
+      console.warn('Cannot log Gmail action: User ID not available.');
       return;
     }
 
     try {
       await createActionLog({
-        user_id: supabaseUser.id,
+        user_id: user.id,
         type: type,
         status: 'completed',
         count
@@ -52,7 +50,7 @@ export function useViewInGmail() {
     } catch (error) {
       console.error(`Failed to log ${type} action:`, error);
     }
-  }, [supabaseUser?.id]);
+  }, [user?.id]);
   
   /**
    * Open Gmail search for a specific sender in a new tab

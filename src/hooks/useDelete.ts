@@ -13,10 +13,9 @@
 import { useState, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import { useUser } from '@supabase/auth-helpers-react';
+import { useAuth } from '@/context/AuthProvider';
 
 // --- Contexts & Hooks ---
-import { useAuth } from '@/context/AuthProvider'; // Basic user auth
 import { 
   useGmailPermissions, 
   // TypesTokenStatus // Avoid importing unused types if TokenStatus isn't used directly
