@@ -44,34 +44,59 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   const handleAuth = useCallback(async (session: Session | null, event?: AuthChangeEvent) => {
-    if (session?.user) {
-      try {
-        // Check for user mismatch and clear data if different user
-        if (session.user.email) {
-          await checkUserMismatch(session.user.email);
-        }
-        
-        const fetchedProfile = await fetchProfile(session.user.id)
-        if (fetchedProfile) {
-          setPlan(fetchedProfile.plan === 'pro' ? 'pro' : 'free')
-          setProfile(fetchedProfile)
-        }
-        setUser(session.user)
-        setSession(session)
-      } catch (error) {
-        console.error('[Auth] Error in auth change:', error)
-      }
-    } else {
-      setProfile(null)
-      setUser(null)
-      setSession(null)
-      setPlan('free')
-      if (event === 'SIGNED_OUT') {
-        router.push('/')
-      }
+    // Prevent concurrent auth processing
+    if (processingAuth.current) {
+      console.log('[Auth] Already processing auth, skipping...')
+      return
     }
-    setIsLoading(false)
-  }, [fetchProfile, router])
+    
+    // Check if this is the same session we already processed
+    const currentSessionId = session?.access_token || null
+    if (currentSessionId === lastSessionId.current && session?.user && user) {
+      console.log('[Auth] Same session detected, skipping re-processing...')
+      return
+    }
+    
+    // Mark as processing to prevent concurrent calls
+    processingAuth.current = true
+    
+    try {
+      if (session?.user) {
+        try {
+          // Check for user mismatch and clear data if different user
+          if (session.user.email) {
+            await checkUserMismatch(session.user.email);
+          }
+          
+          const fetchedProfile = await fetchProfile(session.user.id)
+          if (fetchedProfile) {
+            setPlan(fetchedProfile.plan === 'pro' ? 'pro' : 'free')
+            setProfile(fetchedProfile)
+          }
+          setUser(session.user)
+          setSession(session)
+          
+          // Update the last session ID after successful processing
+          lastSessionId.current = currentSessionId
+        } catch (error) {
+          console.error('[Auth] Error in auth change:', error)
+        }
+      } else {
+        setProfile(null)
+        setUser(null)
+        setSession(null)
+        setPlan('free')
+        lastSessionId.current = null
+        if (event === 'SIGNED_OUT') {
+          router.push('/')
+        }
+      }
+      setIsLoading(false)
+    } finally {
+      // Always clear the processing flag
+      processingAuth.current = false
+    }
+  }, [fetchProfile, router, user])
 
   // Initial session check
   useEffect(() => {
@@ -79,19 +104,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (mounted) {
-      handleAuth(session)
+        handleAuth(session)
       }
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      handleAuth(session, event)
+      if (mounted) {
+        handleAuth(session, event)
+      }
     })
 
     return () => {
       mounted = false
       listener.subscription.unsubscribe()
     }
-  }, [router, updateProfile, fetchProfile, handleAuth])
+  }, [handleAuth])
 
   // Separate effect for profile changes subscription
   useEffect(() => {
@@ -144,13 +171,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [session?.user?.id, fetchProfile])
 
   const value = {
-        session, 
+    session, 
     user,
     profile,
     plan,
-        isLoading,
-        signOut,
-    updateProfile
+    isLoading,
+    signOut
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

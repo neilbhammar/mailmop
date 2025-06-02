@@ -20,7 +20,7 @@ const nunito = Nunito({
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn(nunito.className, 'bg-white text-gray-900 dark:bg-slate-900 dark:text-gray-100')}>
+    <html lang="en" suppressHydrationWarning className={nunito.className}>
       <head>
         <title>MailMop</title>
         <link rel="icon" href="/favicon.png" />
