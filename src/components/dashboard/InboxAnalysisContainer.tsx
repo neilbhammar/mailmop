@@ -66,7 +66,7 @@ export default function InboxAnalysisContainer() {
   // Finally, render our component inside a nice card container
   // The card is styled to be a specific size and look pretty
   return (
-    <Card className="!rounded-lg !border !border-slate-200 !p-0 h-[calc(100vh-17rem)] w-full max-w-7xl mx-auto bg-white overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.03)] transition-all duration-300">
+    <Card className="!rounded-lg !border !border-slate-200 dark:!border-slate-700 !p-0 h-[calc(100vh-17rem)] w-full max-w-7xl mx-auto bg-white dark:bg-slate-800 overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.03)] dark:shadow-[0_1px_4px_rgba(0,0,0,0.2)] transition-all duration-300">
       {/* Show either the step-by-step guide OR the analysis table based on our conditions above */}
       {showingStepper ? (
         <IntroStepper 

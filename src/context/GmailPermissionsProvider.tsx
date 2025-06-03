@@ -26,7 +26,8 @@ const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.modify',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/gmail.labels',
-  'https://www.googleapis.com/auth/gmail.settings.basic'
+  'https://www.googleapis.com/auth/gmail.settings.basic',
+  'https://mail.google.com/'
 ].join(' ');
 
 const GOOGLE_GSI_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
@@ -54,6 +55,7 @@ interface GmailPermissionsContextType extends GmailPermissionState {
   clearAccessTokenOnly: () => Promise<void>;
   expireAccessToken: () => Promise<void>;
   refreshTokenState: 'unknown' | 'present' | 'absent';
+  hideMismatchModal: () => void;
 }
 
 const GmailPermissionsContext = createContext<GmailPermissionsContextType | null>(null);
@@ -100,6 +102,11 @@ export function GmailPermissionsProvider({
   const [isGmailClientInitialized, setIsGmailClientInitialized] = useState(false);
   const [shouldShowMismatchModal, setShouldShowMismatchModal] = useState(false);
   const [gmailEmail, setGmailEmail] = useState<string | null>(null);
+
+  // Function to hide the mismatch modal
+  const hideMismatchModal = useCallback(() => {
+    setShouldShowMismatchModal(false);
+  }, []);
 
   // Combined client loaded state
   const isClientLoaded = isGsiLoaded && isApiClientLoaded && isGmailClientInitialized;
@@ -237,16 +244,10 @@ export function GmailPermissionsProvider({
       checkPermissionState();
     };
 
-    // Function to handle window focus
-    const handleFocus = () => {
-      console.log('[Gmail] Window focused, rechecking state');
-      checkPermissionState();
-    };
-
-    // Add listeners
+    // Add listeners  
     window.addEventListener(TOKEN_CHANGE_EVENT, handleStorageChange);
     window.addEventListener(ANALYSIS_CHANGE_EVENT, handleAnalysisChange);
-    window.addEventListener('focus', handleFocus);
+    // Note: Removed focus listener to prevent unnecessary re-renders when switching tabs
 
     // Initial check
     checkPermissionState();
@@ -255,7 +256,6 @@ export function GmailPermissionsProvider({
     return () => {
       window.removeEventListener(TOKEN_CHANGE_EVENT, handleStorageChange);
       window.removeEventListener(ANALYSIS_CHANGE_EVENT, handleAnalysisChange);
-      window.removeEventListener('focus', handleFocus);
     };
   }, [checkPermissionState]);
 
@@ -537,6 +537,7 @@ export function GmailPermissionsProvider({
     clearAccessTokenOnly,
     expireAccessToken,
     refreshTokenState: getRefreshTokenState(),
+    hideMismatchModal,
   };
 
   return (

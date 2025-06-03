@@ -100,7 +100,7 @@ async function batchMarkAsRead(accessToken: string, messageIds: string[]) {
 }
 
 export function useMarkAsRead() {
-  const { user } = useAuth();
+  const { user, plan: authPlan } = useAuth();
   const {
     getAccessToken,
     forceRefreshAccessToken,
@@ -180,6 +180,15 @@ export function useMarkAsRead() {
   const startMarkAsRead = useCallback(
     async (senders: SenderToMark[]): Promise<{ success: boolean }> => {
       console.log('[MarkAsRead] Starting mark as read for senders:', senders);
+      console.log('[MarkAsRead] Current plan status from useAuth():', authPlan);
+
+      // --- Premium Feature Check ---
+      if (authPlan !== 'pro') {
+        console.warn('[MarkAsRead] Non-pro user attempting to mark as read. Plan:', authPlan);
+        toast.error('Upgrade to Pro', { description: 'Mark as Read is a premium feature.' });
+        return { success: false };
+      }
+
       isCancelledRef.current = false;
 
       // --- Basic Checks ---
@@ -467,7 +476,8 @@ export function useMarkAsRead() {
       isGmailConnected, // Added
       forceRefreshAccessToken, // Added
       peekAccessToken, // Added
-      tokenTimeRemaining // Added
+      tokenTimeRemaining, // Added
+      authPlan
     ]
   );
 

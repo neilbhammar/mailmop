@@ -52,13 +52,13 @@ export default function IntroStepper({
   const totalSteps = 2
   
   return (
-    <div className="flex flex-col w-full h-full bg-white rounded-lg overflow-hidden">
+    <div className="flex flex-col w-full h-full bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
       {/* Refined header with step indicator */}
-      <div className="h-16 flex items-center justify-center border-b border-gray-100 relative">
+      <div className="h-16 flex items-center justify-center border-b border-gray-100 dark:border-slate-700 relative">
         {onCancel && (
           <button 
             onClick={onCancel}
-            className="absolute left-4 flex items-center text-slate-500 hover:text-slate-600 transition-colors py-2"
+            className="absolute left-4 flex items-center text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors py-2"
             aria-label={isReanalysis ? "Back to sender analysis" : "Back"}
           >
             <ArrowLeft size={16} className="mr-1.5" />
@@ -73,10 +73,10 @@ export default function IntroStepper({
           {Array.from({ length: totalSteps }).map((_, i) => (
             <div key={i} className="flex items-center">
               {i > 0 && (
-                <div className="h-0.5 w-12 bg-gray-200 relative overflow-hidden mx-2">
+                <div className="h-0.5 w-12 bg-gray-200 dark:bg-slate-600 relative overflow-hidden mx-2">
                   <div className={cn(
                     "h-full absolute inset-0 transition-all duration-500 ease-in-out",
-                    currentStep > i ? "w-full bg-blue-600" : "w-0 bg-blue-600"
+                    currentStep > i ? "w-full bg-blue-600 dark:bg-blue-500" : "w-0 bg-blue-600 dark:bg-blue-500"
                   )} />
                 </div>
               )}
@@ -84,10 +84,10 @@ export default function IntroStepper({
                 className={cn(
                   "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all",
                   currentStep > i 
-                    ? "bg-blue-600 text-white" 
+                    ? "bg-blue-600 dark:bg-blue-500 text-white dark:text-slate-100" 
                     : currentStep === i + 1
-                      ? "bg-blue-600 text-white ring-4 ring-blue-100" 
-                      : "bg-gray-200 text-gray-500"
+                      ? "bg-blue-600 dark:bg-blue-500 text-white dark:text-slate-100 ring-4 ring-blue-100 dark:ring-blue-500/20" 
+                      : "bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-slate-400"
                 )}
               >
                 {i + 1}
@@ -96,7 +96,7 @@ export default function IntroStepper({
           ))}
         </div>
         
-        <div className="absolute right-4 text-sm font-medium text-gray-500">
+        <div className="absolute right-4 text-sm font-medium text-gray-500 dark:text-slate-400">
           Step {currentStep} of {totalSteps}
         </div>
       </div>

@@ -121,13 +121,13 @@ export function BlockSenderModal({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl bg-white border border-slate-200 shadow-lg">
+      <DialogContent className="max-w-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
-              <Ban className="h-4 w-4 text-red-600" />
+            <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
+              <Ban className="h-4 w-4 text-red-600 dark:text-red-400" />
             </div>
-            <DialogTitle className="text-xl font-semibold">
+            <DialogTitle className="text-xl font-semibold dark:text-slate-100">
               Block {senderCount} {senderCount === 1 ? 'Sender' : 'Senders'}
             </DialogTitle>
           </div>
@@ -135,14 +135,14 @@ export function BlockSenderModal({
 
         <div className="space-y-4">
           {/* Selected Senders List */}
-          <div className="border rounded-lg overflow-hidden">
-            <div className="p-3 border-b bg-slate-50">
+          <div className="border dark:border-slate-700 rounded-lg overflow-hidden">
+            <div className="p-3 border-b dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">Selected Senders</span>
-                <span className="text-xs text-slate-500">{senderCount} {senderCount === 1 ? 'sender' : 'senders'}</span>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Selected Senders</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">{senderCount} {senderCount === 1 ? 'sender' : 'senders'}</span>
               </div>
             </div>
-            <div className="max-h-[110px] overflow-y-auto p-3 bg-white">
+            <div className="max-h-[110px] overflow-y-auto p-3 bg-white dark:bg-slate-800">
               <div className="space-y-2">
                 {sortedSenders.map(sender => (
                   <div 
@@ -150,9 +150,9 @@ export function BlockSenderModal({
                     className="flex items-center justify-between py-1.5"
                   >
                     <div className="flex flex-col flex-1 min-w-0 mr-4">
-                      <span className="text-sm text-slate-700 truncate">{sender}</span>
+                      <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{sender}</span>
                     </div>
-                    <span className="text-sm text-blue-600 font-medium whitespace-nowrap">
+                    <span className="text-sm text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap">
                       {getEmailCountForSender(sender).toLocaleString()}
                     </span>
                   </div>
@@ -162,11 +162,11 @@ export function BlockSenderModal({
           </div>
           
           {/* Info Box */}
-          <div className="p-3 border border-slate-200 bg-slate-50 rounded-md">
-            <p className="text-sm text-slate-700">
+          <div className="p-3 border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 rounded-md">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
               Blocking these senders will:
             </p>
-            <ul className="mt-2 space-y-1.5 text-sm text-slate-600">
+            <ul className="mt-2 space-y-1.5 text-sm text-slate-600 dark:text-slate-400">
               <li className="flex items-center gap-2">
                 • Create a filter that automatically sends their future emails to Trash
               </li>
@@ -183,17 +183,17 @@ export function BlockSenderModal({
                 id="delete-historical" 
                 checked={deleteHistoricalEmails} 
                 onCheckedChange={(checked) => setDeleteHistoricalEmails(checked as boolean)}
-                className="data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600 border-slate-300"
+                className="data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600 dark:data-[state=checked]:bg-red-500 dark:data-[state=checked]:border-red-500 border-slate-300 dark:border-slate-600"
               />
             </div>
             <div>
               <Label 
                 htmlFor="delete-historical" 
-                className="text-sm font-medium text-slate-700 leading-tight cursor-pointer"
+                className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-tight cursor-pointer"
               >
                 Also delete historical emails
               </Label>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Permanently delete all {emailCount > 0 ? emailCount.toLocaleString() : 'existing'} emails from {senderCount === 1 ? 'this sender' : 'these senders'}
               </p>
             </div>
@@ -204,14 +204,14 @@ export function BlockSenderModal({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="mr-2 bg-white"
+            className="mr-2 bg-white dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-600"
             disabled={isProcessing}
           >
             Cancel
           </Button>
           <Button
             onClick={handleConfirm}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-600 dark:text-red-100"
             disabled={isProcessing}
           >
             {isProcessing ? (

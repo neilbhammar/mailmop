@@ -58,10 +58,36 @@ export async function batchDeleteMessages(
     // Set the access token for this API request.
     // It's generally good practice to set this before each gapi call,
     // although it might be set globally elsewhere.
+    console.log('[batchDeleteMessages] Setting access token');
+    console.log('[batchDeleteMessages] Token being used (first 20 chars):', accessToken.substring(0, 20) + '...');
     gapi.client.setToken({ access_token: accessToken });
+
+    // Debug: Check what scopes the token has
+    try {
+      const tokenInfo = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${accessToken}`);
+      const tokenData = await tokenInfo.json();
+      console.log('[batchDeleteMessages] Token info:', {
+        scope: tokenData.scope,
+        expires_in: tokenData.expires_in,
+        audience: tokenData.audience
+      });
+      
+      // Check if we have the modify scope
+      const hasModifyScope = tokenData.scope?.includes('gmail.modify');
+      if (!hasModifyScope) {
+        console.error('[batchDeleteMessages] ❌ Token missing gmail.modify scope!');
+        console.error('[batchDeleteMessages] Current scopes:', tokenData.scope);
+        console.error('[batchDeleteMessages] Required scope: https://www.googleapis.com/auth/gmail.modify');
+      } else {
+        console.log('[batchDeleteMessages] ✅ Token has gmail.modify scope');
+      }
+    } catch (tokenDebugError) {
+      console.warn('[batchDeleteMessages] Could not debug token:', tokenDebugError);
+    }
 
     // Make the API call to batch delete the messages.
     // We use 'me' to refer to the authenticated user.
+    console.log('[batchDeleteMessages] Making API call to batch delete');
     const response = await gapi.client.gmail.users.messages.batchDelete({
       userId: "me",
       ids: messageIds, // Pass the array of message IDs in the request body
@@ -90,6 +116,25 @@ export async function batchDeleteMessages(
   } catch (error: any) {
     // Catch any errors during the API call.
     console.error("[batchDeleteMessages] Error during batch deletion:", error);
+    
+    // Check for scope insufficiency error
+    if (error?.result?.error?.code === 403 && 
+        error?.result?.error?.message?.includes('insufficient authentication scopes')) {
+      console.error('[batchDeleteMessages] Insufficient scopes detected. Token scopes:', error?.result?.error);
+      
+      // Provide specific guidance for scope issues
+      throw new Error(
+        `Gmail API access denied: Your current Gmail connection doesn't have permission to delete emails. 
+        
+To fix this:
+1. Go to your MailMop dashboard
+2. Look for the Gmail connection status in the top bar
+3. Click "Disconnect Gmail" 
+4. Click "Connect Gmail" and re-authorize with deletion permissions
+        
+This happens when Gmail was connected before MailMop had deletion features.`
+      );
+    }
 
     // Try to provide a more specific error message if possible.
     const errorMessage =

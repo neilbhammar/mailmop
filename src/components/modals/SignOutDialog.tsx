@@ -60,24 +60,24 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white p-6 gap-6 max-w-sm">
+      <DialogContent className="bg-white dark:bg-slate-800 p-6 gap-6 max-w-sm">
         <DialogHeader className="gap-3">
-          <DialogTitle className="text-xl">Sign Out</DialogTitle>
-          <DialogDescription className="text-gray-600 text-sm leading-normal">
+          <DialogTitle className="text-xl dark:text-slate-100">Sign Out</DialogTitle>
+          <DialogDescription className="text-gray-600 dark:text-slate-400 text-sm leading-normal">
             Choose how to handle your local data when signing out. Clearing data is recommended on shared devices.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-col gap-2 sm:flex-col">
           <Button
             onClick={handleSignOutWithClear}
-            className="w-full bg-red-600 text-white hover:bg-red-700"
+            className="w-full bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"
           >
             Sign Out & Clear Data
           </Button>
           <Button
             variant="outline"
             onClick={handleSignOutPreserve}
-            className="w-full"
+            className="w-full dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-100"
           >
             Sign Out & Preserve Data
           </Button>

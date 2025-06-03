@@ -51,7 +51,7 @@ export function AnalysisFooter({ searchTerm = '', showUnreadOnly = false }: Anal
   }
 
   return (
-    <div className="text-sm text-slate-500 bg-slate-50 px-4 py-3 rounded shrink-0">
+    <div className="text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 px-4 py-3 rounded shrink-0">
       {getMessage()}
     </div>
   )

@@ -77,7 +77,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
           {/* Google Logo */}
           <div className="flex-shrink-0">
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-slate-700 flex items-center justify-center">
                 <svg width="32" height="32" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -89,17 +89,17 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
             
             {/* Title and description */}
             <div className="text-center mb-4">
-              <h1 className="text-2xl font-semibold text-gray-900 mb-2">Securely Connect Your Inbox</h1>
-              <p className="text-gray-600">
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-2">Securely Connect Your Inbox</h1>
+              <p className="text-gray-600 dark:text-slate-400">
               MailMop analyzes email metadata to identify who's cluttering your inbox and help you take action, all within your browser.
               </p>
             </div>
             
             {/* Benefits - now with hover functionality to control animations */}
-            <div className="bg-white-50 rounded-xl mb-4">
+            <div className="bg-white-50 dark:bg-slate-800/50 rounded-xl mb-4">
               <div className="py-3 px-6 space-y-4">
                 <div 
-                  className="flex cursor-pointer hover:bg-gray-100 p-2 rounded-lg transition-colors"
+                  className="flex cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/60 p-2 rounded-lg transition-colors"
                   onMouseEnter={() => {
                     setIsPaused(true);
                     setCurrentAnimation(0);
@@ -107,18 +107,18 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                   onMouseLeave={() => setIsPaused(false)}
                 >
                   <div className="flex-shrink-0 mt-0.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <CheckIcon size={12} className="text-emerald-600" />
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
+                      <CheckIcon size={12} className="text-emerald-600 dark:text-emerald-400" />
                     </div>
                   </div>
                   <div className="ml-3">
-                    <h3 className="font-medium text-gray-900">Your emails stay private</h3>
-                    <p className="text-sm text-gray-500">We process and store everything in your browser, not on MailMop servers.</p>
+                    <h3 className="font-medium text-gray-900 dark:text-slate-100">Your emails stay private</h3>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">We process and store everything in your browser, not on MailMop servers.</p>
                   </div>
                 </div>
                 
                 <div 
-                  className="flex cursor-pointer hover:bg-gray-100 p-2 rounded-lg transition-colors"
+                  className="flex cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/60 p-2 rounded-lg transition-colors"
                   onMouseEnter={() => {
                     setIsPaused(true);
                     setCurrentAnimation(1);
@@ -126,18 +126,18 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                   onMouseLeave={() => setIsPaused(false)}
                 >
                   <div className="flex-shrink-0 mt-0.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <CheckIcon size={12} className="text-emerald-600" />
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
+                      <CheckIcon size={12} className="text-emerald-600 dark:text-emerald-400" />
                     </div>
                   </div>
                   <div className="ml-3">
-                    <h3 className="font-medium text-gray-900">See who's cluttering your inbox</h3>
-                    <p className="text-sm text-gray-500">Find out which senders are taking up the most space. Analysis is done locally using metadata.</p>
+                    <h3 className="font-medium text-gray-900 dark:text-slate-100">See who's cluttering your inbox</h3>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Find out which senders are taking up the most space. Analysis is done locally using metadata.</p>
                   </div>
                 </div>
                 
                 <div 
-                  className="flex cursor-pointer hover:bg-gray-100 p-2 rounded-lg transition-colors"
+                  className="flex cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/60 p-2 rounded-lg transition-colors"
                   onMouseEnter={() => {
                     setIsPaused(true);
                     setCurrentAnimation(2);
@@ -145,13 +145,13 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                   onMouseLeave={() => setIsPaused(false)}
                 >
                   <div className="flex-shrink-0 mt-0.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <CheckIcon size={12} className="text-emerald-600" />
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
+                      <CheckIcon size={12} className="text-emerald-600 dark:text-emerald-400" />
                     </div>
                   </div>
                   <div className="ml-3">
-                    <h3 className="font-medium text-gray-900">Clean up with one click</h3>
-                    <p className="text-sm text-gray-500">Easily delete, unsubscribe, and block unwanted senders in minutes, not hours.</p>
+                    <h3 className="font-medium text-gray-900 dark:text-slate-100">Clean up with one click</h3>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Easily delete, unsubscribe, and block unwanted senders in minutes, not hours.</p>
                   </div>
                 </div>
               </div>
@@ -161,7 +161,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
             <button
               onClick={handleConnect}
               disabled={isLoading || fetchingStats}
-              className="flex w-full items-center justify-center px-6 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex w-full items-center justify-center px-6 py-3 rounded-xl bg-blue-600 dark:bg-blue-500 text-white font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading || fetchingStats ? (
                 <div className="flex items-center">
@@ -182,12 +182,12 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
             {/* Security and trust indicators */}
             <div className="mt-4 text-center space-y-3 pt-2 mb-4">
               <div className="flex items-center justify-center gap-1.5">
-                <ShieldIcon size={12} className="text-gray-400" />
-                <p className="text-xs text-gray-500">
+                <ShieldIcon size={12} className="text-gray-400 dark:text-slate-500" />
+                <p className="text-xs text-gray-500 dark:text-slate-400">
                   Secure connection. We never see your emails.
                 </p>
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-slate-400">
                 You can revoke access anytime in your MailMop settings.
               </p>
             </div>
@@ -197,7 +197,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
       
       {/* Right side - Rotating animations (was previously on left) */}
       <div 
-        className="hidden md:flex md:w-1/2 h-full bg-slate-50 items-center justify-center p-6 relative"
+        className="hidden md:flex md:w-1/2 h-full bg-slate-50 dark:bg-slate-800/70 items-center justify-center p-6 relative"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
@@ -216,19 +216,19 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                   className="w-full"
                 >
                   <div className="mb-10 text-center">
-                    <div className="inline-flex items-center px-4 py-1.5 bg-blue-100 text-blue-800 rounded-full">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center mr-2 text-xs font-bold">1</span>
+                    <div className="inline-flex items-center px-4 py-1.5 bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 rounded-full">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-500 dark:bg-blue-400 text-white flex items-center justify-center mr-2 text-xs font-bold">1</span>
                       <span className="font-medium">Connect</span>
-                      <RefreshCw className="h-4 w-4 text-blue-800 ml-1.5" />
+                      <RefreshCw className="h-4 w-4 text-blue-800 dark:text-blue-300 ml-1.5" />
                     </div>
                   </div>
                   
-                  <div className="mt-2.5 rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden">
+                  <div className="mt-2.5 rounded-2xl bg-white dark:bg-slate-700/50 shadow-lg dark:shadow-slate-900/30 border border-gray-100 dark:border-slate-700 overflow-hidden">
                     {/* Gmail OAuth animation */}
                     <div className="p-6 flex flex-col items-center">
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-5 relative overflow-hidden">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center mb-5 relative overflow-hidden">
                         <motion.div
-                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-50"
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 dark:via-slate-500/50 to-transparent opacity-50"
                           animate={{
                             x: ['-100%', '100%']
                           }}
@@ -249,7 +249,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                             ease: "easeInOut"
                           }}
                         >
-                          <ShieldIcon className="w-8 h-8 text-blue-600 drop-shadow-lg" />
+                          <ShieldIcon className="w-8 h-8 text-blue-600 dark:text-blue-400 drop-shadow-lg" />
                         </motion.div>
                       </div>
                       
@@ -257,20 +257,21 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                         animate={{ 
                           boxShadow: ["0px 0px 0px rgba(59, 130, 246, 0)", "0px 0px 20px rgba(59, 130, 246, 0.3)", "0px 0px 0px rgba(59, 130, 246, 0)"]
                         }}
+                        // TODO: Dark mode for box shadow? Or is it fine?
                         transition={{ 
                           duration: 2, 
                           repeat: Infinity, 
                           repeatType: "loop" 
                         }}
-                        className="rounded-xl border border-blue-200 bg-blue-50 p-5 mb-6 relative"
+                        className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 p-5 mb-6 relative"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="rounded-full bg-blue-100 p-2">
-                            <ShieldIcon className="h-5 w-5 text-blue-700" />
+                          <div className="rounded-full bg-blue-100 dark:bg-blue-500/20 p-2">
+                            <ShieldIcon className="h-5 w-5 text-blue-700 dark:text-blue-300" />
                           </div>
                           <div className="text-left">
-                            <h3 className="font-medium text-blue-900">Secure Connection</h3>
-                            <p className="text-sm text-blue-700">Encrypted connection and client-side processing</p>
+                            <h3 className="font-medium text-blue-900 dark:text-blue-200">Secure Connection</h3>
+                            <p className="text-sm text-blue-700 dark:text-blue-400">Encrypted connection and client-side processing</p>
                           </div>
                         </div>
                         
@@ -279,6 +280,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                           animate={{ 
                             borderColor: ["rgba(59, 130, 246, 0)", "rgba(59, 130, 246, 0.5)", "rgba(59, 130, 246, 0)"] 
                           }}
+                          // TODO: Dark mode for border color animation? Or is it fine?
                           transition={{ 
                             duration: 2, 
                             repeat: Infinity,
@@ -289,8 +291,8 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                       </motion.div>
                       
                       <div className="flex flex-col items-center gap-3 text-center mt-0">
-                        <p className="text-gray-600 font-medium">MailMop connects securely to Gmail</p>
-                        <div className="inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-2 py-1 rounded-full mt-2">
+                        <p className="text-gray-600 dark:text-slate-300 font-medium">MailMop connects securely to Gmail</p>
+                        <div className="inline-flex items-center gap-1.5 text-xs text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-full mt-2">
                           <CheckIcon size={12} />
                           <span>Your data stays private</span>
                         </div>
@@ -311,27 +313,27 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                   className="w-full"
                 >
                   <div className="mb-10 text-center">
-                    <div className="inline-flex items-center px-4 py-1.5 bg-indigo-100 text-indigo-800 rounded-full">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center mr-2 text-xs font-bold">2</span>
+                    <div className="inline-flex items-center px-4 py-1.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 rounded-full">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 dark:bg-indigo-400 text-white flex items-center justify-center mr-2 text-xs font-bold">2</span>
                       <span className="font-medium">Analyze</span>
-                      <SparklesIcon className="h-4 w-4 text-indigo-600 ml-1.5" />
+                      <SparklesIcon className="h-4 w-4 text-indigo-600 dark:text-indigo-300 ml-1.5" />
                     </div>
                   </div>
                   
-                  <div className="mt-10 rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden">
+                  <div className="mt-10 rounded-2xl bg-white dark:bg-slate-700/50 shadow-lg dark:shadow-slate-900/30 border border-gray-100 dark:border-slate-700 overflow-hidden">
                     <div className="p-6">
                       {/* Browser animation with email analysis */}
-                      <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                      <div className="bg-gray-50 dark:bg-slate-600/40 rounded-lg border border-gray-200 dark:border-slate-600 overflow-hidden">
                         {/* Header bar */}
-                        <div className="h-8 bg-gray-100 border-b border-gray-200 flex items-center px-4 relative">
+                        <div className="h-8 bg-gray-100 dark:bg-slate-500/30 border-b border-gray-200 dark:border-slate-600 flex items-center px-4 relative">
                           {/* Dots on the left */}
                           <div className="flex space-x-1.5 absolute left-4">
-                            <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
-                            <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
-                            <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
+                            <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-slate-500"></div>
+                            <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-slate-500"></div>
+                            <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-slate-500"></div>
                           </div>
                           {/* Centered Title - shifted slightly right with padding */}
-                          <div className="flex-1 text-center text-xs text-gray-500 font-medium pl-2">
+                          <div className="flex-1 text-center text-xs text-gray-500 dark:text-slate-400 font-medium pl-2">
                             Local Analysis
                           </div>
                         </div>
@@ -340,7 +342,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                         <div className="p-4">
                           <div className="space-y-2">
                             <motion.div 
-                              className="h-2.5 bg-indigo-200 rounded-full"
+                              className="h-2.5 bg-indigo-200 dark:bg-indigo-500/40 rounded-full"
                               initial={{ width: "0%" }}
                               animate={{ 
                                 width: ["0%", "95%", "95%", "0%"]
@@ -353,7 +355,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                               }}
                             />
                             <motion.div 
-                              className="h-2.5 bg-indigo-100 rounded-full"
+                              className="h-2.5 bg-indigo-100 dark:bg-indigo-500/20 rounded-full"
                               initial={{ width: "0%" }}
                               animate={{ 
                                 width: ["0%", "85%", "85%", "0%"]
@@ -367,7 +369,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                               }}
                             />
                             <motion.div 
-                              className="h-2.5 bg-indigo-200 rounded-full"
+                              className="h-2.5 bg-indigo-200 dark:bg-indigo-500/40 rounded-full"
                               initial={{ width: "0%" }}
                               animate={{ 
                                 width: ["0%", "70%", "70%", "0%"]
@@ -383,7 +385,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                           </div>
                           
                           <div className="mt-4 flex items-center justify-between">
-                            <div className="text-xs text-gray-500">Analyzing emails...</div>
+                            <div className="text-xs text-gray-500 dark:text-slate-400">Analyzing emails...</div>
                             <motion.div 
                               initial={{ opacity: 0.5 }}
                               animate={{ opacity: [0.5, 1, 1, 0.5] }}
@@ -393,7 +395,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                                 repeat: Infinity,
                                 ease: "easeInOut"
                               }}
-                              className="text-xs font-medium text-indigo-700"
+                              className="text-xs font-medium text-indigo-700 dark:text-indigo-300"
                             >
                               Browser only
                             </motion.div>
@@ -402,8 +404,8 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                       </div>
                       
                       <div className="text-center mt-6">
-                        <p className="text-gray-600 font-medium">Fast analysis in your browser</p>
-                        <div className="inline-flex items-center gap-1.5 text-xs text-indigo-700 bg-indigo-50 px-2 py-1 rounded-full mt-2">
+                        <p className="text-gray-600 dark:text-slate-300 font-medium">Fast analysis in your browser</p>
+                        <div className="inline-flex items-center gap-1.5 text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 rounded-full mt-2">
                           <ShieldIcon size={12} />
                           <span>No server processing</span>
                         </div>
@@ -424,20 +426,20 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                   className="w-full"
                 >
                   <div className="mb-10 text-center">
-                    <div className="inline-flex items-center px-4 py-1.5 bg-emerald-100 text-emerald-800 rounded-full">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center mr-2 text-xs font-bold">3</span>
+                    <div className="inline-flex items-center px-4 py-1.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 rounded-full">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500 dark:bg-emerald-400 text-white flex items-center justify-center mr-2 text-xs font-bold">3</span>
                       <span className="font-medium">Clean</span>
-                      <TrashIcon className="h-4 w-4 text-emerald-600 ml-1.5" />
+                      <TrashIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-300 ml-1.5" />
                     </div>
                   </div>
                   
-                  <div className="mt-10 rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden">
+                  <div className="mt-10 rounded-2xl bg-white dark:bg-slate-700/50 shadow-lg dark:shadow-slate-900/30 border border-gray-100 dark:border-slate-700 overflow-hidden">
                     <div className="p-6">
                       {/* Enhanced email cleanup animation with multiple action types */}
                       <div className="space-y-3">
                         {/* Email 1 - Delete */}
                         <motion.div 
-                          className="flex items-center bg-gray-50 rounded-lg p-3 border border-gray-200"
+                          className="flex items-center bg-gray-50 dark:bg-slate-600/40 rounded-lg p-3 border border-gray-200 dark:border-slate-600"
                           initial={{ x: 0, opacity: 1 }}
                           animate={{ 
                             x: ["0%", "0%", "-100%", "-100%", "0%"],
@@ -450,22 +452,22 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                             ease: "easeInOut"
                           }}
                         >
-                          <div className="w-8 h-8 rounded-full bg-gray-200 mr-3"></div>
+                          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-slate-500 mr-3"></div>
                           <div className="flex-1">
-                            <div className="h-2.5 bg-gray-200 rounded w-2/3 mb-1.5"></div>
-                            <div className="h-2 bg-gray-100 rounded w-1/3"></div>
+                            <div className="h-2.5 bg-gray-200 dark:bg-slate-500 rounded w-2/3 mb-1.5"></div>
+                            <div className="h-2 bg-gray-100 dark:bg-slate-600 rounded w-1/3"></div>
                           </div>
                           <div className="flex gap-2 items-center">
-                            <div className="px-2 py-0.5 bg-red-50 rounded-md text-xs font-medium text-red-600">Delete</div>
-                            <div className="bg-red-100 h-7 w-7 rounded-full flex items-center justify-center">
-                              <TrashIcon className="h-3.5 w-3.5 text-red-500" />
+                            <div className="px-2 py-0.5 bg-red-50 dark:bg-red-500/10 rounded-md text-xs font-medium text-red-600 dark:text-red-400">Delete</div>
+                            <div className="bg-red-100 dark:bg-red-500/20 h-7 w-7 rounded-full flex items-center justify-center">
+                              <TrashIcon className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
                             </div>
                           </div>
                         </motion.div>
                         
                         {/* Email 2 - Unsubscribe */}
                         <motion.div 
-                          className="flex items-center bg-gray-50 rounded-lg p-3 border border-gray-200"
+                          className="flex items-center bg-gray-50 dark:bg-slate-600/40 rounded-lg p-3 border border-gray-200 dark:border-slate-600"
                           initial={{ x: 0, opacity: 1 }}
                           animate={{ 
                             x: ["0%", "0%", "0%", "-100%", "-100%", "0%"],
@@ -478,22 +480,22 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                             ease: "easeInOut"
                           }}
                         >
-                          <div className="w-8 h-8 rounded-full bg-gray-200 mr-3"></div>
+                          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-slate-500 mr-3"></div>
                           <div className="flex-1">
-                            <div className="h-2.5 bg-gray-200 rounded w-1/2 mb-1.5"></div>
-                            <div className="h-2 bg-gray-100 rounded w-1/4"></div>
+                            <div className="h-2.5 bg-gray-200 dark:bg-slate-500 rounded w-1/2 mb-1.5"></div>
+                            <div className="h-2 bg-gray-100 dark:bg-slate-600 rounded w-1/4"></div>
                           </div>
                           <div className="flex gap-2 items-center">
-                            <div className="px-2 py-0.5 bg-blue-50 rounded-md text-xs font-medium text-blue-600">Unsubscribe</div>
-                            <div className="bg-blue-100 h-7 w-7 rounded-full flex items-center justify-center">
-                              <ExternalLinkIcon className="h-3.5 w-3.5 text-blue-500" />
+                            <div className="px-2 py-0.5 bg-blue-50 dark:bg-blue-500/10 rounded-md text-xs font-medium text-blue-600 dark:text-blue-400">Unsubscribe</div>
+                            <div className="bg-blue-100 dark:bg-blue-500/20 h-7 w-7 rounded-full flex items-center justify-center">
+                              <ExternalLinkIcon className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
                             </div>
                           </div>
                         </motion.div>
                         
                         {/* Email 3 - Block */}
                         <motion.div 
-                          className="flex items-center bg-gray-50 rounded-lg p-3 border border-gray-200"
+                          className="flex items-center bg-gray-50 dark:bg-slate-600/40 rounded-lg p-3 border border-gray-200 dark:border-slate-600"
                           initial={{ x: 0, opacity: 1 }}
                           animate={{ 
                             x: ["0%", "0%", "0%", "0%", "-100%", "-100%", "0%"],
@@ -506,25 +508,26 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                             ease: "easeInOut"
                           }}
                         >
-                          <div className="w-8 h-8 rounded-full bg-gray-200 mr-3"></div>
+                          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-slate-500 mr-3"></div>
                           <div className="flex-1">
-                            <div className="h-2.5 bg-gray-200 rounded w-3/5 mb-1.5"></div>
-                            <div className="h-2 bg-gray-100 rounded w-2/5"></div>
+                            <div className="h-2.5 bg-gray-200 dark:bg-slate-500 rounded w-3/5 mb-1.5"></div>
+                            <div className="h-2 bg-gray-100 dark:bg-slate-600 rounded w-2/5"></div>
                           </div>
                           <div className="flex gap-2 items-center">
-                            <div className="px-2 py-0.5 bg-orange-50 rounded-md text-xs font-medium text-orange-600">Block</div>
-                            <div className="bg-orange-100 h-7 w-7 rounded-full flex items-center justify-center">
-                              <BanIcon className="h-3.5 w-3.5 text-orange-500" />
+                            <div className="px-2 py-0.5 bg-orange-50 dark:bg-orange-500/10 rounded-md text-xs font-medium text-orange-600 dark:text-orange-400">Block</div>
+                            <div className="bg-orange-100 dark:bg-orange-500/20 h-7 w-7 rounded-full flex items-center justify-center">
+                              <BanIcon className="h-3.5 w-3.5 text-orange-500 dark:text-orange-400" />
                             </div>
                           </div>
                         </motion.div>
                       </div>
                       
                       <motion.div 
-                        className="mt-6 bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex items-center justify-between"
+                        className="mt-6 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/30 rounded-lg p-3 flex items-center justify-between"
                         animate={{ 
                           boxShadow: ["0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 12px rgba(16, 185, 129, 0.3)", "0px 0px 12px rgba(16, 185, 129, 0.3)", "0px 0px 0px rgba(16, 185, 129, 0)"]
                         }}
+                        // TODO: Dark mode for box shadow? Or is it fine?
                         transition={{ 
                           duration: 4,
                           times: [0, 0.65, 0.75, 0.85, 1],
@@ -533,9 +536,9 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                         }}
                       >
                         <div className="flex items-center">
-                          <CheckIcon className="h-5 w-5 text-emerald-500 mr-2" />
+                          <CheckIcon className="h-5 w-5 text-emerald-500 dark:text-emerald-400 mr-2" />
                           <motion.span 
-                            className="text-sm font-medium text-emerald-800"
+                            className="text-sm font-medium text-emerald-800 dark:text-emerald-200"
                             animate={{
                               opacity: [0.5, 0.5, 1, 1, 0.5]
                             }}
@@ -549,7 +552,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                           </motion.span>
                         </div>
                         <motion.span 
-                          className="text-xs text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full"
+                          className="text-xs text-emerald-600 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 rounded-full"
                           animate={{
                             opacity: [0.5, 0.5, 1, 1, 0.5]
                           }}
@@ -564,8 +567,8 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                       </motion.div>
                       
                       <div className="text-center mt-6">
-                        <p className="text-gray-600 font-medium">Clean up your inbox</p>
-                        <div className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full mt-2">
+                        <p className="text-gray-600 dark:text-slate-300 font-medium">Clean up your inbox</p>
+                        <div className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-full mt-2">
                           <CheckIcon size={12} />
                           <span>Save hours of manual work</span>
                         </div>
@@ -583,7 +586,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
               <button
                 key={i}
                 className={`w-2 h-2 rounded-full transition-colors ${
-                  currentAnimation === i ? 'bg-blue-600' : 'bg-gray-300'
+                  currentAnimation === i ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-slate-600'
                 }`}
                 onClick={() => setCurrentAnimation(i)}
                 aria-label={`View ${i === 0 ? 'connect' : i === 1 ? 'analyze' : 'clean'} animation`}

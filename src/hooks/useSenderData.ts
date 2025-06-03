@@ -53,11 +53,22 @@ export function useSenderData() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const hasHydratedRef = useRef(false);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('[useSenderData] Hook state:', {
+      senderMapSize: senderMap.size,
+      isInitialLoading,
+      hasHydrated: hasHydratedRef.current,
+      isAnalyzing
+    });
+  }, [senderMap.size, isInitialLoading, isAnalyzing]);
+
   // Memoize the array conversion to prevent unnecessary re-renders
   const senders = useMemo(() => Array.from(senderMap.values()), [senderMap]);
 
-  // Merge new senders into the existing map
+  // Merge new senders into the existing map - STABLE function
   const mergeSenders = useCallback((newSenders: SenderResult[]) => {
+    console.log('[useSenderData] Merging senders:', newSenders.length);
     setSenderMap(prevMap => {
       const newMap = new Map(prevMap);
       let hasChanges = false;
@@ -76,36 +87,47 @@ export function useSenderData() {
         }
       });
 
+      if (hasChanges) {
+        console.log('[useSenderData] Sender map updated, new size:', newMap.size);
+      }
       return hasChanges ? newMap : prevMap;
     });
-  }, []);
+  }, []); // Remove dependencies to make it stable
 
-  // Load initial data from IndexedDB only once
+  // Load initial data from IndexedDB only once - STABLE function
   const hydrateFromStorage = useCallback(async () => {
-    if (hasHydratedRef.current) return;
+    if (hasHydratedRef.current) {
+      console.log('[useSenderData] Already hydrated, skipping');
+      return;
+    }
     
     try {
-      console.log('[useSenderData] Initial hydration from IndexedDB...');
+      console.log('[useSenderData] Starting initial hydration from IndexedDB...');
       const senders = await getAllSenders();
       
       if (senders.length > 0) {
-        mergeSenders(senders);
+        console.log('[useSenderData] Found', senders.length, 'senders in storage');
+        setSenderMap(new Map(senders.map(s => [s.senderEmail, convertToTableFormat(s)])));
+      } else {
+        console.log('[useSenderData] No senders found in storage');
       }
       
       hasHydratedRef.current = true;
+      console.log('[useSenderData] Hydration complete');
     } catch (error) {
       console.error('[useSenderData] Hydration failed:', error);
     } finally {
       setIsInitialLoading(false);
     }
-  }, [mergeSenders]);
+  }, []); // Remove dependencies to make it stable
 
-  // Handle analysis changes
+  // Handle analysis changes - STABLE event handler
   useEffect(() => {
     const handleAnalysisChange = (event: Event) => {
       if (event instanceof CustomEvent && event.detail?.type === 'senders') {
         console.log('[useSenderData] Batch update received');
         getAllSenders().then(senders => {
+          console.log('[useSenderData] Analysis change - updating with', senders.length, 'senders');
           mergeSenders(senders);
         });
       }
@@ -115,12 +137,12 @@ export function useSenderData() {
     return () => {
       window.removeEventListener(ANALYSIS_CHANGE_EVENT, handleAnalysisChange);
     };
-  }, [mergeSenders]);
+  }, []); // Remove dependencies since mergeSenders is now stable
 
-  // Initial hydration
+  // Initial hydration - MOUNT ONLY
   useEffect(() => {
     hydrateFromStorage();
-  }, [hydrateFromStorage]);
+  }, []); // Mount only since hydrateFromStorage is now stable
 
   return {
     senders,

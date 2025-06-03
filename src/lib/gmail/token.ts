@@ -40,22 +40,31 @@ export async function initializeTokenState() {
  * - Otherwise hit our refresh route to get a new one, then cache it.
  */
 export async function getAccessToken(): Promise<string> {
+  console.log('[Token] getAccessToken called');
+  
   if (memToken && memToken.exp > Date.now()) {
+    console.log('[Token] Using cached token, expires at:', new Date(memToken.exp));
+    console.log('[Token] Cached token value (first 20 chars):', memToken.value.substring(0, 20) + '...');
     return memToken.value;                 // still good
   }
 
+  console.log('[Token] No valid cached token, refreshing...');
   const res = await fetch('/api/auth/refresh', {
     method: 'POST',
     credentials: 'include',                // sends the cookie
   });
 
   if (!res.ok) {
+    console.error('[Token] Refresh failed with status:', res.status);
     // If refresh fails, we should revoke and clean up since the refresh token is invalid
     await revokeAndClearToken();  // This will handle setting hasRefreshToken to false
     throw new Error('Unable to refresh Gmail token');
   }
 
   const { access_token, expires_in } = await res.json();
+  console.log('[Token] Got fresh token from refresh, expires in:', expires_in, 'seconds');
+  console.log('[Token] Fresh token value (first 20 chars):', access_token.substring(0, 20) + '...');
+  
   memToken = { value: access_token, exp: Date.now() + expires_in * 1000 };
   refreshTokenState = 'present';
   emitTokenChange();

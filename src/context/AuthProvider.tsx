@@ -1,19 +1,21 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useRef } from 'react'
-import { Session, User } from '@supabase/supabase-js'
+import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react'
+import { Session, User, AuthChangeEvent } from '@supabase/supabase-js'
 import { supabase } from '@/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { SessionContextProvider } from '@supabase/auth-helpers-react'
 import { checkUserMismatch, clearAllUserData } from '@/lib/storage/userStorage'
+import type { Profile } from '@/types/user'
 
 type AuthContextType = {
   session: Session | null
   user: User | null
   isLoading: boolean
   signOut: () => Promise<void>
-  plan: string | null
+  plan: 'free' | 'pro'
+  profile: Profile | null
 }
 
 const AuthContext = createContext<AuthContextType>({ 
@@ -21,13 +23,16 @@ const AuthContext = createContext<AuthContextType>({
   user: null, 
   isLoading: true,
   signOut: async () => {},
-  plan: null
+  plan: 'free' as const,
+  profile: null
 })
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [plan, setPlan] = useState<'free' | 'pro'>('free')
   const [isLoading, setIsLoading] = useState(true)
-  const [plan, setPlan] = useState<string | null>(null)
   const router = useRouter()
   const processingAuth = useRef(false)
   const lastSessionId = useRef<string | null>(null)
@@ -38,97 +43,82 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     router.push('/')
   }
 
+  const handleAuth = useCallback(async (session: Session | null, event?: AuthChangeEvent) => {
+    // Prevent concurrent auth processing
+    if (processingAuth.current) {
+      console.log('[Auth] Already processing auth, skipping...')
+      return
+    }
+    
+    // Check if this is the same session we already processed
+    const currentSessionId = session?.access_token || null
+    if (currentSessionId === lastSessionId.current && session?.user && user) {
+      console.log('[Auth] Same session detected, skipping re-processing...')
+      return
+    }
+    
+    // Mark as processing to prevent concurrent calls
+    processingAuth.current = true
+    
+    try {
+      if (session?.user) {
+        try {
+          // Check for user mismatch and clear data if different user
+          if (session.user.email) {
+            await checkUserMismatch(session.user.email);
+          }
+          
+          const fetchedProfile = await fetchProfile(session.user.id)
+          if (fetchedProfile) {
+            setPlan(fetchedProfile.plan === 'pro' ? 'pro' : 'free')
+            setProfile(fetchedProfile)
+          }
+          setUser(session.user)
+          setSession(session)
+          
+          // Update the last session ID after successful processing
+          lastSessionId.current = currentSessionId
+        } catch (error) {
+          console.error('[Auth] Error in auth change:', error)
+        }
+      } else {
+        setProfile(null)
+        setUser(null)
+        setSession(null)
+        setPlan('free')
+        lastSessionId.current = null
+        if (event === 'SIGNED_OUT') {
+          router.push('/')
+        }
+      }
+      setIsLoading(false)
+    } finally {
+      // Always clear the processing flag
+      processingAuth.current = false
+    }
+  }, [fetchProfile, router, user])
+
+  // Initial session check
   useEffect(() => {
     let mounted = true
 
-    const handleAuth = async (session: Session | null, event?: string) => {
-      // Prevent concurrent auth processing
-      if (processingAuth.current) return
-      
-      // Skip if we've already processed this session
-      const sessionId = session?.user?.id
-      if (sessionId && sessionId === lastSessionId.current) return
-      
-      processingAuth.current = true
-
-      try {
-        if (!session?.user) {
-          if (mounted) {
-            setSession(null)
-            setPlan(null)
-            setIsLoading(false)
-          }
-          return
-        }
-
-        console.log(`[Auth] Processing ${event || 'Initial'} auth`)
-
-        // Check for user mismatch on SIGNED_IN event
-        if (event === 'SIGNED_IN' && session.user.email) {
-          console.log('[Auth] Checking for user mismatch...')
-          const isMismatch = await checkUserMismatch(session.user.email)
-          
-          if (isMismatch) {
-            console.log('[Auth] User mismatch detected, clearing previous data')
-            await clearAllUserData()
-          } else {
-            console.log('[Auth] No user mismatch detected, preserving data')
-          }
-        }
-
-        if (mounted) setSession(session)
-
-        // Only update profile if this is a new session
-        if (sessionId !== lastSessionId.current) {
-          try {
-            // Update profile in Supabase
-            await updateProfile({
-              user_id: session.user.id,
-              email: session.user.email ?? '',
-              name: session.user.user_metadata.full_name ?? '',
-              avatar_url: session.user.user_metadata.avatar_url ?? '',
-              last_login: new Date().toISOString()
-            })
-
-            // Fetch full profile to get plan
-            const profile = await fetchProfile(session.user.id)
-            if (mounted && profile) {
-              setPlan(profile.plan ?? 'free')
-            }
-
-            console.log('[Auth] Profile update complete')
-            
-            if (event === 'SIGNED_IN') {
-              router.refresh()
-            }
-
-            lastSessionId.current = sessionId ?? null
-          } catch (error) {
-            console.error('[Auth] Profile update error:', error)
-          }
-        }
-      } catch (error) {
-        console.error('[Auth] Error:', error)
-      } finally {
-        if (mounted) setIsLoading(false)
-        processingAuth.current = false
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted) {
+        handleAuth(session)
       }
-    }
-
-    // Initial session check and auth listener setup
-    supabase.auth.getSession().then(({ data: { session }}) => {
-      handleAuth(session)
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      handleAuth(session, event)
+      if (mounted) {
+        handleAuth(session, event)
+      }
     })
 
     return () => {
       mounted = false
       listener.subscription.unsubscribe()
     }
-  }, [router, updateProfile, fetchProfile])
+  }, [handleAuth])
 
   // Separate effect for profile changes subscription
   useEffect(() => {
@@ -137,6 +127,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Only set up subscription if we have a user ID
     if (session?.user?.id) {
+      console.log('[Auth] Setting up profile changes subscription for user:', session.user.id)
       subscription = supabase
         .channel('profile-changes')
         .on(
@@ -148,39 +139,53 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             filter: `user_id=eq.${session.user.id}`
           },
           async (payload) => {
-            console.log('[Auth] Profile changed:', payload)
+            console.log('[Auth] Profile change event received:', payload)
             if (mounted) {
-              const profile = await fetchProfile(session.user.id)
-              if (profile) {
-                setPlan(profile.plan ?? 'free')
+              try {
+              const fetchedProfile = await fetchProfile(session.user.id)
+              if (fetchedProfile) {
+                  console.log('[Auth] Updated profile:', fetchedProfile)
+                  setPlan(fetchedProfile.plan === 'pro' ? 'pro' : 'free')
+                setProfile(fetchedProfile)
+                  // Emit a custom event when profile is updated
+                  window.dispatchEvent(new CustomEvent('profileUpdated', { detail: fetchedProfile }))
+                }
+              } catch (error) {
+                console.error('[Auth] Error fetching updated profile:', error)
               }
             }
           }
         )
-        .subscribe()
+        .subscribe((status) => {
+          console.log('[Auth] Subscription status:', status)
+        })
     }
 
     return () => {
       mounted = false
       if (subscription) {
+        console.log('[Auth] Cleaning up profile changes subscription')
         subscription.unsubscribe()
       }
     }
   }, [session?.user?.id, fetchProfile])
 
-  return (
-    <SessionContextProvider supabaseClient={supabase}>
-      <AuthContext.Provider value={{ 
-        session, 
-        user: session?.user ?? null, 
-        isLoading,
-        signOut,
-        plan 
-      }}>
-        {children}
-      </AuthContext.Provider>
-    </SessionContextProvider>
-  )
+  const value = {
+    session, 
+    user,
+    profile,
+    plan,
+    isLoading,
+    signOut
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-export const useAuth = () => useContext(AuthContext)
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}

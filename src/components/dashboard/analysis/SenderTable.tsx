@@ -79,8 +79,8 @@ const SenderRow = memo(({
       key={row.original.email}
       className={cn(
         "relative h-14 cursor-pointer group transition-colors duration-75",
-        "hover:bg-blue-50/75 select-none",
-        (isSelected || isActive) && "bg-blue-50/75"
+        "hover:bg-blue-50/75 dark:hover:bg-slate-700",
+        (isSelected || isActive) && "bg-blue-50/75 dark:bg-slate-700/75"
       )}
       onClick={(e) => onRowClick(e, row)}
       onMouseLeave={onRowMouseLeave}
@@ -91,7 +91,7 @@ const SenderRow = memo(({
           <td 
             key={cell.id} 
             className={cn(
-              "px-4 border-b border-slate-200/80",
+              "px-4 border-b border-slate-200/80 dark:border-slate-700/80",
               width,
               cell.column.id === 'actions' && 'actions-container'
             )}
@@ -132,7 +132,7 @@ const SelectCheckbox = memo(({
       checked={checked}
       onCheckedChange={onChange}
       aria-label="Select row"
-      className="group-hover:border-slate-600 transition-opacity duration-75"
+      className="group-hover:border-slate-600 dark:group-hover:border-slate-400 transition-opacity duration-75"
     />
   )
 }, (prev, next) => prev.checked === next.checked && prev.indeterminate === next.indeterminate)
@@ -265,7 +265,7 @@ const TruncatedCell = memo(({
         <Portal container={document.getElementById('tooltip-root')}>
           <TooltipContent 
             side="top" 
-            className="max-w-[300px] break-words z-[100]"
+            className="max-w-[300px] break-words z-[100] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700"
           >
             {content}
           </TooltipContent>
@@ -303,10 +303,10 @@ const LastEmailCell = memo(({ date }: { date: string }) => {
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="text-slate-600 cursor-default">{relativeTime}</span>
+            <span className="text-slate-600 dark:text-slate-400 cursor-default">{relativeTime}</span>
           </TooltipTrigger>
           <Portal container={document.getElementById('tooltip-root')}>
-            <TooltipContent side="top" sideOffset={4} className="z-[100]">
+            <TooltipContent side="top" sideOffset={4} className="z-[100] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
               {new Date(date).toLocaleString('en-US', {
                 month: 'numeric',
                 day: 'numeric',
@@ -408,6 +408,10 @@ export function SenderTable({
   
   // Reference to the virtualized scrollable container
   const tableBodyRef = useRef<HTMLDivElement>(null);
+  
+  // Scroll position preservation
+  const savedScrollPositionRef = useRef<number>(0);
+  const isRestoringScrollRef = useRef<boolean>(false);
   
   // --- State for Apply Label Modal ---
   const [isApplyLabelModalOpen, setIsApplyLabelModalOpen] = useState(false);
@@ -522,7 +526,7 @@ export function SenderTable({
                 clearSelections()
                 e.stopPropagation()
               }}
-              className="text-slate-400 hover:text-slate-500 -ml-0.5 -mt-0.5"
+              className="text-slate-400 hover:text-slate-500 -ml-0.5 -mt-0.5 dark:text-slate-500 dark:hover:text-slate-400"
             >
               <MinusSquare 
                 className="h-5 w-5" 
@@ -555,13 +559,13 @@ export function SenderTable({
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="w-full text-left group"
         >
-          <span className="text-slate-600 font-normal group-hover:text-slate-900">
+          <span className="text-slate-600 font-normal group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-slate-100">
             Name
           </span>
         </button>
       ),
       cell: ({ row }) => (
-        <TruncatedCell content={row.getValue("name")} />
+        <TruncatedCell content={row.getValue("name")} className="dark:text-slate-200" />
       )
     },
     {
@@ -571,7 +575,7 @@ export function SenderTable({
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="w-full text-left group"
         >
-          <span className="text-slate-600 font-normal group-hover:text-slate-900">
+          <span className="text-slate-600 font-normal group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-slate-100">
             Email
           </span>
         </button>
@@ -579,7 +583,7 @@ export function SenderTable({
       cell: ({ row }) => (
         <TruncatedCell 
           content={row.getValue("email")} 
-          className="text-slate-800 opacity-80"
+          className="text-slate-800 opacity-80 dark:text-slate-300 dark:opacity-70"
         />
       )
     },
@@ -590,7 +594,7 @@ export function SenderTable({
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="w-full text-left group"
         >
-          <span className="text-slate-600 font-normal group-hover:text-slate-900">
+          <span className="text-slate-600 font-normal group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-slate-100">
             Last Email
           </span>
         </button>
@@ -612,15 +616,15 @@ export function SenderTable({
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="w-full text-right group"
         >
-          <span className="inline-flex items-center gap-1 text-slate-600 font-normal group-hover:text-slate-900">
+          <span className="inline-flex items-center gap-1 text-slate-600 font-normal group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-slate-100">
             {showUnreadOnly ? 'Unread' : 'Count'}
-            <ArrowUpDown className="h-3.5 w-3.5 text-slate-500" />
+            <ArrowUpDown className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
           </span>
         </button>
       ),
       cell: ({ row }) => (
         <div className="truncate text-right pr-2">
-          <span className="text-blue-700">
+          <span className="text-blue-700 dark:text-blue-400">
             {showUnreadOnly ? row.original.unread_count : row.getValue("count")}
           </span>
         </div>
@@ -637,7 +641,7 @@ export function SenderTable({
     },
     {
       id: "actions",
-      header: () => <div className="text-right text-slate-600 font-normal pr-1">Actions</div>,
+      header: () => <div className="text-right text-slate-600 font-normal pr-1 dark:text-slate-300"></div>,
       cell: ({ row }) => (
         <RowActions
           onBlock={onBlockSingleSender}
@@ -672,6 +676,7 @@ export function SenderTable({
     onApplyLabelSingle, 
     viewSenderInGmail,
     handleDropdownOpen,
+    showUnreadOnly
   ]);
 
   // Initialize and configure the table
@@ -923,11 +928,11 @@ export function SenderTable({
         <div id="tooltip-root" className="fixed inset-0 pointer-events-none z-50" />
       </Portal>
       
-      <div className="w-full h-full flex flex-col relative">
+      <div className="w-full h-full flex flex-col relative select-none">
         {/* Fixed Header - Add higher z-index */}
-        <div className="border-t border-b border-slate-100 relative z-20 bg-white">
+        <div className="border-t border-b border-slate-100 dark:border-slate-700/80 relative z-20 bg-white dark:bg-slate-800">
           <table className="w-full text-sm table-fixed">
-            <thead className="bg-white">
+            <thead className="bg-white dark:bg-slate-800">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id} className="h-11">
                   {headerGroup.headers.map(header => {
@@ -936,7 +941,7 @@ export function SenderTable({
                       <th 
                         key={header.id} 
                         className={cn(
-                          "text-left px-4 py-4 font-semibold bg-white",
+                          "text-left px-4 py-4 font-semibold bg-white dark:bg-slate-800",
                           width,
                           "overflow-hidden"
                         )}
@@ -961,11 +966,11 @@ export function SenderTable({
         >
           {/* Instead of using absolute positioning, we'll use a more traditional approach */}
           {isLoading && senders.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
               Loading senders...
             </div>
           ) : senders.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
               {isAnalyzing ? 'Analyzing your inbox...' : 'No senders found'}
             </div>
           ) : (

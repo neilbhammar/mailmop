@@ -13,7 +13,7 @@ import { useGmailStats } from '@/hooks/useGmailStats';
 import { estimateRuntimeMs, formatDuration, OperationType, OperationMode, getEffectiveEmailCount } from '@/lib/utils/estimateRuntime';
 import { toast } from 'sonner';
 import { ReauthDialog } from '@/components/modals/ReauthDialog';
-import { useUser } from '@supabase/auth-helpers-react';
+import { useAuth } from '@/context/AuthProvider';
 import { createActionLog, updateActionLog, completeActionLog } from '@/supabase/actions/logAction';
 import { 
   createLocalActionLog, 
@@ -147,7 +147,7 @@ export function useAnalysisOperations() {
     hasRefreshToken: isGmailConnected
   } = useGmailPermissions();
   const { stats } = useGmailStats();
-  const user = useUser();
+  const { user } = useAuth();
 
   const closeReauthModal = useCallback(() => {
     console.log('[Analysis] Closing reauth modal');

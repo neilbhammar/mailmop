@@ -122,26 +122,26 @@ export function AnalysisTooltip() {
     <TooltipProvider>
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
-          <span className="border-b border-dotted border-slate-300 pb-[1px] cursor-pointer hover:text-slate-700 transition-colors">
+          <span className="border-b border-dotted border-slate-300 dark:border-slate-600 pb-[1px] cursor-pointer hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
             {isAnalyzing ? `${status}` : `Last Analyzed: ${status}`}
           </span>
         </TooltipTrigger>
         <TooltipContent 
           side="bottom" 
           sideOffset={5}
-          className="bg-white rounded-lg shadow-[0_1px_4px_rgba(0,0,0,0.03)] border border-slate-200 p-0 w-[320px] animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+          className="bg-white dark:bg-slate-800 rounded-lg shadow-[0_1px_4px_rgba(0,0,0,0.03)] dark:shadow-md dark:shadow-black/30 border border-slate-200 dark:border-slate-700 p-0 w-[320px] animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
         >
-          <div className="px-4 py-3 border-b border-slate-100">
-            <h3 className="font-medium text-sm text-slate-900">Analysis Details</h3>
+          <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+            <h3 className="font-medium text-sm text-slate-900 dark:text-slate-100">Analysis Details</h3>
           </div>
           <div className="px-4 py-2 space-y-1">
             <div className="flex justify-between py-1">
-              <span className="text-sm text-slate-500">Date & Time</span>
-              <span className="text-sm text-slate-700">{getFormattedDate()}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">Date & Time</span>
+              <span className="text-sm text-slate-700 dark:text-slate-300">{getFormattedDate()}</span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-sm text-slate-500">Emails Analyzed</span>
-              <span className="text-sm text-slate-700">
+              <span className="text-sm text-slate-500 dark:text-slate-400">Emails Analyzed</span>
+              <span className="text-sm text-slate-700 dark:text-slate-300">
                 {isAnalyzing 
                   ? (currentAnalysis?.processed_email_count?.toLocaleString() || '0') + ' (In Progress)'
                   : lastAnalysis?.processed_email_count?.toLocaleString() || '0'
@@ -149,8 +149,8 @@ export function AnalysisTooltip() {
               </span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-sm text-slate-500">Analysis Type</span>
-              <span className="text-sm text-slate-700">
+              <span className="text-sm text-slate-500 dark:text-slate-400">Analysis Type</span>
+              <span className="text-sm text-slate-700 dark:text-slate-300">
                 {isAnalyzing 
                   ? (currentAnalysis?.filters?.type === 'quick' ? 'Quick' : 'Full') 
                   : (lastAnalysis?.filters?.type === 'quick' ? 'Quick' : 'Full')
@@ -158,8 +158,8 @@ export function AnalysisTooltip() {
               </span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-sm text-slate-500">Status</span>
-              <span className="text-sm text-slate-700">
+              <span className="text-sm text-slate-500 dark:text-slate-400">Status</span>
+              <span className="text-sm text-slate-700 dark:text-slate-300">
                 {isAnalyzing 
                   ? 'In Progress'
                   : (lastAnalysis?.end_type || 'Completed')
@@ -167,14 +167,14 @@ export function AnalysisTooltip() {
               </span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-sm text-slate-500">Run Time</span>
-              <span className="text-sm text-slate-700">{getRuntime()}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">Run Time</span>
+              <span className="text-sm text-slate-700 dark:text-slate-300">{getRuntime()}</span>
             </div>
           </div>
-          <div className="px-4 py-2 border-t border-slate-100 bg-slate-50">
+          <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
             <div className="flex justify-between items-center gap-2">
-              <span className="text-xs text-slate-400 shrink-0">Analysis ID</span>
-              <span className="text-[10px] font-mono text-slate-500 truncate text-right">
+              <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">Analysis ID</span>
+              <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate text-right">
                 {isAnalyzing 
                   ? (currentAnalysis?.client_action_id || 'N/A')
                   : (lastAnalysis?.client_action_id || 'N/A')

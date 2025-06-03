@@ -3,7 +3,7 @@ import { useGmailStats } from '@/hooks/useGmailStats';
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
 import { peekAccessToken } from '@/lib/gmail/token';
 import { useActionStats } from '@/hooks/useActionStats';
-import { useUser } from '@supabase/auth-helpers-react';
+import { useAuth } from '@/context/AuthProvider';
 import { cn } from '@/lib/utils';
 import { GMAIL_STATS_UPDATED_EVENT, GmailStats, getStoredGmailStats } from '@/lib/gmail/fetchGmailStats';
 
@@ -12,7 +12,7 @@ export default function InboxStats() {
   const { tokenStatus } = useGmailPermissions();
   const { stats: gmailStats, isLoading: gmailLoading, refreshStats, error } = useGmailStats(peek?.accessToken);
   const [forceUpdate, setForceUpdate] = useState(0);
-  const user = useUser();
+  const { user } = useAuth();
   const { stats: actionStats, isLoading: actionsLoading } = useActionStats(user?.id);
 
   // Only refresh stats if we have a valid token and either:
@@ -57,16 +57,16 @@ export default function InboxStats() {
       <div className="flex items-center gap-8 text-sm transition-all duration-300">
         {/* Total Emails - Always show */}
         <div>
-          <span className="text-slate-500">Total Emails</span>
-          <p className="font-medium text-slate-800 h-6 flex items-center">
+          <span className="text-slate-500 dark:text-slate-400">Total Emails</span>
+          <p className="font-medium text-slate-800 dark:text-slate-100 h-6 flex items-center">
             {formatNumber(gmailStats?.totalEmails)}
           </p>
         </div>
 
         {/* Threads - Always show */}
         <div>
-          <span className="text-slate-500">Threads</span>
-          <p className="font-medium text-slate-800 h-6 flex items-center">
+          <span className="text-slate-500 dark:text-slate-400">Threads</span>
+          <p className="font-medium text-slate-800 dark:text-slate-100 h-6 flex items-center">
             {formatNumber(gmailStats?.totalThreads)}
           </p>
         </div>
@@ -74,8 +74,8 @@ export default function InboxStats() {
         {/* Analyzed - Only show if we have non-zero data */}
         {showAnalyzed && (
           <div>
-            <span className="text-slate-500">Analyzed</span>
-            <p className="font-medium text-slate-800 h-6 flex items-center">
+            <span className="text-slate-500 dark:text-slate-400">Analyzed</span>
+            <p className="font-medium text-slate-800 dark:text-slate-100 h-6 flex items-center">
               {formatNumber(actionStats?.analyzed)}
             </p>
           </div>
@@ -84,8 +84,8 @@ export default function InboxStats() {
         {/* Deleted - Only show if we have non-zero data */}
         {showDeleted && (
           <div>
-            <span className="text-slate-500">Deleted</span>
-            <p className="font-medium text-slate-800 h-6 flex items-center">
+            <span className="text-slate-500 dark:text-slate-400">Deleted</span>
+            <p className="font-medium text-slate-800 dark:text-slate-100 h-6 flex items-center">
               {formatNumber(actionStats?.deleted)}
             </p>
           </div>

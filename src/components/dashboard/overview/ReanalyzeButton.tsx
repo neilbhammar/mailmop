@@ -58,7 +58,7 @@ export default function ReanalyzeButton() {
   return (
     <Button
       onClick={handleReanalyze}
-      className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-4 rounded-sm shadow-sm transition-colors"
+      className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 dark:text-white font-medium px-6 py-4 rounded-sm shadow-sm transition-colors"
       size="lg"
     >
       <RefreshCw className="mr-0 h-5 w-5" />

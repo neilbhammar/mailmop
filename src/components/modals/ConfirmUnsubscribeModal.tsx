@@ -61,15 +61,15 @@ export function ConfirmUnsubscribeModal({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="sm:max-w-md bg-white">
+      <AlertDialogContent className="sm:max-w-md bg-white dark:bg-slate-800 dark:border-slate-700">
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center">
-            <MailWarning className="h-5 w-5 mr-2 text-orange-500" />
+          <AlertDialogTitle className="flex items-center dark:text-slate-100">
+            <MailWarning className="h-5 w-5 mr-2 text-orange-500 dark:text-orange-400" />
             Confirm Unsubscribe
           </AlertDialogTitle>
-          <AlertDialogDescription className="pt-2">
+          <AlertDialogDescription className="pt-2 dark:text-slate-400">
             This will send an unsubscribe email from your Gmail account to{" "}
-            <strong className="text-gray-700">{senderEmail}</strong>.
+            <strong className="text-gray-700 dark:text-slate-300">{senderEmail}</strong>.
             <br />
             Are you sure you want to proceed?
           </AlertDialogDescription>
@@ -81,10 +81,11 @@ export function ConfirmUnsubscribeModal({
               id="dont-show-again-unsubscribe"
               checked={dontShowAgain}
               onCheckedChange={(checked) => setDontShowAgain(Boolean(checked))}
+              className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500 dark:data-[state=checked]:bg-orange-500 dark:data-[state=checked]:border-orange-500 border-slate-300 dark:border-slate-600"
             />
             <Label
               htmlFor="dont-show-again-unsubscribe"
-              className="text-sm font-normal text-gray-600 cursor-pointer"
+              className="text-sm font-normal text-gray-600 dark:text-slate-400 cursor-pointer"
             >
               Don&apos;t ask me again this session for mailto unsubscribes.
             </Label>
@@ -93,12 +94,12 @@ export function ConfirmUnsubscribeModal({
 
         <AlertDialogFooter className="mt-2">
           <AlertDialogCancel asChild>
-            <Button variant="outline" onClick={handleCancel} size="sm">
+            <Button variant="outline" onClick={handleCancel} size="sm" className="dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-100">
               Cancel
             </Button>
           </AlertDialogCancel>
           <AlertDialogAction asChild>
-            <Button onClick={handleConfirm} size="sm" className="bg-orange-500 hover:bg-orange-600 text-white">
+            <Button onClick={handleConfirm} size="sm" className="bg-orange-500 hover:bg-orange-600 text-white dark:bg-orange-600 dark:hover:bg-orange-500 dark:text-white">
               Send Email
             </Button>
           </AlertDialogAction>

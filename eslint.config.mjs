@@ -11,6 +11,11 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+
+  // ⛔ Ignore linting in the supabase folder
+  {
+    ignores: ["supabase/**"],
+  },
 ];
 
 export default eslintConfig;

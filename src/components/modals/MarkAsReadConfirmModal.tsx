@@ -100,13 +100,13 @@ export function MarkAsReadConfirmModal({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl bg-white border border-slate-200 shadow-lg">
+      <DialogContent className="max-w-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <MailOpen className="h-4 w-4 text-blue-600" />
+            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
+              <MailOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
-            <DialogTitle className="text-xl font-semibold">
+            <DialogTitle className="text-xl font-semibold dark:text-slate-100">
               {getTitle()}
             </DialogTitle>
           </div>
@@ -114,14 +114,14 @@ export function MarkAsReadConfirmModal({
 
         <div className="space-y-4">
           {senders.length > 0 && (
-            <div className="border rounded-lg overflow-hidden">
-              <div className="p-3 border-b bg-slate-50">
+            <div className="border dark:border-slate-700 rounded-lg overflow-hidden">
+              <div className="p-3 border-b dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">Selected Senders</span>
-                  <span className="text-xs text-slate-500">{senderCount} {senderCount === 1 ? 'sender' : 'senders'}</span>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Selected Senders</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">{senderCount} {senderCount === 1 ? 'sender' : 'senders'}</span>
                 </div>
               </div>
-              <div className="max-h-[110px] overflow-y-auto p-3 bg-white">
+              <div className="max-h-[110px] overflow-y-auto p-3 bg-white dark:bg-slate-800">
                 <div className="space-y-2">
                   {sortedSenders.map(sender => {
                     const unreadCount = getUnreadCountForSender(sender)
@@ -131,10 +131,10 @@ export function MarkAsReadConfirmModal({
                         className="flex items-center justify-between py-1.5"
                       >
                         <div className="flex flex-col flex-1 min-w-0 mr-4">
-                          <span className="text-sm text-slate-700 truncate">{sender}</span>
+                          <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{sender}</span>
                         </div>
                         {unreadCount > 0 && (
-                          <span className="text-sm text-blue-600 font-medium whitespace-nowrap">
+                          <span className="text-sm text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap">
                             {unreadCount.toLocaleString()}
                           </span>
                         )}
@@ -146,8 +146,8 @@ export function MarkAsReadConfirmModal({
             </div>
           )}
           
-          <div className="p-3 border border-blue-200 bg-blue-50 rounded-md">
-            <p className="text-sm text-blue-700 font-medium">
+          <div className="p-3 border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 rounded-md">
+            <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
               You can undo this later by marking emails as unread in Gmail
             </p>
           </div>
@@ -157,13 +157,13 @@ export function MarkAsReadConfirmModal({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="mr-2 bg-white"
+            className="mr-2 bg-white dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-600"
           >
             Cancel
           </Button>
           <Button
             onClick={handleConfirm}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-white"
             disabled={isProcessing}
           >
             {isProcessing ? (

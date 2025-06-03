@@ -13,7 +13,12 @@ import { TopBar } from '@/components/TopBar/TopBar'
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading: authLoading } = useAuth()
   const { checkWhitelist, isWhitelisted, isLoading: whitelistLoading } = useWhitelist()
-  const { shouldShowPermissionsModal, shouldShowMismatchModal, gmailEmail } = useGmailPermissions()
+  const { 
+    shouldShowPermissionsModal, 
+    shouldShowMismatchModal, 
+    gmailEmail,
+    hideMismatchModal
+  } = useGmailPermissions()
   const router = useRouter()
 
   useEffect(() => {
@@ -30,8 +35,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Show loading state while checking auth or whitelist
   if (authLoading || whitelistLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-slate-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-slate-300"></div>
       </div>
     )
   }
@@ -43,9 +48,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // Main app content that may be blurred
   const mainContent = (
-    <div className="min-h-screen bg-white-50">
+    <div className="bg-white-50 dark:bg-slate-900">
       <TopBar />
-      <main className="px-4 pt-2 pb-4">
+      <main className="px-4 pt-2">
         <div className="max-w-7xl mx-auto">
           {children}
         </div>
@@ -73,6 +78,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {mainContent}
         </div>
         <EmailMismatchModal 
+          isOpen={shouldShowMismatchModal}
+          onClose={hideMismatchModal}
           supabaseEmail={user.email} 
           gmailEmail={gmailEmail} 
         />
