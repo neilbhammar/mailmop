@@ -170,17 +170,18 @@ export async function POST(req: Request) {
           }
         }
 
-        // Determine plan expiration based on cancel_at_period_end and cancel_at
+        // Determine plan expiration based on cancel_at and cancel_at_period_end
+        // Priority: If cancel_at is set, always treat as cancel_at_period_end=true in Supabase
         let planExpiresAt = null;
-        let supabaseCancelAtPeriodEnd = fullSubscription.cancel_at_period_end ?? true;
+        let supabaseCancelAtPeriodEnd = true; // Default to true
         
-        if (fullSubscription.cancel_at_period_end) {
-          // Subscription will cancel - store the actual cancellation date
-          if (fullSubscription.cancel_at) {
-            // If there's a specific cancellation date set (one-time renewals), use that
-            planExpiresAt = new Date(fullSubscription.cancel_at * 1000).toISOString();
-          } else if (fullSubscription.current_period_end) {
-            // If cancel_at_period_end is true but no specific cancel_at date, use current_period_end
+        if (fullSubscription.cancel_at) {
+          // If there's a specific cancellation date set, use that and set cancel_at_period_end=true
+          planExpiresAt = new Date(fullSubscription.cancel_at * 1000).toISOString();
+          supabaseCancelAtPeriodEnd = true;
+        } else if (fullSubscription.cancel_at_period_end) {
+          // No specific cancel_at date, but cancel_at_period_end is true - use current_period_end
+          if (fullSubscription.current_period_end) {
             planExpiresAt = new Date(fullSubscription.current_period_end * 1000).toISOString();
           }
           supabaseCancelAtPeriodEnd = true;
