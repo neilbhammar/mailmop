@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
     // 2. Check for subscriptions expiring in 7 days and send reminder emails
     const { data: expiringProfiles, error: expiringFetchError } = await supabaseAdmin
       .from('profiles')
-      .select('user_id, email, name as full_name, plan_expires_at, stripe_customer_id, cancel_at_period_end, last_reminder_sent')
+      .select('user_id, email, name as full_name, plan_expires_at, stripe_customer_id, cancel_at_period_end, last_upsell_nudge_sent')
       .eq('plan', 'pro')
       .gte('plan_expires_at', now) // Not expired yet
       .lte('plan_expires_at', sevenDaysFromNow) // But expiring within 7 days
@@ -92,9 +92,9 @@ Deno.serve(async (req) => {
 
       for (const profile of expiringProfiles) {
         try {
-          // Check if we've already sent a reminder recently using last_reminder_sent
-          if (profile.last_reminder_sent) {
-            const lastReminderDate = new Date(profile.last_reminder_sent);
+          // Check if we've already sent a reminder recently using last_upsell_nudge_sent
+          if (profile.last_upsell_nudge_sent) {
+            const lastReminderDate = new Date(profile.last_upsell_nudge_sent);
             const daysSinceLastReminder = (Date.now() - lastReminderDate.getTime()) / (1000 * 60 * 60 * 24);
             
             if (daysSinceLastReminder < 30) {

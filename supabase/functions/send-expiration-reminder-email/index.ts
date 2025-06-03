@@ -191,7 +191,7 @@ Deno.serve(async (req: Request) => {
 
     const emailResult = await emailResponse.json();
 
-    // Log the action in Supabase and update last_reminder_sent
+    // Log the action in Supabase and update last_upsell_nudge_sent
     const supabase = (await import('https://esm.sh/@supabase/supabase-js@2')).createClient(
       'https://ucoacqalcpqrjrrqkizf.supabase.co',
       supabaseServiceRoleKey
@@ -209,10 +209,10 @@ Deno.serve(async (req: Request) => {
         }
       });
 
-    // Update the last_reminder_sent timestamp in profiles
+    // Update the last_upsell_nudge_sent timestamp in profiles
     await supabase
       .from('profiles')
-      .update({ last_reminder_sent: new Date().toISOString() })
+      .update({ last_upsell_nudge_sent: new Date().toISOString() })
       .eq('user_id', user_id);
 
     return new Response(
