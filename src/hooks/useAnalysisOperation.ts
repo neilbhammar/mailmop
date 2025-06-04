@@ -1,4 +1,4 @@
-import { useState, useCallback, ReactNode, useRef } from 'react';
+import { useState, useCallback, ReactNode, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   clearSenderAnalysis, 
@@ -27,6 +27,9 @@ import { ActionEndType } from '@/types/actions';
 import { fetchMessageIds } from '@/lib/gmail/fetchMessageIds';
 import { fetchMetadata } from '@/lib/gmail/fetchMetadata';
 import { parseMetadataBatch } from '@/lib/gmail/parseHeaders';
+
+// --- Queue System Integration ---
+import { AnalysisJobPayload, ProgressCallback, ExecutorResult } from '@/types/queue';
 
 // Analysis status types - used for UI state and progress tracking
 type AnalysisStatus = 
@@ -120,12 +123,25 @@ export function useAnalysisOperations() {
   });
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null); // Ref for Wake Lock
+  const cancellationRef = useRef<boolean>(false); // Track cancellation state with ref to avoid closure issues
+  const progressRef = useRef<AnalysisProgress>({ status: 'idle', progress: 0 }); // Track current progress state
 
   const updateProgress = useCallback((newProgress: AnalysisProgress | ((prev: AnalysisProgress) => AnalysisProgress)) => {
     setProgress(prevProgress => {
       const nextProgress = typeof newProgress === 'function' 
         ? newProgress(prevProgress) 
         : newProgress;
+      
+      // Update the ref with the latest progress
+      progressRef.current = nextProgress;
+      
+      // Update cancellation ref when status changes to cancelled
+      if (nextProgress.status === 'cancelled') {
+        cancellationRef.current = true;
+      } else if (nextProgress.status === 'idle' || nextProgress.status === 'preparing') {
+        cancellationRef.current = false; // Reset on new analysis
+      }
+      
       if (prevProgress.status !== nextProgress.status) {
         console.log(`[Analysis] Status changing from ${prevProgress.status} to ${nextProgress.status}`);
         dispatchStatusChange();
@@ -165,7 +181,7 @@ export function useAnalysisOperations() {
     }
   }, []);
 
-  const startAnalysis = useCallback(async (options: AnalysisOptions) => {
+  const startAnalysis = useCallback(async (options: AnalysisOptions, queueProgressCallback?: ProgressCallback, abortSignal?: AbortSignal) => {
     updateProgress({ status: 'preparing', progress: 0 });
     console.log('[Analysis] Preparing analysis...');
 
@@ -227,13 +243,17 @@ export function useAnalysisOperations() {
       emailCount: effectiveEmailCount, // Base ETA on effective count
       mode: options.type as OperationMode
     });
-    const formattedEta = formatDuration(estimatedRuntimeMs);
+    
+    // Apply UX polish - minimum time estimates  
+    const minimumTimeMs = 30000; // 30 seconds minimum
+    const finalEstimatedRuntimeMs = Math.max(minimumTimeMs, estimatedRuntimeMs);
+    const formattedEta = formatDuration(finalEstimatedRuntimeMs);
     console.log(`[Analysis] Estimated runtime: ${formattedEta}`);
     updateProgress(prev => ({ ...prev, eta: formattedEta }));
 
     // Removed pre-operation token expiry checks as getAccessToken handles this implicitly.
     // If token is > 55 mins, a toast warning is still fine.
-    if (estimatedRuntimeMs > (55 * 60 * 1000)) { // 55 minutes
+    if (finalEstimatedRuntimeMs > (55 * 60 * 1000)) { // 55 minutes
       toast.warning(
         "Long Operation Detected",
         {
@@ -264,7 +284,7 @@ export function useAnalysisOperations() {
       estimatedRuntimeMs,
       totalEmails: effectiveEmailCount,
       totalEstimatedBatches,
-      filters: { query, mode: options.type }
+      filters: { query, type: options.type }
     });
 
     let supabaseLogId: string;
@@ -286,6 +306,16 @@ export function useAnalysisOperations() {
     
     updateProgress({ status: 'analyzing', progress: 0 });
     await updateActionLog(supabaseLogId, { status: 'analyzing' });
+
+    // Initial queue progress callback if provided
+    if (queueProgressCallback) {
+      queueProgressCallback(0, effectiveEmailCount);
+    }
+    
+    // For very small operations, add a small delay to ensure UI can render
+    if (effectiveEmailCount <= 100) {
+      await sleep(500); // 500ms delay for very small operations
+    }
 
     console.log('[Analysis] Pre-flight checks passed, proceeding with background analysis');
     
@@ -336,6 +366,15 @@ export function useAnalysisOperations() {
           if (batchIndex > 0) {
             await sleep(BATCH_DELAY_MS);
           }
+          
+          // 🛑 CRITICAL: Check for cancellation before each batch
+          // This prevents the stale closure issue where progress.status doesn't update
+          if (cancellationRef.current || (abortSignal && abortSignal.aborted)) {
+            console.log(`[Analysis] Cancellation detected before batch ${batchIndex + 1}, stopping analysis`);
+            console.log(`[Analysis] Cancellation source: ${cancellationRef.current ? 'cancellationRef' : 'abortSignal'}`);
+            break;
+          }
+          
           const batchNumber = batchIndex + 1;
           console.log(`\n[Analysis] Starting Batch ${batchNumber}`);
 
@@ -408,11 +447,17 @@ export function useAnalysisOperations() {
           console.log(`[Analysis] Batch ${batchNumber} complete. Progress: ${progressPercent}% (${totalProcessed.toLocaleString()}/${effectiveEmailCount.toLocaleString()} emails)`);
           updateProgress(prev => ({ ...prev, progress: progressPercent }));
           updateAnalysisProgress(batchIndex, totalProcessed);
+          
+          // Update queue progress callback if provided
+          if (queueProgressCallback) {
+            queueProgressCallback(totalProcessed, effectiveEmailCount);
+          }
+          
           batchIndex++;
 
-        } while (nextPageToken && progress.status !== 'cancelled');
+        } while (nextPageToken && !cancellationRef.current && !(abortSignal && abortSignal.aborted));
 
-        if (progress.status === 'cancelled') {
+        if (cancellationRef.current || (abortSignal && abortSignal.aborted)) {
            console.log('[Analysis] Analysis was cancelled by the user.');
            await completeActionLog(supabaseLogId, 'user_stopped', totalProcessed);
            completeAnalysis('user_stopped');
@@ -491,6 +536,138 @@ export function useAnalysisOperations() {
       }
     }
   }, [updateProgress, stopSilentAudio]);
+
+  /**
+   * 🔌 QUEUE SYSTEM INTEGRATION
+   * 
+   * This creates a simple adapter function that converts queue payload format
+   * to the format expected by startAnalysis, then calls it directly.
+   * 
+   * This way we get all the benefits:
+   * ✅ Auth handling & reauth modals
+   * ✅ Toast notifications  
+   * ✅ Progress tracking
+   * ✅ Error handling
+   * ✅ Logging to Supabase
+   * ✅ No code duplication!
+   */
+  const queueExecutor = useCallback(async (
+    payload: AnalysisJobPayload,
+    onProgress: ProgressCallback,
+    abortSignal: AbortSignal
+  ): Promise<ExecutorResult> => {
+    console.log('[Analysis] Queue executor called with payload:', payload);
+    
+    // Set up cancellation handling
+    const handleAbort = () => {
+      console.log('[Analysis] Queue cancellation requested via abort event');
+      cancelAnalysis();
+    };
+    
+    console.log('[Analysis] Setting up abort signal listener, signal aborted:', abortSignal.aborted);
+    abortSignal.addEventListener('abort', handleAbort);
+    
+    // Also check if already aborted before we set up the listener
+    if (abortSignal.aborted) {
+      console.log('[Analysis] Abort signal already aborted before listener setup');
+      handleAbort();
+    }
+    
+    try {
+      // Convert queue payload to hook format
+      const options: AnalysisOptions = { type: payload.type };
+      
+      // Create a custom progress callback that bridges to the queue system
+      const bridgeProgressCallback: ProgressCallback = (current, total) => {
+        console.log(`[Analysis] Queue progress update: ${current}/${total}`);
+        onProgress(current, total);
+      };
+      
+      // Call startAnalysis with our bridge callback and abort signal
+      const setupResult = await startAnalysis(options, bridgeProgressCallback, abortSignal);
+      
+      if (!setupResult.success) {
+        // Setup failed, return immediately
+        return {
+          success: false,
+          error: 'Failed to start analysis',
+          processedCount: 0
+        };
+      }
+      
+      // Setup succeeded, now we need to wait for the actual completion
+      // We'll poll the progress state until completion
+      console.log('[Analysis] Analysis setup complete, monitoring for completion...');
+      
+      return new Promise<ExecutorResult>((resolve) => {
+        const pollInterval = setInterval(() => {
+          // Check for cancellation via abort signal OR cancellation ref
+          if (abortSignal.aborted || cancellationRef.current) {
+            clearInterval(pollInterval);
+            console.log('[Analysis] Queue executor detected cancellation via', abortSignal.aborted ? 'abort signal' : 'cancellation ref');
+            resolve({
+              success: false,
+              error: 'Operation cancelled by user',
+              processedCount: progressRef.current.progress
+            });
+            return;
+          }
+          
+          // Check completion status using current progress state from ref
+          const currentProgress = progressRef.current;
+          if (currentProgress.status === 'completed') {
+            clearInterval(pollInterval);
+            console.log('[Analysis] Queue executor detected completion');
+            resolve({
+              success: true,
+              processedCount: currentProgress.progress
+            });
+          } else if (currentProgress.status === 'error') {
+            clearInterval(pollInterval);
+            console.log('[Analysis] Queue executor detected error:', currentProgress.error);
+            resolve({
+              success: false,
+              error: currentProgress.error || 'Analysis failed',
+              processedCount: currentProgress.progress
+            });
+          }
+          // Continue polling for other statuses (preparing, analyzing)
+        }, 500); // Poll every 500ms
+      });
+      
+    } catch (error: any) {
+      // Provide specific error messages based on the error type
+      let errorMessage = 'Unknown error occurred';
+      
+      if (abortSignal.aborted) {
+        errorMessage = 'Operation cancelled by user';
+      } else if (error.message?.includes('authentication') || error.message?.includes('token')) {
+        errorMessage = 'Gmail authentication failed - please reconnect';
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorMessage = 'Network error - please check your connection';
+      } else if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
+        errorMessage = 'Gmail API rate limit reached - please try again later';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      return {
+        success: false,
+        error: errorMessage,
+        processedCount: progressRef.current.progress
+      };
+    } finally {
+      abortSignal.removeEventListener('abort', handleAbort);
+    }
+  }, [startAnalysis, cancelAnalysis]);
+
+  // Register with queue system
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).__queueRegisterExecutor) {
+      console.log('[Analysis] Registering executor with queue system');
+      (window as any).__queueRegisterExecutor('analysis', queueExecutor);
+    }
+  }, [queueExecutor]);
 
   return {
     progress,

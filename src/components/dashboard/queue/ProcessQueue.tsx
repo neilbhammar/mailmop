@@ -27,7 +27,7 @@ import { useQueue } from '@/hooks/useQueue';
 
 // Helper for readable time format
 const formatTimeRemaining = (ms: number): string => {
-  if (ms <= 0) return "~30 seconds"; // Never show 0, always show minimum
+  if (ms <= 0) return "Calculating..."; // Show "Calculating..." instead of "30 seconds"
   
   if (ms < 60000) {
     // Less than 1 minute - show seconds
@@ -151,6 +151,78 @@ export default function ProcessQueue() {
   
   const [open, setOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // State for smoothed ETA calculation
+  const [smoothedETA, setSmoothedETA] = useState<number>(0);
+  const lastUpdateTimeRef = useRef<number>(0);
+  const etaHistoryRef = useRef<number[]>([]);
+  
+  // Calculate ETA with smoothing - only update every 3 seconds and smooth the values
+  useEffect(() => {
+    if (!currentJob || !currentJob.startedAt || currentJob.progress.total <= 0) {
+      setSmoothedETA(0);
+      etaHistoryRef.current = [];
+      return;
+    }
+    
+    const now = Date.now();
+    const elapsed = now - currentJob.startedAt;
+    const progressRatio = currentJob.progress.current / currentJob.progress.total;
+    
+    // 🚀 NEW: Use initial ETA for first 30 seconds if available (for analysis jobs)
+    if (elapsed < 30000 && currentJob.type === 'analysis' && currentJob.payload?.initialEtaMs) {
+      const remainingFromInitial = Math.max(0, currentJob.payload.initialEtaMs - elapsed);
+      // Only update if the difference is significant (more than 1 second) to prevent excessive updates
+      const currentSmoothed = smoothedETA;
+      if (Math.abs(currentSmoothed - remainingFromInitial) > 1000) {
+        console.log(`[ProcessQueue] Using initial ETA for first 30s: ${formatTimeRemaining(remainingFromInitial)}`);
+        setSmoothedETA(remainingFromInitial);
+      }
+      return;
+    }
+    
+    // Only recalculate every 3 seconds to reduce flashing
+    if (now - lastUpdateTimeRef.current < 3000) {
+      return;
+    }
+    
+    // Don't calculate ETA until we have some meaningful progress
+    if (progressRatio <= 0.01) { // 1% threshold
+      lastUpdateTimeRef.current = now;
+      return;
+    }
+    
+    const rawETA = Math.max(0, (elapsed / progressRatio) - elapsed);
+    
+    // Add to history for smoothing
+    etaHistoryRef.current.push(rawETA);
+    
+    // Keep only last 3 calculations for smoothing (reduced from 5 for faster response)
+    if (etaHistoryRef.current.length > 3) {
+      etaHistoryRef.current.shift();
+    }
+    
+    // Calculate median ETA to reduce volatility
+    const sortedETAs = [...etaHistoryRef.current].sort((a, b) => a - b);
+    const medianETA = sortedETAs[Math.floor(sortedETAs.length / 2)];
+    
+    // Only update if the change is significant (reduced to 10 seconds)
+    const currentSmoothed = smoothedETA;
+    if (Math.abs(medianETA - currentSmoothed) > 10000 || currentSmoothed === 0) {
+      setSmoothedETA(medianETA);
+    }
+    
+    lastUpdateTimeRef.current = now;
+  }, [currentJob?.progress.current, currentJob?.startedAt, currentJob?.progress.total, currentJob?.type, currentJob?.payload?.initialEtaMs]);
+  
+  // Reset ETA when job changes
+  useEffect(() => {
+    if (!currentJob) {
+      setSmoothedETA(0);
+      etaHistoryRef.current = [];
+      lastUpdateTimeRef.current = 0;
+    }
+  }, [currentJob?.id]);
 
   // Find the most recently completed job (within last 5 seconds)
   const recentlyCompletedJob = completedJobs.find(job => {
@@ -181,16 +253,28 @@ export default function ProcessQueue() {
         )
     : 0;
   
-  // Estimate time remaining (only for running jobs)
-  const timeRemainingMs = currentJob && currentJob.startedAt && currentJob.progress.total > 0
-    ? (() => {
-        const elapsed = Date.now() - currentJob.startedAt;
-        const progressRatio = currentJob.progress.current / currentJob.progress.total;
-        if (progressRatio === 0) return 0;
-        const estimatedTotal = elapsed / progressRatio;
-        return Math.max(0, estimatedTotal - elapsed);
-      })()
-    : 0;
+  // Use smoothed ETA for display, with fallback for early stages
+  const timeRemainingMs = currentJob ? (
+    smoothedETA > 0 ? smoothedETA : (
+      // Fallback: use a rough estimate based on job start time if no smoothed ETA yet
+      currentJob.progress.total > 0 && currentJob.startedAt ? (
+        (() => {
+          const elapsed = Date.now() - currentJob.startedAt;
+          const progressRatio = currentJob.progress.current / currentJob.progress.total;
+          
+          // If we have some progress (even less than 1%), show a rough estimate
+          if (progressRatio > 0.001) { // 0.1% threshold for rough estimate
+            const roughETA = Math.max(0, (elapsed / progressRatio) - elapsed);
+            // Cap the rough estimate to avoid showing unrealistic numbers
+            return Math.min(roughETA, 20 * 60 * 1000); // Max 20 minutes for rough estimate
+          }
+          
+          // If no meaningful progress yet, don't show an ETA
+          return 0;
+        })()
+      ) : 0
+    )
+  ) : 0;
 
   // Show "Keep tab open" badge for running jobs only
   const showKeepTabOpenBadge = !!currentJob;
@@ -296,16 +380,18 @@ export default function ProcessQueue() {
                       ? Math.min(Math.round((job.progress.current / job.progress.total) * 100), 100)
                       : 0;
                   
-                  // Calculate time remaining for this job
-                  const itemTimeRemainingMs = job.startedAt && job.progress.total > 0
-                    ? (() => {
-                        const elapsed = Date.now() - job.startedAt;
-                        const progressRatio = job.progress.current / job.progress.total;
-                        if (progressRatio === 0) return 0;
-                        const estimatedTotal = elapsed / progressRatio;
-                        return Math.max(0, estimatedTotal - elapsed);
-                      })()
-                    : 0;
+                  // Calculate time remaining for this job (using different variable name to avoid conflict)
+                  const jobTimeRemainingMs = job.startedAt && job.progress.total > 0 && job.id === currentJob?.id
+                    ? smoothedETA // Use the same smoothed ETA for consistency
+                    : job.startedAt && job.progress.total > 0
+                      ? (() => {
+                          const elapsed = Date.now() - job.startedAt;
+                          const progressRatio = job.progress.current / job.progress.total;
+                          if (progressRatio <= 0.001) return 0; // Don't show ETA until 0.1% progress
+                          const rawETA = Math.max(0, (elapsed / progressRatio) - elapsed);
+                          return Math.min(rawETA, 20 * 60 * 1000); // Cap at 20 minutes
+                        })()
+                      : 0;
 
                   let ActionButtonIcon = XIcon;
                   let actionButtonTitle = "Cancel action";
@@ -367,7 +453,7 @@ export default function ProcessQueue() {
                             ) : job.progress.total > 0 ? (
                               <>
                                 {formatEmailCount(job.progress.current)} of ~{formatEmailCount(job.progress.total)} 
-                                {job.status === 'running' && itemTimeRemainingMs > 0 && ` (${formatTimeRemaining(itemTimeRemainingMs)})`}
+                                {job.status === 'running' && jobTimeRemainingMs > 0 && ` (${formatTimeRemaining(jobTimeRemainingMs)})`}
                               </>
                             ) : (
                               'Preparing...'

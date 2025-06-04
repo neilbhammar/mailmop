@@ -63,6 +63,7 @@ export interface MarkReadJobPayload {
 
 export interface AnalysisJobPayload {
   type: 'full' | 'quick';        // Analysis mode
+  initialEtaMs: number;          // Pre-calculated ETA from Step2 for stable initial display
 }
 
 export interface CreateFilterJobPayload {
