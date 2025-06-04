@@ -1,0 +1,40 @@
+fix: replace hardcoded URLs with environment variables in edge functions
+
+This commit addresses security and deployment flexibility issues by removing
+hardcoded URLs and API keys from edge functions and database functions.
+
+## Edge Function Updates:
+
+### send-expiration-reminder-email/index.ts:
+- Add CORS headers import and POST method validation
+- Replace hardcoded localhost URLs with NEXT_PUBLIC_APP_URL env var
+- Switch from Stripe library to direct API calls for better reliability
+- Use SUPABASE_URL env var instead of hardcoded project URL
+- Improve error handling for Stripe portal session creation
+- Fix renewal URL generation for canceled vs active subscriptions
+
+### send-premium-upsell-email/index.ts:
+- Add NEXT_PUBLIC_SITE_URL environment variable for checkout URLs
+- Replace hardcoded Supabase URL with SUPABASE_URL env var
+- Update Stripe checkout success/cancel URLs to use dynamic site URL
+
+## Database Migrations:
+- Create comprehensive migration suite in supabase/migrations/
+- 20241201000000_initial_schema.sql: Complete database schema
+- 20241201000001_rls_policies.sql: Row Level Security policies
+- 20241201000002_seed_data.sql: Seed data from current database
+- 20250604230058_fix_hardcoded_urls_in_functions.sql: Remove hardcoded URLs from DB functions
+
+## Documentation:
+- ENVIRONMENT_SETUP_EXPLAINED.md: Complete env var setup guide
+- MIGRATION_SETUP_COMPLETE.md: Migration process documentation  
+- setup-edge-function-env.md: Edge function environment setup guide
+
+## Benefits:
+- Improved security by removing hardcoded sensitive URLs
+- Better deployment flexibility across environments
+- Enhanced error handling and CORS support
+- Comprehensive documentation for future deployments
+- Database schema version control with migrations
+
+Fixes deployment issues and improves maintainability for production deployments. 
