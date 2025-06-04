@@ -551,7 +551,7 @@ export default function Home() {
               <div className="md:col-span-12 bg-white rounded-2xl p-6 sm:p-8 relative overflow-hidden group border border-gray-100 shadow-sm hover:shadow-md transition-all dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100 rounded-full opacity-20 transform translate-x-1/3 -translate-y-1/3 group-hover:bg-blue-200 transition-colors dark:bg-blue-900/20 dark:group-hover:bg-blue-800/30"></div>
                 <div className="flex flex-col md:flex-row items-start gap-6 sm:gap-8 relative z-10">
-                  <div className="md:w-1/2">
+                  <div className="w-full md:w-1/2">
                     <div className="flex items-center gap-3 mb-4 sm:mb-6">
                       <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center text-lg sm:text-xl font-bold">1</div>
                       <h3 className="text-xl sm:text-2xl font-semibold dark:text-slate-100">Local-First Analysis</h3>
@@ -575,7 +575,7 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
-                  <div className="md:w-1/2 h-full flex items-center justify-center">
+                  <div className="w-full md:w-1/2 h-full flex items-center justify-center">
                     {/* Updated Local Analysis Visual */}
                     <div className="relative w-full h-64 bg-gray-100 rounded-xl overflow-hidden p-1 transform transition-transform group-hover:scale-105 border border-gray-200 shadow-inner dark:bg-slate-700 dark:border-slate-600">
                       {/* Browser Top Bar */}
@@ -590,8 +590,8 @@ export default function Home() {
                       {/* Browser Content Area */}
                       <div className="mt-7 h-[calc(100%-1.75rem)] bg-white p-4 flex items-center justify-center relative dark:bg-slate-700/50">
                         <div className="w-full h-full flex flex-col items-center justify-center space-y-3">
-                          {/* Stylized email list */}
-                          <div className="w-4/5 p-2 bg-blue-50 rounded-md space-y-1.5 shadow-sm dark:bg-blue-900/20">
+                          {/* Stylized email list - made wider */}
+                          <div className="w-full p-3 bg-blue-50 rounded-md space-y-2 shadow-sm dark:bg-blue-900/20">
                             {[1, 2, 3, 4].map((i) => (
                               <div key={i} className={`h-3 rounded-sm ${i === 2 ? 'bg-blue-400 dark:bg-blue-600/50 w-full' : 'bg-blue-200 dark:bg-blue-700/30 w-11/12'}`}></div>
                             ))}
