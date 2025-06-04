@@ -15,7 +15,8 @@ export type JobType =
   | 'markRead'
   | 'applyLabel'
   | 'createFilter'
-  | 'unsubscribe';
+  | 'unsubscribe'
+  | 'modifyLabel';
 
 // Status of a job in the queue
 export type JobStatus = 'queued' | 'running' | 'success' | 'error' | 'cancelled';
@@ -44,6 +45,7 @@ export interface DeleteJobPayload {
     email: string; 
     count: number;               // Estimated email count
   }[];
+  initialEtaMs: number;          // Pre-calculated ETA for stable initial display
 }
 
 export interface DeleteWithExceptionsJobPayload {
@@ -52,6 +54,7 @@ export interface DeleteWithExceptionsJobPayload {
     count: number;               // Estimated email count
   }[];
   filterRules: RuleGroup[];      // Filter rules for partial deletion
+  initialEtaMs: number;          // Pre-calculated ETA for stable initial display
 }
 
 export interface MarkReadJobPayload {
@@ -82,6 +85,16 @@ export interface UnsubscribeJobPayload {
   senderEmail: string;
   unsubscribeUrl?: string;       // Direct unsubscribe URL if available
   method: 'link' | 'mailto' | 'auto'; // Unsubscribe method
+}
+
+export interface ModifyLabelJobPayload {
+  senders: { 
+    email: string; 
+    emailCount: number;          // Estimated email count
+  }[];
+  labelIds: string[];            // Label IDs to add or remove
+  actionType: 'add' | 'remove';  // Whether to add or remove labels
+  initialEtaMs: number;          // Pre-calculated ETA for stable initial display
 }
 
 // Type guard functions

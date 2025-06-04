@@ -45,6 +45,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 // Add new imports for hooks
 import { useModifyLabel } from "@/hooks/useModifyLabel"
 import { useCreateFilter } from "@/hooks/useCreateFilter"
+import { useQueue } from "@/hooks/useQueue"
+import { estimateRuntimeMs } from "@/lib/utils/estimateRuntime"
 
 // Import for reauth dialog
 import { ReauthDialog } from '@/components/modals/ReauthDialog';
@@ -57,7 +59,7 @@ interface ApplyLabelModalProps {
   emailCount: number
   senders?: string[]
   emailCountMap?: Record<string, number>
-  onConfirm: (options: { 
+  onConfirm?: (options: { 
     actionType: 'add' | 'remove'
     labelIds: string[]
     labelNames: string[]
@@ -105,6 +107,7 @@ export function ApplyLabelModal({
   // Add hooks
   const { startModifyLabel, progress: modifyProgress } = useModifyLabel()
   const { startCreateFilter, progress: filterProgress } = useCreateFilter()
+  const { enqueue } = useQueue()
   
   // Get GmailPermissions context
   const { getAccessToken, tokenStatus } = useGmailPermissions();
@@ -227,30 +230,8 @@ export function ApplyLabelModal({
     
     setIsProcessing(true)
     try {
-      // Prepare the sender data for the hooks
-      const sendersToModify = senders.map(email => ({
-        email,
-        emailCount: emailCountMap[email] || 0
-      }))
-
-      // First modify the labels on existing emails
-      await startModifyLabel({
-        senders: sendersToModify,
-        labelIds: selectedLabels.map(label => label.id),
-        actionType
-      })
-
-      // If apply to future is checked, create the filter
-      if (applyToFuture) {
-        await startCreateFilter({
-          senders: senders,
-          labelIds: selectedLabels.map(label => label.id),
-          actionType
-        })
-      }
-
-      // Call the onConfirm callback if provided
       if (onConfirm) {
+        // Legacy path - use provided onConfirm function
         const newLabels = selectedLabels.filter(label => label.isNew).map(label => label.name)
         await onConfirm({
           actionType,
@@ -259,6 +240,40 @@ export function ApplyLabelModal({
           createNewLabels: newLabels,
           applyToFuture
         })
+      } else {
+        // Queue path - use queue system
+        console.log('[ApplyLabelModal] Using queue system for label modification');
+        
+        // Prepare the sender data for the queue
+        const sendersToModify = senders.map(email => ({
+          email,
+          emailCount: emailCountMap[email] || 0
+        }));
+
+        // Calculate initial ETA for stable display
+        const totalEmailCount = sendersToModify.reduce((sum, sender) => sum + sender.emailCount, 0);
+        const initialEtaMs = estimateRuntimeMs({
+          operationType: 'mark', // Label modification is similar to mark
+          emailCount: totalEmailCount,
+          mode: 'single'
+        });
+
+        // Add label modification job to queue
+        enqueue('modifyLabel', {
+          senders: sendersToModify,
+          labelIds: selectedLabels.map(label => label.id),
+          actionType,
+          initialEtaMs
+        });
+
+        // If apply to future is checked, create the filter
+        if (applyToFuture) {
+          await startCreateFilter({
+            senders: senders,
+            labelIds: selectedLabels.map(label => label.id),
+            actionType
+          })
+        }
       }
 
       onOpenChange(false)
@@ -759,7 +774,7 @@ export function ApplyLabelModal({
             {isProcessing ? (
               <div className="flex items-center gap-2">
                 <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                <span>Processing...</span>
+                <span>{onConfirm ? 'Processing...' : 'Adding to Queue...'}</span>
               </div>
             ) : (
               <span>{actionType === 'add' ? 'Apply Labels' : 'Remove Labels'}</span>

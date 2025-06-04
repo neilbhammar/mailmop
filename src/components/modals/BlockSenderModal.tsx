@@ -16,7 +16,8 @@ import { cn } from "@/lib/utils"
 
 // --- Hooks ---
 import { useCreateFilter } from "@/hooks/useCreateFilter"
-import { useDelete } from "@/hooks/useDelete"
+import { useQueue } from "@/hooks/useQueue"
+import { estimateRuntimeMs } from "@/lib/utils/estimateRuntime"
 
 interface BlockSenderModalProps {
   /**
@@ -70,7 +71,7 @@ export function BlockSenderModal({
   
   // Get the hooks we need
   const { startCreateFilter } = useCreateFilter()
-  const { startDelete } = useDelete()
+  const { enqueue } = useQueue()
   
   // Get the email count for a sender
   const getEmailCountForSender = (sender: string): number => {
@@ -98,12 +99,25 @@ export function BlockSenderModal({
       
       // If user chose to delete historical emails, do that too
       if (deleteHistoricalEmails) {
-        await startDelete(
-          senders.map(email => ({
-            email,
-            count: getEmailCountForSender(email)
-          }))
-        )
+        // Convert senders to the format expected by the queue
+        const sendersForQueue = senders.map(email => ({
+          email,
+          count: getEmailCountForSender(email)
+        }));
+        
+        // Calculate initial ETA for stable display
+        const totalEmailCount = sendersForQueue.reduce((sum, sender) => sum + sender.count, 0);
+        const initialEtaMs = estimateRuntimeMs({
+          operationType: 'delete',
+          emailCount: totalEmailCount,
+          mode: 'single'
+        });
+        
+        // Add delete job to queue
+        enqueue('delete', {
+          senders: sendersForQueue,
+          initialEtaMs
+        });
       }
       
       // Call the onConfirm callback

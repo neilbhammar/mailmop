@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, useMemo } from "react"
 import {
   Dialog,
   DialogContent,
@@ -58,6 +58,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useViewInGmail } from '@/hooks/useViewInGmail'
+import { useQueue } from "@/hooks/useQueue"
+import { estimateRuntimeMs } from "@/lib/utils/estimateRuntime"
+import { buildQuery } from "@/lib/gmail/buildQuery"
 
 // Operator types
 type Operator = 'and' | 'or';
@@ -96,7 +99,7 @@ interface DeleteWithExceptionsModalProps {
   onOpenChange: (open: boolean) => void;
   emailCount: number;
   senderCount: number;
-  onConfirm: (ruleGroups: RuleGroup[]) => Promise<void>;
+  onConfirm?: (ruleGroups: RuleGroup[]) => Promise<void>;
   senders?: string[];
   emailCountMap?: Record<string, number>;
 }
@@ -200,6 +203,7 @@ export function DeleteWithExceptionsModal({
   emailCountMap = {}
 }: DeleteWithExceptionsModalProps) {
   const { viewFilteredEmailsInGmail } = useViewInGmail();
+  const { enqueue } = useQueue();
 
   // Date presets for quick filters
   const datePresets = [
@@ -569,37 +573,93 @@ export function DeleteWithExceptionsModal({
   
   // Handle confirmation
   const handleConfirm = async () => {
-    try {
-      setIsDeleting(true);
-      
-      // Get valid rule groups (with at least one valid condition)
-      const validGroups = ruleGroups.filter(
-        group => group.conditions.some(c => c.isValid)
-      );
-      
-      // If we have no filters, create a "match all" condition
-      if (validGroups.length === 0) {
-        const defaultGroup: RuleGroup = {
-          id: crypto.randomUUID(),
-          operator: 'and' as Operator,
-          conditions: [{
-            id: crypto.randomUUID(),
-            type: 'contains' as ConditionType,
-            value: '',
-            isValid: true
-          }]
-        };
+    if (onConfirm) {
+      // Legacy path - use provided onConfirm function
+      try {
+        setIsDeleting(true);
         
-        await onConfirm([defaultGroup]);
-      } else {
-        await onConfirm(validGroups);
+        // Get valid rule groups (with at least one valid condition)
+        const validGroups = ruleGroups.filter(
+          group => group.conditions.some(c => c.isValid)
+        );
+        
+        // If we have no filters, create a "match all" condition
+        if (validGroups.length === 0) {
+          const defaultGroup: RuleGroup = {
+            id: crypto.randomUUID(),
+            operator: 'and' as Operator,
+            conditions: [{
+              id: crypto.randomUUID(),
+              type: 'contains' as ConditionType,
+              value: '',
+              isValid: true
+            }]
+          };
+          
+          await onConfirm([defaultGroup]);
+        } else {
+          await onConfirm(validGroups);
+        }
+        
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Error during deletion with exceptions:", error);
+      } finally {
+        setIsDeleting(false);
       }
-      
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Error during deletion with exceptions:", error);
-    } finally {
-      setIsDeleting(false);
+    } else {
+      // New queue path - add job to queue
+      try {
+        setIsDeleting(true);
+        
+        // Get valid rule groups (with at least one valid condition)
+        const validGroups = ruleGroups.filter(
+          group => group.conditions.some(c => c.isValid)
+        );
+        
+        // If we have no filters, create a "match all" condition
+        let finalRules = validGroups;
+        if (validGroups.length === 0) {
+          const defaultGroup: RuleGroup = {
+            id: crypto.randomUUID(),
+            operator: 'and' as Operator,
+            conditions: [{
+              id: crypto.randomUUID(),
+              type: 'contains' as ConditionType,
+              value: '',
+              isValid: true
+            }]
+          };
+          finalRules = [defaultGroup];
+        }
+        
+        // Convert senders to the format expected by the queue
+        const sendersForQueue = senders.map(email => ({
+          email,
+          count: emailCountMap[email] || Math.floor(emailCount / senders.length) || 0
+        }));
+        
+        // Calculate initial ETA for stable display
+        const initialEtaMs = estimateRuntimeMs({
+          operationType: 'delete',
+          emailCount,
+          mode: 'single'
+        });
+        
+        // Add job to queue
+        enqueue('deleteWithExceptions', {
+          senders: sendersForQueue,
+          filterRules: finalRules,
+          initialEtaMs
+        });
+        
+        // Close modal immediately - user can track progress in ProcessQueue
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Error adding delete with exceptions job to queue:", error);
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -805,6 +865,17 @@ export function DeleteWithExceptionsModal({
       // For now, do nothing if query is empty
       console.log("Preview clicked, but no valid filters or senders to generate query.");
     }
+  };
+
+  // NEW: Handler for the Estimate button
+  const handleEstimate = () => {
+    // Calculate initial ETA for the estimation
+    const initialEtaMs = estimateRuntimeMs({
+      operationType: 'delete',
+      emailCount,
+      mode: 'single'
+    });
+    console.log(`Estimated runtime: ${initialEtaMs} ms`);
   };
 
   return (
@@ -1104,7 +1175,7 @@ export function DeleteWithExceptionsModal({
           >
             {isDeleting ? (
               <span className="flex items-center">
-                <span className="animate-pulse">Deleting</span>
+                <span className="animate-pulse">{onConfirm ? 'Deleting' : 'Adding to Queue'}</span>
                 <span className="animate-pulse">...</span>
               </span>
             ) : (

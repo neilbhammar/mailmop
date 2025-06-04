@@ -39,6 +39,20 @@ const formatTimeRemaining = (ms: number): string => {
   return `~${minutes} minute${minutes === 1 ? '' : 's'}`;
 };
 
+// Helper to format email count display
+const formatEmailCount = (count: number) => {
+  return count.toLocaleString();
+};
+
+// Helper to format progress display - shows just current count when exceeding original estimate
+const formatProgressDisplay = (current: number, total: number): string => {
+  if (current > total && total > 0) {
+    // When we've exceeded the original estimate, show just the current count
+    return formatEmailCount(current);
+  }
+  return `${formatEmailCount(current)} of ~${formatEmailCount(total)}`;
+};
+
 // Progress circle component
 function DetailedProgressCircle({ percentage, isCompleted }: { percentage: number, isCompleted?: boolean }) {
   const size = 24; 
@@ -81,11 +95,6 @@ function DetailedProgressCircle({ percentage, isCompleted }: { percentage: numbe
     </div>
   );
 }
-
-// Function to format email count
-const formatEmailCount = (count: number) => {
-  return count.toLocaleString();
-};
 
 // Get display title for a job
 const getActionDisplayTitle = (job: Job): string => {
@@ -299,7 +308,7 @@ export default function ProcessQueue() {
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <div className="truncate">
-              {formatEmailCount(activeJob.progress.current)} of ~{formatEmailCount(activeJob.progress.total)}
+              {formatProgressDisplay(activeJob.progress.current, activeJob.progress.total)}
             </div>
             <div className="text-slate-400 dark:text-slate-500 flex-shrink-0">•</div>
             <div className="flex-shrink-0">
@@ -452,7 +461,7 @@ export default function ProcessQueue() {
                               'Cancelled by user'
                             ) : job.progress.total > 0 ? (
                               <>
-                                {formatEmailCount(job.progress.current)} of ~{formatEmailCount(job.progress.total)} 
+                                {formatProgressDisplay(job.progress.current, job.progress.total)}
                                 {job.status === 'running' && jobTimeRemainingMs > 0 && ` (${formatTimeRemaining(jobTimeRemainingMs)})`}
                               </>
                             ) : (

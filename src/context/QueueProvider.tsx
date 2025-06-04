@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect, useRef, useCallback, ReactNode, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Job, JobType, JobStatus, ProgressCallback, ExecutorResult } from '@/types/queue';
+import { Job, JobType, JobStatus, ProgressCallback, ExecutorResult, JobExecutor } from '@/types/queue';
 import { toast } from 'sonner';
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
 import { ReauthDialog } from '@/components/modals/ReauthDialog';
@@ -139,70 +139,10 @@ export function QueueProvider({ children }: { children: ReactNode }) {
   // Track if user has dismissed the reauth dialog (don't show again until new job or reconnect)
   const [reauthDialogDismissed, setReauthDialogDismissed] = useState(false);
 
-  // Register executors (will be populated by hooks)
-  const registerExecutor = useCallback((type: JobType, executor: any) => {
+  // Register an executor for a specific job type
+  const registerExecutor = useCallback((type: JobType, executor: JobExecutor) => {
+    console.log(`[Queue] Registering executor for type: ${type}`);
     executorsRef.current[type] = executor;
-  }, []);
-
-  // Temporary test executor for demonstration
-  useEffect(() => {
-    // Register a simple test executor for analysis
-    const testAnalysisExecutor = async (
-      payload: any,
-      onProgress: ProgressCallback,
-      abortSignal: AbortSignal
-    ): Promise<ExecutorResult> => {
-      console.log('[TestExecutor] Starting analysis with payload:', payload);
-      
-      const totalItems = 1000;
-      const batchSize = 100;
-      
-      for (let i = 0; i < totalItems; i += batchSize) {
-        if (abortSignal.aborted) {
-          console.log('[TestExecutor] Aborted');
-          return { success: false, error: 'Cancelled by user' };
-        }
-        
-        // Simulate processing
-        await new Promise(resolve => setTimeout(resolve, 500));
-        onProgress(Math.min(i + batchSize, totalItems), totalItems);
-        
-        console.log(`[TestExecutor] Progress: ${Math.min(i + batchSize, totalItems)}/${totalItems}`);
-      }
-      
-      return { success: true, processedCount: totalItems };
-    };
-    
-    // Register test executors
-    executorsRef.current.analysis = testAnalysisExecutor;
-    
-    // Simple test executors for other types
-    const createSimpleExecutor = (type: string, duration: number = 3000) => async (
-      payload: any,
-      onProgress: ProgressCallback,
-      abortSignal: AbortSignal
-    ): Promise<ExecutorResult> => {
-      console.log(`[TestExecutor] Starting ${type} with payload:`, payload);
-      
-      const steps = 10;
-      const stepDuration = duration / steps;
-      
-      for (let i = 0; i <= steps; i++) {
-        if (abortSignal.aborted) {
-          return { success: false, error: 'Cancelled by user' };
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, stepDuration));
-        onProgress(i, steps);
-      }
-      
-      return { success: true };
-    };
-    
-    // Only create test executors for unimplemented types
-    executorsRef.current.delete = createSimpleExecutor('delete', 5000);
-    executorsRef.current.createFilter = createSimpleExecutor('createFilter', 1000);
-    // Note: markRead executor will be registered by useMarkAsRead hook
   }, []);
 
   // Enqueue a new job
@@ -379,10 +319,11 @@ export function QueueProvider({ children }: { children: ReactNode }) {
       // Reset dismissal state when user reconnects
       setReauthDialogDismissed(false);
       
-      toast.success('Gmail Connected', {
-        description: 'Queue processing will resume automatically.',
-        duration: 3000,
-      });
+      // DISABLED: Toast notification when queue resumes
+      // toast.success('Gmail Connected', {
+      //   description: 'Queue processing will resume automatically.',
+      //   duration: 3000,
+      // });
     }
   }, [hasRefreshToken, state.jobs, state.isProcessing, showReauthDialog, setShowReauthDialog]);
 
