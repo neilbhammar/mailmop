@@ -16,11 +16,20 @@ import { Label } from "@/components/ui/label"
 import { MailWarning } from "lucide-react"
 import { useState, useEffect } from "react"
 
+// --- Queue Integration ---
+import { useQueue } from "@/hooks/useQueue"
+import { estimateRuntimeMs } from "@/lib/utils/estimateRuntime"
+
 interface ConfirmUnsubscribeModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   senderEmail: string
-  onConfirm: () => void // Called when user confirms sending the email
+  methodDetails: {
+    type: "url" | "mailto";
+    value: string; 
+    requiresPost?: boolean;
+  }
+  onConfirm?: () => void // Optional: Called when user confirms sending the email (legacy support)
   onCancel?: () => void // Optional: Called when user explicitly cancels
 }
 
@@ -30,15 +39,15 @@ export function ConfirmUnsubscribeModal({
   open,
   onOpenChange,
   senderEmail,
+  methodDetails,
   onConfirm,
   onCancel,
 }: ConfirmUnsubscribeModalProps) {
   const [dontShowAgain, setDontShowAgain] = useState(false)
+  const { enqueue } = useQueue()
 
-  // Effect to check session storage when modal is opened (or would be opened)
-  // This is slightly different from the plan: the check should happen *before* deciding to show the modal.
-  // For now, this modal will always be shown if `open` is true. The calling code will manage the session check.
-  // This modal itself will just handle setting the session storage if "don't show again" is checked.
+  // Check if this is an EMAIL-based operation that should use the queue
+  const isEmailOperation = methodDetails.type === "mailto" && !methodDetails.requiresPost
 
   const handleConfirm = () => {
     if (dontShowAgain) {
@@ -48,7 +57,27 @@ export function ConfirmUnsubscribeModal({
         console.warn("Could not save to session storage:", error)
       }
     }
-    onConfirm()
+
+    // Use queue for EMAIL-based operations, legacy path for others
+    if (isEmailOperation) {
+      // Calculate initial ETA for unsubscribe operation
+      const unsubscribeEtaMs = estimateRuntimeMs({
+        operationType: 'mark', // Similar complexity to marking
+        emailCount: 1, // Unsubscribe is a single operation
+        mode: 'single'
+      })
+
+      // Add unsubscribe job to queue
+      enqueue('unsubscribe', {
+        senderEmail,
+        methodDetails,
+        initialEtaMs: unsubscribeEtaMs
+      })
+    } else {
+      // Legacy path for URL-based or POST operations
+      onConfirm?.()
+    }
+
     onOpenChange(false)
   }
 

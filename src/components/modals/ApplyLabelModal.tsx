@@ -44,7 +44,6 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 // Add new imports for hooks
 import { useModifyLabel } from "@/hooks/useModifyLabel"
-import { useCreateFilter } from "@/hooks/useCreateFilter"
 import { useQueue } from "@/hooks/useQueue"
 import { estimateRuntimeMs } from "@/lib/utils/estimateRuntime"
 
@@ -106,7 +105,6 @@ export function ApplyLabelModal({
 }: ApplyLabelModalProps) {
   // Add hooks
   const { startModifyLabel, progress: modifyProgress } = useModifyLabel()
-  const { startCreateFilter, progress: filterProgress } = useCreateFilter()
   const { enqueue } = useQueue()
   
   // Get GmailPermissions context
@@ -268,11 +266,20 @@ export function ApplyLabelModal({
 
         // If apply to future is checked, create the filter
         if (applyToFuture) {
-          await startCreateFilter({
+          // Calculate initial ETA for filter creation (quick operation)
+          const filterEtaMs = estimateRuntimeMs({
+            operationType: 'mark', // Similar complexity to marking
+            emailCount: 1, // Filter creation is a single operation
+            mode: 'single'
+          });
+
+          // Add filter creation job to queue
+          enqueue('createFilter', {
             senders: senders,
             labelIds: selectedLabels.map(label => label.id),
-            actionType
-          })
+            actionType,
+            initialEtaMs: filterEtaMs
+          });
         }
       }
 

@@ -15,7 +15,6 @@ import { Ban } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // --- Hooks ---
-import { useCreateFilter } from "@/hooks/useCreateFilter"
 import { useQueue } from "@/hooks/useQueue"
 import { estimateRuntimeMs } from "@/lib/utils/estimateRuntime"
 
@@ -70,7 +69,6 @@ export function BlockSenderModal({
   const [deleteHistoricalEmails, setDeleteHistoricalEmails] = useState(false)
   
   // Get the hooks we need
-  const { startCreateFilter } = useCreateFilter()
   const { enqueue } = useQueue()
   
   // Get the email count for a sender
@@ -90,12 +88,20 @@ export function BlockSenderModal({
     try {
       setIsProcessing(true)
       
-      // First create the filter to send future emails to trash
-      await startCreateFilter({
+      // Calculate initial ETA for filter creation (quick operation)
+      const filterEtaMs = estimateRuntimeMs({
+        operationType: 'mark', // Similar complexity to marking
+        emailCount: 1, // Filter creation is a single operation
+        mode: 'single'
+      });
+
+      // First create the filter to send future emails to trash using queue
+      enqueue('createFilter', {
         senders: senders,
         labelIds: ['TRASH'],
         actionType: 'add',
-      })
+        initialEtaMs: filterEtaMs
+      });
       
       // If user chose to delete historical emails, do that too
       if (deleteHistoricalEmails) {

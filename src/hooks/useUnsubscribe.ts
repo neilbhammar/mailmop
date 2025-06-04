@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthProvider';
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
@@ -9,6 +9,9 @@ import { markSenderActionTaken } from '@/lib/storage/senderAnalysis';
 import { parseMailto } from '@/lib/gmail/parseMailto';
 import { sendUnsubEmail } from '@/lib/gmail/sendUnsubEmail';
 import { ActionType, ActionStatus, ActionEndType } from '@/types/actions';
+
+// --- Queue Types ---
+import { UnsubscribeJobPayload, ProgressCallback, ExecutorResult } from '@/types/queue';
 
 // Matches the one in getUnsubscribeMethod.ts and expected by AnalysisView
 export interface UnsubscribeMethodDetails {
@@ -47,11 +50,28 @@ export function useUnsubscribe() {
     setReauthModal({ isOpen: false, type: 'expired' });
   }, []);
 
-  const run = useCallback(async (params: UnsubscribeHookParams, methodDetails: UnsubscribeMethodDetails): Promise<{ success: boolean; error: string | null }> => {
+  const run = useCallback(async (
+    params: UnsubscribeHookParams, 
+    methodDetails: UnsubscribeMethodDetails,
+    queueProgressCallback?: ProgressCallback,
+    abortSignal?: AbortSignal
+  ): Promise<{ success: boolean; error: string | null }> => {
     setIsLoading(true);
     setError(null);
     let operationErrorMessage: string | null = null;
     console.log(`useUnsubscribe: Unsubscribing from ${params.senderEmail} using ${methodDetails.type}: ${methodDetails.value}`);
+
+    // Check for cancellation at the start
+    if (abortSignal?.aborted) {
+      console.log('[Unsubscribe] Operation cancelled before starting');
+      setIsLoading(false);
+      return { success: false, error: 'Operation cancelled by user' };
+    }
+
+    // Report initial progress to queue (only for EMAIL-based operations)
+    if (queueProgressCallback && methodDetails.type === "mailto" && !methodDetails.requiresPost) {
+      queueProgressCallback(0, 1); // Unsubscribe is a single operation
+    }
 
     if (!user?.id) {
       operationErrorMessage = "User not authenticated";
@@ -142,6 +162,14 @@ export function useUnsubscribe() {
             operationErrorMessage = "Access token is required for sending email but was not available.";
             throw new Error(operationErrorMessage);
           }
+          
+          // Check for cancellation before sending email
+          if (abortSignal?.aborted) {
+            console.log('[Unsubscribe] Operation cancelled before sending email');
+            setIsLoading(false);
+            return { success: false, error: 'Operation cancelled by user' };
+          }
+          
           const mailtoParts = parseMailto(methodDetails.value);
           if (!mailtoParts || !mailtoParts.to) {
             operationErrorMessage = `Invalid mailto link or missing recipient: ${methodDetails.value}`;
@@ -153,6 +181,14 @@ export function useUnsubscribe() {
             subject: mailtoParts.subject || "Unsubscribe",
             body: mailtoParts.body || "Please unsubscribe me from this mailing list.",
           });
+          
+          // Check for cancellation after sending email
+          if (abortSignal?.aborted) {
+            console.log('[Unsubscribe] Operation cancelled after sending email');
+            setIsLoading(false);
+            return { success: false, error: 'Operation cancelled by user' };
+          }
+          
           toast.success(`Unsubscribe email sent for ${params.senderEmail}.`);
           actionEndType = 'success';
           success = true;
@@ -172,6 +208,11 @@ export function useUnsubscribe() {
           notes: methodDetails.requiresPost ? "Mailto one-click (opened link as fallback)" : undefined
         });
         console.log(`[useUnsubscribe] Logged unsubscribe action to Supabase for ${params.senderEmail}`);
+        
+        // Report completion to queue (only for EMAIL-based operations)
+        if (queueProgressCallback && methodDetails.type === "mailto" && !methodDetails.requiresPost) {
+          queueProgressCallback(1, 1);
+        }
       }
       
     } catch (err: any) {
@@ -199,6 +240,72 @@ export function useUnsubscribe() {
     getAccessToken,
     isGmailConnected,
   ]);
+
+  // --- Queue Integration ---
+  // Create a queue executor wrapper that converts payloads and calls existing function
+  // Only for EMAIL-based unsubscribe operations (mailto without requiresPost)
+  const queueExecutor = useCallback(async (
+    payload: UnsubscribeJobPayload,
+    onProgress: ProgressCallback,
+    abortSignal: AbortSignal
+  ): Promise<ExecutorResult> => {
+    console.log('[Unsubscribe] Queue executor called with payload:', payload);
+    
+    // Only handle EMAIL-based unsubscribe operations
+    if (payload.methodDetails.type !== "mailto" || payload.methodDetails.requiresPost) {
+      console.log('[Unsubscribe] Queue executor skipping non-email operation:', payload.methodDetails.type);
+      return {
+        success: false,
+        error: 'Queue only supports email-based unsubscribe operations'
+      };
+    }
+    
+    try {
+      // Convert queue payload to hook format
+      const params: UnsubscribeHookParams = {
+        senderEmail: payload.senderEmail
+      };
+      
+      // Call existing function with progress callback and abort signal
+      const result = await run(params, payload.methodDetails, onProgress, abortSignal);
+      
+      // Return queue-compatible result
+      return {
+        success: result.success,
+        processedCount: result.success ? 1 : 0,
+        error: result.error || undefined
+      };
+    } catch (error: any) {
+      console.error('[Unsubscribe] Queue executor error:', error);
+      
+      // Handle specific error cases
+      let errorMessage = 'Unknown error occurred';
+      if (abortSignal.aborted) {
+        errorMessage = 'Operation cancelled by user';
+      } else if (error.message?.includes('authentication') || error.message?.includes('token')) {
+        errorMessage = 'Gmail authentication failed - please reconnect';
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorMessage = 'Network error - please check your connection';
+      } else if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
+        errorMessage = 'Gmail API rate limit reached - please try again later';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
+  }, [run]);
+
+  // Register executor with queue system
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).__queueRegisterExecutor) {
+      console.log('[Unsubscribe] Registering queue executor');
+      (window as any).__queueRegisterExecutor('unsubscribe', queueExecutor);
+    }
+  }, [queueExecutor]);
 
   return {
     run,

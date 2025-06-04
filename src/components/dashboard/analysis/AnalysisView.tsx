@@ -23,6 +23,7 @@ import { useUnsubscribe, UnsubscribeMethodDetails } from '@/hooks/useUnsubscribe
 import { getUnsubscribeMethod } from '@/lib/gmail/getUnsubscribeMethod'
 import { ConfirmUnsubscribeModal } from '@/components/modals/ConfirmUnsubscribeModal'
 import { ApplyLabelModal } from "@/components/modals/ApplyLabelModal"
+import { useCreateFilter } from '@/hooks/useCreateFilter'
 
 // Create a custom type for the selection count change handler
 // that includes our viewInGmail extension
@@ -114,6 +115,9 @@ export default function AnalysisView() {
 
   // Hook for unsubscribe functionality
   const unsubscribeHook = useUnsubscribe();
+
+  // Hook for create filter functionality (registers queue executor)
+  useCreateFilter();
 
   // State for ConfirmUnsubscribeModal
   const [isConfirmUnsubscribeModalOpen, setConfirmUnsubscribeModalOpen] = useState(false);
@@ -554,8 +558,11 @@ export default function AnalysisView() {
           open={isConfirmUnsubscribeModalOpen}
           onOpenChange={setConfirmUnsubscribeModalOpen}
           senderEmail={unsubscribeModalData.senderEmail}
+          methodDetails={unsubscribeModalData.methodDetails}
           onConfirm={async () => {
-            if (unsubscribeModalData) { // Should always be true if modal is open
+            // Only use legacy path for non-email operations (URL or POST)
+            if (unsubscribeModalData && 
+                (unsubscribeModalData.methodDetails.type !== "mailto" || unsubscribeModalData.methodDetails.requiresPost)) {
               await unsubscribeHook.run(
                 { senderEmail: unsubscribeModalData.senderEmail }, 
                 unsubscribeModalData.methodDetails

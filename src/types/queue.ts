@@ -70,9 +70,10 @@ export interface AnalysisJobPayload {
 }
 
 export interface CreateFilterJobPayload {
-  senderEmail: string;
-  filterAction: 'archive' | 'delete' | 'label' | 'markRead';
-  labelName?: string;            // If action is 'label'
+  senders: string[];
+  labelIds: string[];
+  actionType: 'add' | 'remove';
+  initialEtaMs?: number;
 }
 
 export interface ApplyLabelJobPayload {
@@ -83,18 +84,19 @@ export interface ApplyLabelJobPayload {
 
 export interface UnsubscribeJobPayload {
   senderEmail: string;
-  unsubscribeUrl?: string;       // Direct unsubscribe URL if available
-  method: 'link' | 'mailto' | 'auto'; // Unsubscribe method
+  methodDetails: {
+    type: "url" | "mailto";
+    value: string; 
+    requiresPost?: boolean;
+  };
+  initialEtaMs?: number;
 }
 
 export interface ModifyLabelJobPayload {
-  senders: { 
-    email: string; 
-    emailCount: number;          // Estimated email count
-  }[];
-  labelIds: string[];            // Label IDs to add or remove
-  actionType: 'add' | 'remove';  // Whether to add or remove labels
-  initialEtaMs: number;          // Pre-calculated ETA for stable initial display
+  senders: { email: string; emailCount: number }[];
+  labelIds: string[];
+  actionType: 'add' | 'remove';
+  initialEtaMs?: number;
 }
 
 // Type guard functions

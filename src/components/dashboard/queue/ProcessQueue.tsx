@@ -236,7 +236,7 @@ export default function ProcessQueue() {
   // Find the most recently completed job (within last 5 seconds)
   const recentlyCompletedJob = completedJobs.find(job => {
     if (!job.finishedAt) return false;
-    return Date.now() - job.finishedAt < 5000; // 5 seconds
+    return Date.now() - job.finishedAt < 1000; // 5 seconds
   });
 
   // The "active" job is either currently running or recently completed
