@@ -133,7 +133,7 @@ Deno.serve(async (req: Request) => {
           month: 'long',
           day: 'numeric',
           year: 'numeric'
-        })} • $9/month</div>
+        })} • $1.89/month</div>
         <div style="font-size:14px; color:#059669; font-weight:500;">✓ Auto-renew is ON</div>
       </div>
 

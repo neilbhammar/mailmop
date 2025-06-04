@@ -108,7 +108,7 @@ export default function Home() {
           const cleanedEmails = Math.ceil(data.modified_count / 1000) * 1000
           
           // Calculate hours saved (modified_count / 10 / 60) with minimum of 20
-          const hoursSaved = Math.max(20, Math.ceil(data.modified_count / 100 + data.analysis_count / 10000))
+          const hoursSaved = Math.max(20, Math.ceil(data.modified_count / 500 + data.analysis_count / 10000))
           
           setStats({
             analyzedEmails,
