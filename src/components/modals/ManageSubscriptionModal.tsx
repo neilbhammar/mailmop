@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/AuthProvider"
 import { useStripeCheckout } from "@/hooks/useStripeCheckout"
-import { CreditCard, HelpCircle, X, Crown, Calendar, RotateCcw, Sparkles, CheckCircle2, AlertCircle, Rocket, BookOpen, ExternalLink } from "lucide-react"
+import { CreditCard, HelpCircle, X, Crown, Calendar, RotateCcw, Sparkles, CheckCircle2, AlertCircle, Rocket, BookOpen, ExternalLink, Loader2 } from "lucide-react"
 import { differenceInDays, format } from 'date-fns'
 import { useState, useEffect } from "react"
 import { toast } from 'sonner'
@@ -27,11 +27,19 @@ export function ManageSubscriptionModal({
   showConfettiOnMount = false
 }: ManageSubscriptionModalProps) {
   const { profile, session } = useAuth()
-  const { redirectToCheckout } = useStripeCheckout()
+  const { redirectToCheckout, isLoading: isCheckoutLoading } = useStripeCheckout()
   const [isUpdating, setIsUpdating] = useState(false)
   const [showConfetti, setShowConfetti] = useState(showConfettiOnMount)
   const [windowWidth, windowHeight] = useWindowSize()
   const [isOpeningPortal, setIsOpeningPortal] = useState(false)
+
+  // Update confetti state when showConfettiOnMount changes
+  useEffect(() => {
+    if (showConfettiOnMount) {
+      console.log('[ManageSubscriptionModal] Starting confetti from checkout success');
+      setShowConfetti(true);
+    }
+  }, [showConfettiOnMount]);
 
   // Debug logging for profile changes
   useEffect(() => {
@@ -44,7 +52,13 @@ export function ManageSubscriptionModal({
 
   const handleRenew = async () => {
     onOpenChange(false)
-    await redirectToCheckout()
+    await redirectToCheckout(() => {
+      // This callback runs when checkout is successful
+      // Re-open the modal with confetti
+      onOpenChange(true)
+      setShowConfetti(true)
+      setTimeout(() => setShowConfetti(false), 5000)
+    })
   }
 
   const handleClose = () => {
@@ -156,11 +170,6 @@ export function ManageSubscriptionModal({
     isExpired = false;
   }
 
-  const getButtonText = () => {
-    if (!isPro) return "Upgrade to Pro";
-    return "Learn how to use Pro";
-  };
-
   const getButtonAction = () => {
     if (!isPro) {
       return handleRenew; // Upgrade to Pro
@@ -169,10 +178,20 @@ export function ManageSubscriptionModal({
   };
 
   const getButtonIcon = () => {
+    if (!isPro && isCheckoutLoading) {
+      return <Loader2 className="w-4 h-4 mr-2 animate-spin" />;
+    }
     if (!isPro) {
       return <CreditCard className="w-4 h-4 mr-2" />;
     }
     return <BookOpen className="w-4 h-4 mr-2" />;
+  };
+
+  const getButtonText = () => {
+    if (!isPro) {
+      return isCheckoutLoading ? "Creating checkout..." : "Upgrade to Pro";
+    }
+    return "Learn how to use Pro";
   };
 
   return (
@@ -299,10 +318,11 @@ export function ManageSubscriptionModal({
             <div className="flex flex-col sm:flex-row gap-3">
               <Button 
                 onClick={getButtonAction()}
+                disabled={isCheckoutLoading}
                 className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-medium rounded-lg shadow-sm transition-all duration-200"
               >
                 {getButtonIcon()}
-                {getButtonText()}{!isPro && " — $22.68/year"}
+                {getButtonText()}
               </Button>
               
               {isPro && (

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
-import { ChevronDown, MessageSquare, Settings, CreditCard, HelpCircle, LogOut, RefreshCwOff, RefreshCcw, Sun, Moon, Monitor, CheckIcon } from 'lucide-react'
+import { ChevronDown, MessageSquare, Settings, CreditCard, HelpCircle, LogOut, RefreshCwOff, RefreshCcw, Sun, Moon, Monitor, CheckIcon, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthProvider'
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
@@ -24,10 +24,11 @@ export function UserDropdown({ user }: UserDropdownProps) {
   const [showSignOutDialog, setShowSignOutDialog] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [showManageSubscriptionModal, setShowManageSubscriptionModal] = useState(false)
+  const [showSubscriptionConfetti, setShowSubscriptionConfetti] = useState(false)
   const { plan } = useAuth()
   const { tokenStatus, requestPermissions, hasRefreshToken } = useGmailPermissions()
   const { theme, setTheme, resolvedTheme } = useTheme()
-  const { redirectToCheckout } = useStripeCheckout()
+  const { redirectToCheckout, isLoading: isCheckoutLoading } = useStripeCheckout()
   const avatarUrl = user.user_metadata?.avatar_url
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -72,11 +73,21 @@ export function UserDropdown({ user }: UserDropdownProps) {
   };
 
   const handleSubscription = async () => {
-    setIsOpen(false);
     if (plan === 'pro') {
+      setIsOpen(false);
       setShowManageSubscriptionModal(true);
     } else {
-      await redirectToCheckout();
+      // Don't close dropdown immediately - wait for checkout to open
+      await redirectToCheckout(() => {
+        // This callback runs when checkout is successful in the new tab
+        console.log('[UserDropdown] Checkout success received, showing modal with confetti');
+        setShowSubscriptionConfetti(true);
+        setShowManageSubscriptionModal(true);
+        // Stop confetti after 5 seconds
+        setTimeout(() => setShowSubscriptionConfetti(false), 5000);
+      });
+      // Only close dropdown after checkout tab opens successfully
+      setIsOpen(false);
     }
   };
 
@@ -135,11 +146,17 @@ export function UserDropdown({ user }: UserDropdownProps) {
               {/* Manage Plan / Upgrade to Pro */}
               <button
                 onClick={handleSubscription}
-                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-slate-700"
+                disabled={isCheckoutLoading}
+                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <CreditCard className="w-4 h-4 mr-3 shrink-0" />
+                {isCheckoutLoading && plan !== 'pro' ? (
+                  <Loader2 className="w-4 h-4 mr-3 shrink-0 animate-spin" />
+                ) : (
+                  <CreditCard className="w-4 h-4 mr-3 shrink-0" />
+                )}
                 <span className="truncate">
-                  {plan === 'pro' ? 'Manage Subscription' : 'Upgrade to Pro'}
+                  {plan === 'pro' ? 'Manage Subscription' : 
+                   isCheckoutLoading ? 'Creating checkout...' : 'Upgrade to Pro'}
                 </span>
                 <span 
                   className={cn(
@@ -230,13 +247,18 @@ export function UserDropdown({ user }: UserDropdownProps) {
         onClose={() => setShowFeedbackModal(false)}
       />
 
-      {/* Manage Subscription Modal (only rendered when needed) */}
-      {plan === 'pro' && (
-        <ManageSubscriptionModal
-          open={showManageSubscriptionModal}
-          onOpenChange={setShowManageSubscriptionModal}
-        />
-      )}
+      {/* Manage Subscription Modal */}
+      <ManageSubscriptionModal
+        open={showManageSubscriptionModal}
+        onOpenChange={(open) => {
+          setShowManageSubscriptionModal(open);
+          if (!open) {
+            // Reset confetti when modal closes
+            setShowSubscriptionConfetti(false);
+          }
+        }}
+        showConfettiOnMount={showSubscriptionConfetti}
+      />
     </div>
   )
 } 

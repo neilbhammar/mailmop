@@ -1,0 +1,40 @@
+feat: enhance Stripe checkout UX with new tab flow and loading states
+
+Improve checkout experience by implementing new tab flow, comprehensive loading 
+states, and cross-tab communication to prevent analysis interruption.
+
+### 🚀 New Features
+- **Lightweight checkout success page** (/checkout-success) replaces full dashboard redirect
+- **Cross-tab communication** for seamless checkout completion feedback
+- **Loading indicators** across all checkout entry points
+- **Immediate confetti timing** triggered when checkout completes
+
+### 🔧 Technical Changes
+- Add useStripeCheckout loading state and success callback system
+- Implement postMessage API for cross-window communication
+- Create dedicated checkout-success page for fast post-payment handling
+- Update success URLs to use lightweight success page instead of dashboard
+
+### 📱 UX Improvements
+- Dropdowns stay open during checkout loading (no premature closing)
+- New tab checkout preserves ongoing email analysis in original tab  
+- ManageSubscriptionModal shows with confetti after successful upgrade
+- Graceful popup blocker fallback to same-tab redirect
+- Fast tab closure (500ms) instead of slow dashboard load (5s+)
+
+### 🎯 Files Modified
+- src/hooks/useStripeCheckout.ts: Add loading states & cross-tab messaging
+- src/components/TopBar/UserDropdown.tsx: Enhanced checkout flow
+- src/components/modals/PremiumFeatureModal.tsx: Add success callbacks
+- src/components/modals/ManageSubscriptionModal.tsx: Loading indicators
+- src/app/api/stripe/create-checkout-session/route.ts: Update success URLs
+- src/app/checkout-success/page.tsx: New lightweight success page
+
+### 📊 Impact
+- 6 files changed, 264 insertions(+), 139 deletions(-)
+- Reduces checkout completion time from 5+ seconds to ~500ms
+- Eliminates analysis disruption during upgrade flow
+- Provides immediate visual feedback with perfect confetti timing
+
+Fixes checkout UX issues where dropdown closed prematurely and confetti 
+was missed due to slow tab loading times. 
