@@ -29,13 +29,11 @@ export function BetaWaitlistModal() {
   return (
     <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-md dark:backdrop-blur-lg flex items-center justify-center z-50 p-4 overflow-y-auto">
       <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0, scale: 0.96, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ 
-          type: "spring", 
-          stiffness: 300, 
-          damping: 20,
-          duration: 0.5
+          duration: 0.4,
+          ease: [0.22, 1, 0.36, 1]
         }}
         className="w-full max-w-xl mx-auto relative my-4 md:my-0"
       >
@@ -67,7 +65,8 @@ export function BetaWaitlistModal() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{
                       delay: 0.01 * (rowIndex + colIndex),
-                      duration: 0.5
+                      duration: 0.5,
+                      ease: "easeOut"
                     }}
                   >
                     <div 
@@ -93,9 +92,13 @@ export function BetaWaitlistModal() {
         <div className="relative z-10 p-6 sm:p-8 md:p-12 lg:p-14">
           {/* Badge */}
           <motion.div 
-            initial={{ y: -10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.6, type: "spring" }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ 
+              delay: 0.15, 
+              duration: 0.4, 
+              ease: [0.22, 1, 0.36, 1]
+            }}
             className="flex justify-center mb-6 sm:mb-8"
           >
             <div className="inline-flex items-center px-3 py-1 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-blue-50/80 to-blue-100/80 dark:from-slate-700/80 dark:to-slate-600/80 backdrop-blur-sm text-blue-800 dark:text-blue-300 text-xs sm:text-sm font-medium rounded-full border border-blue-200/80 dark:border-slate-500/80 shadow-sm">
@@ -108,9 +111,13 @@ export function BetaWaitlistModal() {
           
           {/* Heading */}
           <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.6, type: "spring" }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ 
+              delay: 0.25, 
+              duration: 0.4, 
+              ease: [0.22, 1, 0.36, 1]
+            }}
             className="text-center mb-6 sm:mb-8"
           >
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] leading-tight font-bold text-gray-900 dark:text-slate-100 tracking-tight mb-3 sm:mb-5">
@@ -124,9 +131,13 @@ export function BetaWaitlistModal() {
           
           {/* Early access callout */}
           <motion.div 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.6, type: "spring" }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ 
+              delay: 0.35, 
+              duration: 0.4, 
+              ease: [0.22, 1, 0.36, 1]
+            }}
             className="mb-8 sm:mb-10 md:mb-14 text-center"
           >
             <div className="bg-blue-50/50 dark:bg-slate-700/40 backdrop-blur-[1px] border border-blue-100/80 dark:border-slate-600/80 rounded-xl p-4 sm:p-6 max-w-md mx-auto">
@@ -146,7 +157,7 @@ export function BetaWaitlistModal() {
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           exit={{ scale: 0 }}
-                          transition={{ duration: 0.2 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
                         >
                           <CheckIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-green-500 dark:text-green-400" />
                         </motion.span>
@@ -156,7 +167,7 @@ export function BetaWaitlistModal() {
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           exit={{ scale: 0 }}
-                          transition={{ duration: 0.2 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
                         >
                           <CopyIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-70 group-hover:opacity-100" />
                         </motion.span>
@@ -178,7 +189,7 @@ export function BetaWaitlistModal() {
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -5 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
                     className="text-xs text-green-600 dark:text-green-500 font-medium"
                   >
                     Email copied to clipboard!
@@ -192,7 +203,11 @@ export function BetaWaitlistModal() {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.7, duration: 0.5 }}
+            transition={{ 
+              delay: 0.45, 
+              duration: 0.4, 
+              ease: [0.22, 1, 0.36, 1]
+            }}
             className="flex justify-center"
           >
             <button
@@ -207,7 +222,7 @@ export function BetaWaitlistModal() {
                 viewBox="0 0 24 24" 
                 stroke="currentColor"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
               </svg>
               <span className="absolute inset-0 w-full h-full bg-gray-100 opacity-0 group-hover:opacity-100 dark:bg-gray-700/20 rounded-full transition-opacity duration-300 -z-0"></span>
             </button>
