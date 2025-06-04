@@ -4,10 +4,12 @@ import { useAuth } from '@/context/AuthProvider'
 import { useWhitelist } from '@/hooks/useWhitelist'
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
 import { useBeforeUnloadWarning } from '@/hooks/useBeforeUnloadWarning'
+import { useMobileDetection } from '@/hooks/useMobileDetection'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { BetaWaitlistModal } from '@/components/modals/BetaWaitlistModal'
 import { EmailMismatchModal } from '@/components/modals/EmailMismatchModal'
+import { MobileBlockingModal } from '@/components/modals/MobileBlockingModal'
 import { TopBar } from '@/components/TopBar/TopBar'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -18,6 +20,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     gmailEmail,
     hideMismatchModal
   } = useGmailPermissions()
+  const isMobile = useMobileDetection()
   const router = useRouter()
 
   // Warn users before closing tab if there are active queue operations
@@ -59,6 +62,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </main>
     </div>
   )
+
+  // If user is on mobile, show blurred content + mobile blocking modal
+  if (isMobile) {
+    return (
+      <>
+        <div className="filter blur-sm pointer-events-none">
+          {mainContent}
+        </div>
+        <MobileBlockingModal />
+      </>
+    )
+  }
 
   // If whitelist check is complete and user is not whitelisted, show blurred content + modal
   if (isWhitelisted === false) {
