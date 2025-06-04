@@ -140,7 +140,7 @@ export function ReauthDialog({
               </svg>
             </div>
             <p className="text-xs text-gray-500 dark:text-slate-500">
-              MailMop only uses read-only access to analyze your inbox
+              MailMop doesn't store or process any of your email content on our servers.
             </p>
           </div>
         </div>

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { MailOpen } from "lucide-react"
+import { useQueue } from "@/hooks/useQueue"
 
 interface MarkAsReadConfirmModalProps {
   /**
@@ -30,8 +31,11 @@ interface MarkAsReadConfirmModalProps {
   senderCount: number
   /**
    * Function to call when marking is confirmed
+   * 
+   * NOTE: This is now optional since the modal can handle the job directly
+   * via the queue system, but kept for backward compatibility
    */
-  onConfirm: () => Promise<void>
+  onConfirm?: () => Promise<void>
   /**
    * Optional array of sender emails to display
    */
@@ -45,18 +49,25 @@ interface MarkAsReadConfirmModalProps {
 /**
  * A modal that confirms marking emails as read with the user
  * Shows the number of unread emails and senders affected
+ * 
+ * 🆕 Now integrated with the queue system!
+ * When users confirm, the job is added to the queue and processed automatically.
+ * Users can track progress in the ProcessQueue UI and cancel if needed.
  */
 export function MarkAsReadConfirmModal({
   open,
   onOpenChange,
   unreadCount,
   senderCount,
-  onConfirm,
+  onConfirm, // Optional - for backward compatibility
   senders = [],
   unreadCountMap = {},
 }: MarkAsReadConfirmModalProps) {
   // Track loading state during the operation
   const [isProcessing, setIsProcessing] = useState(false)
+  
+  // Get queue functions
+  const { enqueue } = useQueue()
   
   // Format the title based on context
   const getTitle = () => {
@@ -77,7 +88,33 @@ export function MarkAsReadConfirmModal({
   const handleConfirm = async () => {
     try {
       setIsProcessing(true)
-      await onConfirm()
+      
+      // If there's a legacy onConfirm callback, use it (for backward compatibility)
+      if (onConfirm) {
+        console.log('[MarkAsReadModal] Using legacy onConfirm callback')
+        await onConfirm()
+      } else {
+        // 🚀 NEW QUEUE INTEGRATION
+        console.log('[MarkAsReadModal] Using queue system for Mark as Read')
+        
+        // Convert senders list to the format expected by the queue
+        const sendersPayload = senders.map(senderEmail => ({
+          email: senderEmail,
+          unreadCount: getUnreadCountForSender(senderEmail)
+        }))
+        
+        // Enqueue the Mark as Read job
+        const jobId = enqueue('markRead', {
+          senders: sendersPayload
+        })
+        
+        console.log(`[MarkAsReadModal] Mark as Read job enqueued with ID: ${jobId}`)
+        
+        // Show success message
+        // Note: The actual completion toast will be shown by useMarkAsRead when the job finishes
+      }
+      
+      // Close the modal
       onOpenChange(false)
     } catch (error) {
       console.error("Error marking as read:", error)
@@ -146,9 +183,9 @@ export function MarkAsReadConfirmModal({
             </div>
           )}
           
-          <div className="p-3 border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 rounded-md">
-            <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
-              You can undo this later by marking emails as unread in Gmail
+          <div className="p-3 border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/30 rounded-md">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              💡 You can undo this later by marking emails as unread in Gmail
             </p>
           </div>
         </div>
@@ -168,7 +205,7 @@ export function MarkAsReadConfirmModal({
           >
             {isProcessing ? (
               <>
-                <span className="animate-pulse">Processing</span>
+                <span className="animate-pulse">Adding to Queue</span>
                 <span className="animate-pulse ml-1">...</span>
               </>
             ) : (

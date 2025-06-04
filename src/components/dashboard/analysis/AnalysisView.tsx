@@ -16,7 +16,7 @@ import { PremiumFeatureModal } from "@/components/modals/PremiumFeatureModal"
 import { ReauthDialog } from "@/components/modals/ReauthDialog"
 import { useSenderData, TableSender } from '@/hooks/useSenderData'
 import { RuleGroup } from '@/lib/gmail/buildQuery'
-import { useMarkAsRead, SenderToMark } from '@/hooks/useMarkAsRead'
+import { useMarkAsRead } from '@/hooks/useMarkAsRead'
 import { MarkAsReadConfirmModal } from '@/components/modals/MarkAsReadConfirmModal'
 import { BlockSenderModal } from '@/components/modals/BlockSenderModal'
 import { useUnsubscribe, UnsubscribeMethodDetails } from '@/hooks/useUnsubscribe'
@@ -100,7 +100,6 @@ export default function AnalysisView() {
   // Add mark as read hook
   const {
     progress: markAsReadProgress,
-    startMarkAsRead,
     cancelMarkAsRead,
     reauthModal: markAsReadReauthModal,
     closeReauthModal: closeMarkAsReadReauthModal,
@@ -346,23 +345,6 @@ export default function AnalysisView() {
     }
   }, [checkFeatureAccess, allSenders]);
 
-  // Handler for when mark as read is confirmed
-  const handleMarkAsReadConfirm = useCallback(async () => {
-    if (emailsToMark.length === 0) return;
-    
-    const sendersToMarkFormatted: SenderToMark[] = emailsToMark.map(email => ({
-      email: email,
-      unreadCount: emailCountMap[email] || 30
-    }));
-    
-    const result = await startMarkAsRead(sendersToMarkFormatted);
-    
-    if (result.success) {
-      setSelectedEmails(new Set());
-      setEmailsToMark([]);
-    }
-  }, [emailsToMark, emailCountMap, startMarkAsRead]);
-
   // Handler for BULK Apply Label action (called from AnalysisHeader)
   const handleApplyLabelBulk = useCallback(() => {
     if (selectedEmails.size === 0) {
@@ -592,7 +574,6 @@ export default function AnalysisView() {
         onOpenChange={setIsMarkAsReadModalOpen}
         unreadCount={emailsToMark.reduce((sum, email) => sum + (unreadCountMap[email] || 0), 0)}
         senderCount={emailsToMark.length}
-        onConfirm={handleMarkAsReadConfirm}
         senders={emailsToMark}
         unreadCountMap={unreadCountMap}
       />

@@ -1,9 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import InboxStats from './overview/InboxStats';
 import ReanalyzeButton from './overview/ReanalyzeButton';
-import ProcessQueue from './overview/ProcessQueue';
+import ProcessQueue from './queue/ProcessQueue';
+import { useAnalysis } from '@/context/AnalysisProvider';
+import { Button } from '@/components/ui/button';
+import { MarkAsReadConfirmModal } from '@/components/modals/MarkAsReadConfirmModal';
 
 export default function Overview() {
+  const { hasAnalysis, isAnalyzing } = useAnalysis();
+  
+  // State for testing the MarkAsReadConfirmModal with queue integration
+  const [showMarkReadModal, setShowMarkReadModal] = useState(false);
+
+  // Test data for the modal
+  const testSenders = ['newsletter@example.com', 'promotions@store.com', 'notifications@app.com'];
+  const testUnreadCountMap = {
+    'newsletter@example.com': 45,
+    'promotions@store.com': 23,
+    'notifications@app.com': 12
+  };
+  const totalUnreadCount = Object.values(testUnreadCountMap).reduce((sum, count) => sum + count, 0);
+
   return (
     <div className="mt-2 mb-8">
       <div className="flex justify-between items-start">
@@ -20,9 +37,31 @@ export default function Overview() {
           <InboxStats />
         </div>
         <div className="flex justify-end items-center h-[60px]">
-          <ProcessQueue />
+          <div className="flex items-center gap-2">
+            {/* Test button for MarkAsReadConfirmModal */}
+            <Button 
+              onClick={() => setShowMarkReadModal(true)}
+              variant="outline"
+              size="sm"
+              className="text-xs"
+            >
+              🧪 Test Queue
+            </Button>
+            <ProcessQueue />
+          </div>
         </div>
       </div>
+
+      {/* Test MarkAsReadConfirmModal with Queue Integration */}
+      <MarkAsReadConfirmModal
+        open={showMarkReadModal}
+        onOpenChange={setShowMarkReadModal}
+        unreadCount={totalUnreadCount}
+        senderCount={testSenders.length}
+        senders={testSenders}
+        unreadCountMap={testUnreadCountMap}
+        // Note: No onConfirm prop - modal will use queue system automatically
+      />
     </div>
   );
 }
