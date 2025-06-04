@@ -292,7 +292,7 @@ export function useMarkAsRead() {
           type: 'mark_as_read',
           status: 'started',
           filters: {
-            senders: senders.map(s => s.email),
+            senderCount: senders.length,
             estimatedCount: totalToProcess
           },
           estimated_emails: totalToProcess,

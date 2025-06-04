@@ -143,8 +143,8 @@ export function useCreateFilter() {
           type: 'create_filter',
           status: 'started',
           filters: {
-            senders: options.senders,
-            labelIds: options.labelIds,
+            senderCount: options.senders.length,
+            labelCount: options.labelIds.length,
             actionType: options.actionType,
           },
           estimated_emails: 0, // Filters don't process emails directly

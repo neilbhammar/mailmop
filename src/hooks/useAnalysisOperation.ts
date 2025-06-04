@@ -79,7 +79,6 @@ interface GmailPermissionsContextType extends GmailPermissionState {
 // Update the filters type to include effectiveEmailCount
 interface AnalysisFilters {
   type: 'full' | 'quick';
-  query: string;
   effectiveEmailCount: number;
 }
 
@@ -284,7 +283,7 @@ export function useAnalysisOperations() {
       estimatedRuntimeMs,
       totalEmails: effectiveEmailCount,
       totalEstimatedBatches,
-      filters: { query, type: options.type }
+      filters: { type: options.type }
     });
 
     let supabaseLogId: string;
@@ -293,7 +292,7 @@ export function useAnalysisOperations() {
         user_id: user.id,
         type: 'analysis',
         status: 'started',
-        filters: { type: options.type, query, effectiveEmailCount } as AnalysisFilters,
+        filters: { type: options.type, effectiveEmailCount } as AnalysisFilters,
         estimated_emails: effectiveEmailCount
       });
       supabaseLogId = actionLog.id!;

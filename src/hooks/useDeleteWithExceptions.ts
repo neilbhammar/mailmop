@@ -248,7 +248,11 @@ export function useDeleteWithExceptions() {
           user_id: user.id,
           type: 'delete_with_exceptions',
           status: 'started',
-          filters: { senders: senders.map(s => s.email), rules: filterRules, estimatedCount: totalEmailsEstimate },
+          filters: { 
+            senderCount: senders.length, 
+            ruleGroupCount: filterRules.length,
+            estimatedCount: totalEmailsEstimate 
+          },
           estimated_emails: totalEmailsEstimate,
         });
         supabaseLogId = actionLog.id;

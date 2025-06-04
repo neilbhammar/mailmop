@@ -204,7 +204,7 @@ export function useUnsubscribe() {
           type: 'unsubscribe' as ActionType,
           status: 'completed' as ActionStatus, 
           count: 1,
-          filters: { sender: params.senderEmail, method: methodDetails.type, value: methodDetails.value },
+          filters: { method: methodDetails.type },
           notes: methodDetails.requiresPost ? "Mailto one-click (opened link as fallback)" : undefined
         });
         console.log(`[useUnsubscribe] Logged unsubscribe action to Supabase for ${params.senderEmail}`);

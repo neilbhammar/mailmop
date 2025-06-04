@@ -265,8 +265,8 @@ export function useModifyLabel() {
           type: 'modify_label',
           status: 'started',
           filters: {
-            senders: options.senders.map(s => s.email),
-            labelIds: options.labelIds,
+            senderCount: options.senders.length,
+            labelCount: options.labelIds.length,
             actionType: options.actionType,
             estimatedCount: totalToProcess
           },

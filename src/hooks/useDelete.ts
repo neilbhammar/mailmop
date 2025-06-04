@@ -274,7 +274,7 @@ export function useDelete() {
           user_id: user.id,
           type: 'delete',
           status: 'started',
-          filters: { senders: senders.map(s => s.email), estimatedCount: totalEmailsEstimate },
+          filters: { senderCount: senders.length, estimatedCount: totalEmailsEstimate },
           estimated_emails: totalEmailsEstimate,
         });
         supabaseLogId = actionLog.id;
