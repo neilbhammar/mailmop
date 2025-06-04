@@ -3,6 +3,7 @@
 import { useAuth } from '@/context/AuthProvider'
 import { useWhitelist } from '@/hooks/useWhitelist'
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
+import { useBeforeUnloadWarning } from '@/hooks/useBeforeUnloadWarning'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { BetaWaitlistModal } from '@/components/modals/BetaWaitlistModal'
@@ -18,6 +19,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     hideMismatchModal
   } = useGmailPermissions()
   const router = useRouter()
+
+  // Warn users before closing tab if there are active queue operations
+  useBeforeUnloadWarning()
 
   useEffect(() => {
     if (!authLoading && user === null) {
