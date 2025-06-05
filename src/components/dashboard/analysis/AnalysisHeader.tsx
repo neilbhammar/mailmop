@@ -156,49 +156,54 @@ export function AnalysisHeader({
               onChange={handleSearchChange}
             />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="icon"
-                className="h-9 w-9 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[260px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg dark:shadow-slate-900/50 py-2">
-              <DropdownMenuItem 
-                className="flex items-center justify-between cursor-pointer px-3 py-2 text-sm text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70"
-                onSelect={(event) => {
-                  event.preventDefault();
-                  handleUnreadOnlyToggle();
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-2" />
-                  <span className="text-sm text-slate-700 dark:text-slate-200">Unread Senders Only</span>
-                </div>
-                <span className={cn(
-                  "px-2 py-0.5 text-xs font-medium rounded-md",
-                  showUnreadOnly 
-                    ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300" 
-                    : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
-                )}>
-                  {showUnreadOnly ? 'On' : 'Off'}
-                </span>
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className="flex items-center gap-2 cursor-pointer px-3 py-2 text-sm text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70"
-                onSelect={() => exportToCSV(senders)}
-                disabled={isExporting || senders.length === 0}
-              >
-                <Download className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-2" />
-                <span className="text-sm">
-                  {isExporting ? 'Exporting...' : 'Export CSV'}
-                </span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="relative">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="h-9 w-9 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              {showUnreadOnly && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white dark:border-slate-900"></div>
+              )}
+              <DropdownMenuContent align="end" className="w-[260px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg dark:shadow-slate-900/50 py-2">
+                <DropdownMenuItem 
+                  className="flex items-center justify-between cursor-pointer px-3 py-2 text-sm text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70"
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    handleUnreadOnlyToggle();
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-2" />
+                    <span className="text-sm text-slate-700 dark:text-slate-200">Unread Senders Only</span>
+                  </div>
+                  <span className={cn(
+                    "px-2 py-0.5 text-xs font-medium rounded-md",
+                    showUnreadOnly 
+                      ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300" 
+                      : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                  )}>
+                    {showUnreadOnly ? 'On' : 'Off'}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="flex items-center gap-2 cursor-pointer px-3 py-2 text-sm text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70"
+                  onSelect={() => exportToCSV(senders)}
+                  disabled={isExporting || senders.length === 0}
+                >
+                  <Download className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-2" />
+                  <span className="text-sm">
+                    {isExporting ? 'Exporting...' : 'Export CSV'}
+                  </span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 

@@ -93,8 +93,7 @@ export function useViewInGmail() {
   
   /**
    * Open Gmail search based on a complex filter query in a new tab
-   * @param filterQuery The pre-constructed Gmail search query string. 
-   * It's assumed that any dynamic parts within this query are already appropriately encoded by the caller.
+   * @param filterQuery The pre-constructed Gmail search query string
    */
   const viewFilteredEmailsInGmail = useCallback(async (filterQuery: string) => {
     if (!filterQuery.trim()) {
@@ -110,7 +109,9 @@ export function useViewInGmail() {
     }
     
     await logGmailAction('preview', 1);
-    window.open(`https://mail.google.com/mail/u/${userEmailForLink}/#search/${filterQuery}`, '_blank');
+    // Properly encode the entire filter query for URL usage
+    const encodedQuery = encodeURIComponent(filterQuery);
+    window.open(`https://mail.google.com/mail/u/${userEmailForLink}/#search/${encodedQuery}`, '_blank');
   }, [determineUserEmailForGmailLink, logGmailAction]);
   
   return {

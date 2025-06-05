@@ -1,0 +1,23 @@
+feat: add unread-only indicator + social sharing support
+
+- Add blue dot to Analysis header ellipses when in "Unread Only" mode
+- Implement full Open Graph and Twitter card metadata for social sharing
+- Convert app/layout.tsx to a Server Component to enable metadata exports
+- Create client-providers.tsx to isolate client-side context providers
+- Add SEO enhancements: canonical URLs, robots directives, keywords
+- Add social preview images:
+  - opengraph-image.png (1200x630) for FB, LinkedIn, Slack
+  - twitter-image.png for Twitter/X
+  - .alt.txt files added for accessibility
+- Set metadataBase for proper absolute image paths
+
+UX Impact:
+- www.mailmop.com now renders rich preview cards on Slack, Discord, Twitter, etc.
+- Custom title: "MailMop – Clean Your Gmail Inbox in Minutes"
+- Custom description and social-share images shown on link share
+
+Tech Notes:
+- Moved ThemeProvider, AuthProvider, GmailPermissionsProvider, AnalysisProvider, QueueProvider, and Toaster to client-providers.tsx
+- Follows Next.js App Router best practices for server-side metadata
+
+fix: sharing links now generate rich previews instead of plain URLs
