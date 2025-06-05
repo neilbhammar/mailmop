@@ -4,6 +4,7 @@
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import Script from 'next/script'
 import { supabase } from '@/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -311,6 +312,14 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-slate-900 selection:bg-blue-500 selection:text-white">
+      {/* Umami Analytics - Only loaded on landing page */}
+      <Script
+        defer
+        src="https://cloud.umami.is/script.js"
+        data-website-id="99d13ac3-8c9d-4499-94d7-4aa6e5e7f56d"
+        strategy="afterInteractive"
+      />
+      
       <LandingNavbar signIn={signIn} lenis={lenisInstanceRef.current} />
 
       {/* Bubble container - ensure it's styled to be fixed and cover the screen with a high z-index */}
