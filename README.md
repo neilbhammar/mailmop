@@ -59,7 +59,7 @@ Your Gmail → Your Browser → Analysis → Results
 ### Core Technologies
 - **Frontend**: Next.js 15 with App Router, TypeScript, Tailwind CSS
 - **Backend**: Supabase (Auth, Database, Edge Functions)
-- **Gmail Integration**: Gmail API 
+- **Gmail Integration**: Gmail API
 - **Local Storage**: IndexedDB for efficient local data caching
 - **State Management**: React Context with custom providers
 - **UI Components**: Radix UI + ShadCN for accessible components
@@ -123,16 +123,17 @@ I'm making MailMop **source available** for several reasons:
 ## 🛠️ Local Development Setup
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+ (You can use [nvm](https://github.com/nvm-sh/nvm) to be sure you're on the right node version!)
 - npm or yarn
 - A Google Cloud Project (for Gmail API)
 - A Supabase account
 
-### 1. Clone the Repository
+### 1. Clone the Repository, Activate Correct Node Version, & Install Dependencies
 
 ```bash
 git clone https://github.com/neilbhammar/mailmop.git
 cd mailmop
+nvm use
 npm install
 ```
 
