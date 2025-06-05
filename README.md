@@ -1,5 +1,7 @@
 # MailMop 📧🧹
 
+> As of June 2025, Currently beta-testing with a few folks prior to submitting for Google's CASA 2 verification.
+
 **A privacy-first Gmail inbox decluttering tool that processes everything locally in your browser**
 
 MailMop is a client-heavy, privacy-focused Gmail cleaning tool built with Next.js, Supabase, and the Gmail API. Unlike traditional email management tools that upload your data to remote servers, MailMop processes everything locally in your browser, ensuring your emails never leave your device.
