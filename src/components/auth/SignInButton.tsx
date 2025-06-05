@@ -4,10 +4,11 @@ import { supabase } from '@/supabase/client';
 
 export const SignInButton = () => {
   const handleLogin = async () => {
+    const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || location.origin;
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${location.origin}/dashboard`,
+        redirectTo: `${redirectUrl}/dashboard`,
       },
     });
   };

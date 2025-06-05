@@ -133,9 +133,10 @@ export default function Home() {
   }, [])
 
   const signIn = async () => {
+    const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || location.origin;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${location.origin}/dashboard` }
+      options: { redirectTo: `${redirectUrl}/dashboard` }
     })
     if (error) console.error(error)
   }
