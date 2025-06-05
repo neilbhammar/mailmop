@@ -78,12 +78,11 @@ export default function PrivacyPolicy() {
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg my-4">
-              <h3 className="text-lg font-semibold mb-3">Action Analytics (Anonymous)</h3>
+              <h3 className="text-lg font-semibold mb-3">Action Analytics</h3>
               <ul>
                 <li><strong>Action Type:</strong> "delete", "unsubscribe", "mark_read", "apply_label"</li>
                 <li><strong>Action Count:</strong> How many emails were affected</li>
                 <li><strong>Timestamp:</strong> When the action was performed</li>
-                <li><strong>Anonymous User ID:</strong> Randomized identifier (not tied to your email)</li>
               </ul>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                 <strong>Why:</strong> To understand feature usage and improve the product
