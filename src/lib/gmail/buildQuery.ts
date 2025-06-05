@@ -48,7 +48,7 @@ export interface RuleGroup {
  * @param value - The string value to escape
  * @returns Escaped string safe for Gmail search
  */
-function escapeGmailSearchValue(value: string): string {
+export function escapeGmailSearchValue(value: string): string {
   if (!value || typeof value !== 'string') {
     return '';
   }

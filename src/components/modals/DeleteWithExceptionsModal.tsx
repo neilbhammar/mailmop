@@ -62,6 +62,7 @@ import { estimateRuntimeMs } from "@/lib/utils/estimateRuntime"
 import { buildQuery } from "@/lib/gmail/buildQuery"
 import { validateFilterConditionValue, validateDateInput } from '@/lib/utils/inputValidation'
 import { toast } from "sonner"
+import { escapeGmailSearchValue } from "@/lib/gmail/buildQuery"
 
 // Operator types
 type Operator = 'and' | 'or';
@@ -824,9 +825,17 @@ export function DeleteWithExceptionsModal({
         const conditionStrings = validConditions.map(condition => {
           switch (condition.type) {
             case 'contains':
-              return `"${condition.value}"`;
+              if (typeof condition.value === 'string') {
+                const escapedValue = escapeGmailSearchValue(condition.value);
+                return `"${escapedValue}"`;
+              }
+              return '';
             case 'not-contains':
-              return `-"${condition.value}"`;
+              if (typeof condition.value === 'string') {
+                const escapedValue = escapeGmailSearchValue(condition.value);
+                return `-"${escapedValue}"`;
+              }
+              return '';
             case 'date-after':
               return `after:${format(condition.value as Date, 'yyyy/MM/dd')}`;
             case 'date-before':
@@ -892,7 +901,7 @@ export function DeleteWithExceptionsModal({
     console.log(`Estimated runtime: ${initialEtaMs} ms`);
   };
 
-  // Handle keyword filter changes - no sanitization needed as buildQuery.ts handles escaping
+  // Handle keyword filter changes - now properly escaped in buildGmailQuery
   const handleKeywordFilterChange = (text: string) => {
     setKeywordFilter(prev => ({ ...prev, text }));
   };
