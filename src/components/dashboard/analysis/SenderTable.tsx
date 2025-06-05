@@ -892,16 +892,6 @@ export function SenderTable({
     setIsApplyLabelModalOpen(true);
   }, [senders]);
 
-  const handleApplyLabelConfirm = useCallback(async (options: any) => {
-    // This is where the actual logic from useApplyLabel will go later
-    console.log("Confirming Apply Label with options:", options);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500)); 
-    console.log("Apply Label action complete (simulated).");
-    // Close modal is handled inside ApplyLabelModal on success
-    // Need to potentially update UI state / refetch data or update local state here
-  }, []);
-
   // Add callback for bulk apply label action
   useEffect(() => {
     if (onSelectedCountChange && typeof onSelectedCountChange.getSelectedEmails === 'function') {
@@ -1018,7 +1008,6 @@ export function SenderTable({
         emailCount={applyLabelModalData.emailCount}
         senders={applyLabelModalData.senders}
         emailCountMap={applyLabelModalData.emailCountMap}
-        onConfirm={handleApplyLabelConfirm}
       />
     </>
   )

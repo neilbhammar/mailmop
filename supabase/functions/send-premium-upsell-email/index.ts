@@ -35,6 +35,7 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
     const stripePriceId = Deno.env.get('STRIPE_PRICE_ID');
+    const siteUrl = Deno.env.get('NEXT_PUBLIC_SITE_URL') || 'https://mailmop.com';
 
     if (!resendApiKey || !supabaseServiceRoleKey || !stripeSecretKey || !stripePriceId) {
       throw new Error('Missing required environment variables');
@@ -50,8 +51,8 @@ Deno.serve(async (req: Request) => {
       body: new URLSearchParams({
         'mode': 'subscription',
         'customer_email': email,
-        'success_url': 'https://mailmop.com/dashboard?upgrade=success',
-        'cancel_url': 'https://mailmop.com/dashboard?upgrade=cancelled',
+        'success_url': `${siteUrl}/dashboard?upgrade=success`,
+        'cancel_url': `${siteUrl}/dashboard?upgrade=cancelled`,
         'line_items[0][price]': stripePriceId,
         'line_items[0][quantity]': '1',
         'allow_promotion_codes': 'true',
@@ -169,7 +170,7 @@ Deno.serve(async (req: Request) => {
 
     // Log the action in Supabase 
     const supabase = createClient(
-      'https://ucoacqalcpqrjrrqkizf.supabase.co',
+      Deno.env.get('SUPABASE_URL')!,
       supabaseServiceRoleKey
     );
 

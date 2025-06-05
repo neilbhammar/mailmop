@@ -3,23 +3,28 @@
 import { useAuth } from '@/context/AuthProvider'
 import { useWhitelist } from '@/hooks/useWhitelist'
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
+import { useBeforeUnloadWarning } from '@/hooks/useBeforeUnloadWarning'
+import { useMobileDetection } from '@/hooks/useMobileDetection'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { BetaWaitlistModal } from '@/components/modals/BetaWaitlistModal'
-import { GrantPermissionsModal } from '@/components/modals/GrantPermissionsModal'
 import { EmailMismatchModal } from '@/components/modals/EmailMismatchModal'
+import { MobileBlockingModal } from '@/components/modals/MobileBlockingModal'
 import { TopBar } from '@/components/TopBar/TopBar'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading: authLoading } = useAuth()
   const { checkWhitelist, isWhitelisted, isLoading: whitelistLoading } = useWhitelist()
   const { 
-    shouldShowPermissionsModal, 
     shouldShowMismatchModal, 
     gmailEmail,
     hideMismatchModal
   } = useGmailPermissions()
+  const isMobile = useMobileDetection()
   const router = useRouter()
+
+  // Warn users before closing tab if there are active queue operations
+  useBeforeUnloadWarning()
 
   useEffect(() => {
     if (!authLoading && user === null) {
@@ -58,6 +63,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </div>
   )
 
+  // If user is on mobile, show blurred content + mobile blocking modal
+  if (isMobile) {
+    return (
+      <>
+        <div className="filter blur-sm pointer-events-none">
+          {mainContent}
+        </div>
+        <MobileBlockingModal />
+      </>
+    )
+  }
+
   // If whitelist check is complete and user is not whitelisted, show blurred content + modal
   if (isWhitelisted === false) {
     return (
@@ -83,18 +100,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           supabaseEmail={user.email} 
           gmailEmail={gmailEmail} 
         />
-      </>
-    )
-  }
-
-  // If user needs to grant Gmail permissions, show blurred content + modal
-  if (shouldShowPermissionsModal) {
-    return (
-      <>
-        <div className="filter blur-sm pointer-events-none">
-          {mainContent}
-        </div>
-        <GrantPermissionsModal />
       </>
     )
   }

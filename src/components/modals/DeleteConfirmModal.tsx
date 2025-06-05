@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
+import { useQueue } from "@/hooks/useQueue"
+import { estimateRuntimeMs } from "@/lib/utils/estimateRuntime"
 
 interface DeleteConfirmModalProps {
   /**
@@ -30,8 +32,11 @@ interface DeleteConfirmModalProps {
   senderCount: number
   /**
    * Function to call when deletion is confirmed
+   * 
+   * NOTE: This is now optional since the modal can handle the job directly
+   * via the queue system, but kept for backward compatibility
    */
-  onConfirm: () => Promise<void>
+  onConfirm?: () => Promise<void>
   /**
    * Optional array of sender emails to display
    */
@@ -49,13 +54,17 @@ interface DeleteConfirmModalProps {
 /**
  * A modal that confirms email deletion with the user
  * Shows the number of emails, senders, and a warning message
+ * 
+ * 🆕 Now integrated with the queue system!
+ * When users confirm, the job is added to the queue and processed automatically.
+ * Users can track progress in the ProcessQueue UI and cancel if needed.
  */
 export function DeleteConfirmModal({
   open,
   onOpenChange,
   emailCount,
   senderCount,
-  onConfirm,
+  onConfirm, // Optional - for backward compatibility
   senders = [],
   emailCountMap = {},
   onDeleteWithExceptions
@@ -63,21 +72,59 @@ export function DeleteConfirmModal({
   // Track loading state during deletion process
   const [isDeleting, setIsDeleting] = useState(false)
   
+  // Get queue functions
+  const { enqueue } = useQueue()
+  
   // Format the title based on email count
   const title = `Delete ${emailCount.toLocaleString()} emails?`
   
   // Handle the confirmation click
   const handleConfirm = async () => {
-    try {
-      setIsDeleting(true)
-      await onConfirm()
-      // Close modal after successful deletion
-      onOpenChange(false)
-    } catch (error) {
-      console.error("Error during deletion:", error)
-      // Modal will stay open if there's an error
-    } finally {
-      setIsDeleting(false)
+    if (onConfirm) {
+      // Legacy path - use provided onConfirm function
+      try {
+        setIsDeleting(true)
+        await onConfirm()
+        // Close modal after successful deletion
+        onOpenChange(false)
+      } catch (error) {
+        console.error("Error during deletion:", error)
+        // Modal will stay open if there's an error
+      } finally {
+        setIsDeleting(false)
+      }
+    } else {
+      // New queue path - add job to queue
+      try {
+        setIsDeleting(true)
+        
+        // Convert senders to the format expected by the queue
+        const sendersForQueue = senders.map(email => ({
+          email,
+          count: getEmailCountForSender(email)
+        }))
+        
+        // Calculate initial ETA for stable display
+        const initialEtaMs = estimateRuntimeMs({
+          operationType: 'delete',
+          emailCount,
+          mode: 'single'
+        })
+        
+        // Add job to queue
+        enqueue('delete', {
+          senders: sendersForQueue,
+          initialEtaMs
+        })
+        
+        // Close modal immediately - user can track progress in ProcessQueue
+        onOpenChange(false)
+      } catch (error) {
+        console.error("Error adding delete job to queue:", error)
+        // Modal will stay open if there's an error
+      } finally {
+        setIsDeleting(false)
+      }
     }
   }
   
@@ -181,7 +228,7 @@ export function DeleteConfirmModal({
           >
             {isDeleting ? (
               <>
-                <span className="animate-pulse">Deleting</span>
+                <span className="animate-pulse">{onConfirm ? 'Deleting' : 'Adding to Queue'}</span>
                 <span className="animate-pulse ml-1">...</span>
               </>
             ) : (

@@ -1,9 +1,12 @@
 import React from 'react';
 import InboxStats from './overview/InboxStats';
 import ReanalyzeButton from './overview/ReanalyzeButton';
-import ProcessQueue from './overview/ProcessQueue';
+import ProcessQueue from './queue/ProcessQueue';
+import { useAnalysis } from '@/context/AnalysisProvider';
 
 export default function Overview() {
+  const { hasAnalysis, isAnalyzing } = useAnalysis();
+
   return (
     <div className="mt-2 mb-8">
       <div className="flex justify-between items-start">

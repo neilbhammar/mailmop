@@ -16,13 +16,14 @@ import { PremiumFeatureModal } from "@/components/modals/PremiumFeatureModal"
 import { ReauthDialog } from "@/components/modals/ReauthDialog"
 import { useSenderData, TableSender } from '@/hooks/useSenderData'
 import { RuleGroup } from '@/lib/gmail/buildQuery'
-import { useMarkAsRead, SenderToMark } from '@/hooks/useMarkAsRead'
+import { useMarkAsRead } from '@/hooks/useMarkAsRead'
 import { MarkAsReadConfirmModal } from '@/components/modals/MarkAsReadConfirmModal'
 import { BlockSenderModal } from '@/components/modals/BlockSenderModal'
 import { useUnsubscribe, UnsubscribeMethodDetails } from '@/hooks/useUnsubscribe'
 import { getUnsubscribeMethod } from '@/lib/gmail/getUnsubscribeMethod'
 import { ConfirmUnsubscribeModal } from '@/components/modals/ConfirmUnsubscribeModal'
 import { ApplyLabelModal } from "@/components/modals/ApplyLabelModal"
+import { useCreateFilter } from '@/hooks/useCreateFilter'
 
 // Create a custom type for the selection count change handler
 // that includes our viewInGmail extension
@@ -100,7 +101,6 @@ export default function AnalysisView() {
   // Add mark as read hook
   const {
     progress: markAsReadProgress,
-    startMarkAsRead,
     cancelMarkAsRead,
     reauthModal: markAsReadReauthModal,
     closeReauthModal: closeMarkAsReadReauthModal,
@@ -115,6 +115,9 @@ export default function AnalysisView() {
 
   // Hook for unsubscribe functionality
   const unsubscribeHook = useUnsubscribe();
+
+  // Hook for create filter functionality (registers queue executor)
+  useCreateFilter();
 
   // State for ConfirmUnsubscribeModal
   const [isConfirmUnsubscribeModalOpen, setConfirmUnsubscribeModalOpen] = useState(false);
@@ -218,23 +221,6 @@ export default function AnalysisView() {
     // No else needed, hook handles opening the premium modal
   }, [selectedEmails, checkFeatureAccess]);
 
-  // Handler for when delete is actually confirmed
-  const handleDeleteConfirm = useCallback(async () => {
-    if (emailsToDelete.length === 0) return;
-    
-    const sendersToDeleteFormatted: SenderToDelete[] = emailsToDelete.map(email => ({
-      email: email,
-      count: emailCountMap[email] || 30
-    }));
-    
-    const result = await startDelete(sendersToDeleteFormatted);
-    
-    if (result.success) {
-      setSelectedEmails(new Set());
-      setEmailsToDelete([]);
-    } 
-  }, [emailsToDelete, emailCountMap, startDelete]);
-  
   // Handler for row-level delete action
   const handleDeleteSingleSender = useCallback((email: string, emailCount?: number) => {
     const currentCount = emailCount || emailCountMap[email] || 30;
@@ -270,41 +256,6 @@ export default function AnalysisView() {
     }
     // If access check fails, the premium modal will be shown by the hook
   }, [selectedEmails, emailsToDelete, checkFeatureAccess]);
-
-  // Handler for when delete with exceptions is confirmed
-  const handleDeleteWithExceptionsConfirm = useCallback(async (filterRules: RuleGroup[]) => {
-    if (emailsToDelete.length === 0) return;
-    
-    // Format senders with counts
-    const sendersToDeleteFormatted: SenderToDelete[] = emailsToDelete.map(email => ({
-      email: email,
-      count: emailCountMap[email] || 30
-    }));
-    
-    // Pass filter rules to startDelete
-    const result = await startDeleteWithExceptions(sendersToDeleteFormatted, filterRules);
-    
-    if (result.success) {
-      setSelectedEmails(new Set());
-      setEmailsToDelete([]);
-    } 
-  }, [emailsToDelete, emailCountMap, startDeleteWithExceptions]);
-
-  // Handler for single sender delete with exceptions from row actions
-  const handleDeleteSingleSenderWithExceptions = useCallback((email: string, emailCount?: number) => {
-    const currentCount = emailCount || emailCountMap[email] || 30;
-    setEmailCountMap(prev => ({ ...prev, [email]: currentCount }));
-
-    // Check feature access
-    if (checkFeatureAccess('delete_with_exceptions', 1)) {
-      // Access granted, set email and open modal
-      setEmailsToDelete([email]);
-      setIsDeleteWithExceptionsModalOpen(true);
-    } else {
-      // Access denied, hook opened modal. Store sender for potential view action.
-      setActiveSingleSender(email);
-    }
-  }, [checkFeatureAccess, emailCountMap]);
 
   // Handler for mark as read functionality
   const handleMarkAllRead = useCallback(() => {
@@ -345,23 +296,6 @@ export default function AnalysisView() {
       setActiveSingleSender(email);
     }
   }, [checkFeatureAccess, allSenders]);
-
-  // Handler for when mark as read is confirmed
-  const handleMarkAsReadConfirm = useCallback(async () => {
-    if (emailsToMark.length === 0) return;
-    
-    const sendersToMarkFormatted: SenderToMark[] = emailsToMark.map(email => ({
-      email: email,
-      unreadCount: emailCountMap[email] || 30
-    }));
-    
-    const result = await startMarkAsRead(sendersToMarkFormatted);
-    
-    if (result.success) {
-      setSelectedEmails(new Set());
-      setEmailsToMark([]);
-    }
-  }, [emailsToMark, emailCountMap, startMarkAsRead]);
 
   // Handler for BULK Apply Label action (called from AnalysisHeader)
   const handleApplyLabelBulk = useCallback(() => {
@@ -492,6 +426,22 @@ export default function AnalysisView() {
 
   }, [selectedCount, selectedEmails, allSenders]); // Dependencies: count, emails, and the sender data itself
 
+  // Handler for single sender delete with exceptions from row actions
+  const handleDeleteSingleSenderWithExceptions = useCallback((email: string, emailCount?: number) => {
+    const currentCount = emailCount || emailCountMap[email] || 30;
+    setEmailCountMap(prev => ({ ...prev, [email]: currentCount }));
+
+    // Check feature access
+    if (checkFeatureAccess('delete_with_exceptions', 1)) {
+      // Access granted, set email and open modal
+      setEmailsToDelete([email]);
+      setIsDeleteWithExceptionsModalOpen(true);
+    } else {
+      // Access denied, hook opened modal. Store sender for potential view action.
+      setActiveSingleSender(email);
+    }
+  }, [checkFeatureAccess, emailCountMap]);
+
   // Show loading state if we're still preparing
   if (progress.status === 'preparing') {
     return (
@@ -547,7 +497,6 @@ export default function AnalysisView() {
         onOpenChange={setIsDeleteModalOpen}
         emailCount={totalEmailCount}
         senderCount={emailsToDelete.length}
-        onConfirm={handleDeleteConfirm} 
         senders={emailsToDelete}
         emailCountMap={emailCountMap}
         onDeleteWithExceptions={handleDeleteWithExceptions}
@@ -559,7 +508,6 @@ export default function AnalysisView() {
         onOpenChange={setIsDeleteWithExceptionsModalOpen}
         emailCount={totalEmailCount}
         senderCount={emailsToDelete.length}
-        onConfirm={handleDeleteWithExceptionsConfirm}
         senders={emailsToDelete}
         emailCountMap={emailCountMap}
       />
@@ -592,7 +540,6 @@ export default function AnalysisView() {
         onOpenChange={setIsMarkAsReadModalOpen}
         unreadCount={emailsToMark.reduce((sum, email) => sum + (unreadCountMap[email] || 0), 0)}
         senderCount={emailsToMark.length}
-        onConfirm={handleMarkAsReadConfirm}
         senders={emailsToMark}
         unreadCountMap={unreadCountMap}
       />
@@ -611,8 +558,11 @@ export default function AnalysisView() {
           open={isConfirmUnsubscribeModalOpen}
           onOpenChange={setConfirmUnsubscribeModalOpen}
           senderEmail={unsubscribeModalData.senderEmail}
+          methodDetails={unsubscribeModalData.methodDetails}
           onConfirm={async () => {
-            if (unsubscribeModalData) { // Should always be true if modal is open
+            // Only use legacy path for non-email operations (URL or POST)
+            if (unsubscribeModalData && 
+                (unsubscribeModalData.methodDetails.type !== "mailto" || unsubscribeModalData.methodDetails.requiresPost)) {
               await unsubscribeHook.run(
                 { senderEmail: unsubscribeModalData.senderEmail }, 
                 unsubscribeModalData.methodDetails
@@ -642,27 +592,7 @@ export default function AnalysisView() {
         senders={emailsToApplyLabelTo}
         senderCount={emailsToApplyLabelTo.length}
         emailCount={emailCountForApplyLabel}
-        onConfirm={async (options: { 
-          actionType: "add" | "remove"; 
-          labelIds: string[]; 
-          labelNames: string[]; 
-          createNewLabels: string[]; 
-          applyToFuture: boolean; 
-        }) => {
-          // Placeholder for actual label application logic
-          // This would typically involve calling a hook like useApplyLabel
-          console.log('ApplyLabelModal confirmed with options:', options);
-          console.log('Applying to senders:', emailsToApplyLabelTo);
-          
-          // Simulate async operation for type compatibility
-          await new Promise(resolve => setTimeout(resolve, 100)); 
-
-          // Logic after label is applied successfully (e.g., refetch data, show toast)
-          toast.success(`Labels ${options.actionType === 'add' ? 'applied' : 'removed'} for ${emailsToApplyLabelTo.length} sender(s).`);
-          setSelectedEmails(new Set());
-          setEmailsToApplyLabelTo([]);
-          setIsApplyLabelModalOpen(false); // Close modal after confirm
-        }}
+        emailCountMap={emailCountMap}
       />
     </div>
   )

@@ -81,7 +81,7 @@ export default function LandingNavbar({ signIn, lenis }: LandingNavbarProps) {
         
         <button 
           onClick={signIn} 
-          className="flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-transparent text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium shadow-sm border border-gray-100 dark:text-slate-200 dark:hover:bg-slate-800 dark:border-slate-700 dark:shadow-md"
+          className="hidden md:flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-transparent text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium shadow-sm border border-gray-100 dark:text-slate-200 dark:hover:bg-slate-800 dark:border-slate-700 dark:shadow-md"
         >
           <svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg" className="dark:brightness-[.85] dark:saturate-150">
             <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">

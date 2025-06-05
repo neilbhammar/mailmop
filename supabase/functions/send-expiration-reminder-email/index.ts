@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { corsHeaders } from '../_shared/cors.ts';
 
 interface EmailRequest {
   user_id: string;
@@ -10,6 +11,13 @@ interface EmailRequest {
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 405,
+    });
+  }
+
   try {
     const payload: EmailRequest = await req.json();
     
@@ -29,28 +37,36 @@ Deno.serve(async (req: Request) => {
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    const appUrl = Deno.env.get('NEXT_PUBLIC_APP_URL') || Deno.env.get('NEXT_PUBLIC_SITE_URL') || 'https://mailmop.com';
 
     if (!resendApiKey || !supabaseServiceRoleKey || !stripeSecretKey) {
       throw new Error('Missing required environment variables');
     }
 
-    // Create Stripe customer portal session for the personalized link
-    const stripe = new (await import('https://esm.sh/stripe@13.11.0')).default(
-      stripeSecretKey,
-      { apiVersion: '2023-10-16' }
-    );
-
-    // Create customer portal session
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customer_id,
-      return_url: 'http://localhost:3000/dashboard',
+    // Create Stripe customer portal session
+    const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${stripeSecretKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        'customer': customer_id,
+        'return_url': `${appUrl}/dashboard`,
+      }).toString(),
     });
 
+    if (!portalResponse.ok) {
+      const errorText = await portalResponse.text();
+      throw new Error(`Failed to create portal session: ${errorText}`);
+    }
+
+    const portalSession = await portalResponse.json();
     const portalUrl = portalSession.url;
     
     // For canceled subscriptions, use our custom renewal flow instead of portal
     const renewalUrl = cancel_at_period_end 
-      ? 'http://localhost:3000/dashboard?renew=true'  // Custom renewal page
+      ? `${appUrl}/dashboard?renew=true`  // Custom renewal page
       : portalUrl;  // Regular portal for active subscriptions
 
     // Calculate days until expiration using plan_expires_at from database
@@ -133,7 +149,7 @@ Deno.serve(async (req: Request) => {
           month: 'long',
           day: 'numeric',
           year: 'numeric'
-        })} • $9/month</div>
+        })} • $1.89/month</div>
         <div style="font-size:14px; color:#059669; font-weight:500;">✓ Auto-renew is ON</div>
       </div>
 
@@ -152,7 +168,7 @@ Deno.serve(async (req: Request) => {
       </ul>
 
       <div style="display:flex; justify-content:center; gap:12px; margin-bottom:24px;">
-        <a href="http://localhost:3000/dashboard" style="background:#3b82f6; color:#fff; text-decoration:none; padding:12px 18px; border-radius:8px; font-size:14px; font-weight:500;">Open MailMop</a>
+        <a href="${appUrl}/dashboard" style="background:#3b82f6; color:#fff; text-decoration:none; padding:12px 18px; border-radius:8px; font-size:14px; font-weight:500;">Open MailMop</a>
         <a href="${portalUrl}" style="background:#f3f4f6; color:#374151; text-decoration:none; padding:12px 18px; border-radius:8px; font-size:14px; font-weight:500;">Manage Billing</a>
       </div>
 
@@ -193,7 +209,7 @@ Deno.serve(async (req: Request) => {
 
     // Log the action in Supabase and update last_upsell_nudge_sent
     const supabase = (await import('https://esm.sh/@supabase/supabase-js@2')).createClient(
-      'https://ucoacqalcpqrjrrqkizf.supabase.co',
+      Deno.env.get('SUPABASE_URL')!,
       supabaseServiceRoleKey
     );
 

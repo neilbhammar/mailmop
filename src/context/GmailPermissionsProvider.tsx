@@ -40,7 +40,6 @@ interface GmailPermissionsContextType extends GmailPermissionState {
   isLoading: boolean;
   isClientLoaded: boolean;
   requestPermissions: () => Promise<boolean>;
-  shouldShowPermissionsModal: boolean;
   shouldShowMismatchModal: boolean;
   gmailEmail: string | null;
   clearToken: () => Promise<void>;
@@ -439,16 +438,13 @@ export function GmailPermissionsProvider({
     });
   }, [isClientLoaded, user?.email, verifyEmailMatch, updateTokenStatus]);
 
-  // Determine if we need to show the permissions modal
-  const shouldShowPermissionsModal = false; // Disabled - permissions now handled in IntroStepper - old logic was: !permissionState.isTokenValid && !permissionState.hasEmailData && !shouldShowMismatchModal;
-
   // Log any changes to the modal visibility
   useEffect(() => {
     console.log('[Gmail] Modal visibility changed:', { 
-      shouldShow: shouldShowPermissionsModal,
+      shouldShow: shouldShowMismatchModal,
       state: permissionState 
     });
-  }, [shouldShowPermissionsModal, permissionState]);
+  }, [shouldShowMismatchModal, permissionState]);
 
   const clearToken = useCallback(async () => {
     await revokeAndClearToken();
@@ -522,7 +518,6 @@ export function GmailPermissionsProvider({
     isLoading,
     isClientLoaded,
     requestPermissions,
-    shouldShowPermissionsModal,
     shouldShowMismatchModal,
     gmailEmail,
     clearToken,

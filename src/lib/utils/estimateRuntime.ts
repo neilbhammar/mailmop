@@ -117,8 +117,14 @@ export function estimateRuntimeMs({
   console.log(`[Estimate] API Overhead: ${formatDuration(apiOverheadMs)}`);
   console.log(`[Estimate] Total Estimated: ${formatDuration(totalEstimatedMs)}`);
 
-  // Return at least 1 second for very small counts
-  return Math.max(1000, Math.round(totalEstimatedMs));
+  // Return at least 30 seconds for any operation to avoid "0 minutes" display
+  // For very small email counts, add a base minimum time for API calls and processing
+  const minimumTimeMs = 30000; // 30 seconds minimum
+  const finalEstimate = Math.max(minimumTimeMs, Math.round(totalEstimatedMs));
+  
+  console.log(`[Estimate] Final Estimate (with 30s minimum): ${formatDuration(finalEstimate)}`);
+  
+  return finalEstimate;
 }
 
 /**

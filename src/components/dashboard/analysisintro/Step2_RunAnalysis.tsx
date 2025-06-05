@@ -24,6 +24,7 @@ import { clearSenderAnalysis } from '@/lib/storage/senderAnalysis'
 import { useAnalysisOperations } from '@/hooks/useAnalysisOperation'
 import { estimateRuntimeMs, formatDuration, getEffectiveEmailCount } from '@/lib/utils/estimateRuntime'
 import { ReauthDialog } from '@/components/modals/ReauthDialog'
+import { useQueue } from '@/hooks/useQueue'
 
 // BorderTrail component for the magical button effect
 function BorderTrail({
@@ -76,7 +77,8 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
   const [unsubscribeOnly, setUnsubscribeOnly] = useState(false) // Default to full analysis
   const [buttonState, setButtonState] = useState<'idle' | 'preparing'>('idle')
   
-  const { progress, startAnalysis, reauthModal, closeReauthModal } = useAnalysisOperations();
+  const { progress, reauthModal, closeReauthModal } = useAnalysisOperations();
+  const { enqueue } = useQueue();
   
   // Update the function to use the proper setter
   const handleReauthModalChange = (isOpen: boolean) => {
@@ -155,22 +157,29 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
       console.log('[Step2] Changing button state to preparing');
       setButtonState('preparing');
       
-      // Start analysis and check the result
-      console.log('[Step2] Calling startAnalysis...');
-      const result = await startAnalysis({
-        type: unsubscribeOnly ? 'quick' : 'full'
-      });
-      console.log('[Step2] Analysis result:', result);
+      // Calculate the initial ETA to pass to the queue for stable display
+      const initialEtaMs = stats?.totalEmails ? estimateRuntimeMs({
+        operationType: 'analysis',
+        emailCount: stats.totalEmails,
+        mode: unsubscribeOnly ? 'quick' : 'full'
+      }) : 0;
+      
+      // 🚀 NEW QUEUE INTEGRATION - Use queue instead of direct call
+      console.log('[Step2] Enqueuing analysis job...');
+      
+      const analysisPayload = {
+        type: unsubscribeOnly ? 'quick' as const : 'full' as const,
+        initialEtaMs // Pass the pre-calculated ETA
+      };
+      
+      const jobId = enqueue('analysis', analysisPayload);
+      console.log(`[Step2] Analysis job enqueued with ID: ${jobId}, initial ETA: ${formatDuration(initialEtaMs)}`);
 
-      // Only proceed if analysis was successfully initialized
-      if (result.success) {
-        console.log('[Step2] Analysis started successfully, moving to next step...');
-        await onStart(2);
-        console.log('[Step2] Moved to next step');
-      } else {
-        console.log('[Step2] Analysis start failed:', result);
-        setButtonState('idle');
-      }
+      // Move to next step immediately since job is now queued
+      console.log('[Step2] Analysis job queued successfully, moving to next step...');
+      await onStart(2);
+      console.log('[Step2] Moved to next step');
+      
     } catch (error) {
       console.error('[Step2] Analysis error:', error);
       // Log the full error details

@@ -142,7 +142,7 @@ export async function POST(req: Request) {
           }
         ],
         allow_promotion_codes: true,
-        success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard?checkout=success`,
+        success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard?canceled=true`,
         metadata: {
           supabase_user_id: user.id,
@@ -169,7 +169,7 @@ export async function POST(req: Request) {
           }
       ],
         allow_promotion_codes: true,
-        success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard?checkout=success`,
+        success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard?canceled=true`,
         subscription_data: {
           metadata: {

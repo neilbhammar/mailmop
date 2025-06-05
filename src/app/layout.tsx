@@ -6,6 +6,7 @@ import { Inter, Nunito } from 'next/font/google'
 import { AuthProvider } from '@/context/AuthProvider'
 import { GmailPermissionsProvider } from '@/context/GmailPermissionsProvider'
 import { AnalysisProvider } from '@/context/AnalysisProvider'
+import { QueueProvider } from '@/context/QueueProvider'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/components/theme-provider'
 import { cn } from '@/lib/utils'
@@ -35,7 +36,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <GmailPermissionsProvider>
             <AnalysisProvider>
+              <QueueProvider>
               {children}
+              </QueueProvider>
             </AnalysisProvider>
           </GmailPermissionsProvider>
         </AuthProvider>

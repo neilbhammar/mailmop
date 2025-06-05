@@ -6,6 +6,7 @@ import { useAnalysis } from '@/context/AnalysisProvider'
 import IntroStepper from './analysisintro/IntroStepper'
 import AnalysisTable from './analysis/AnalysisView'
 import { useAnalysisOperations } from '@/hooks/useAnalysisOperation'
+import { useQueue } from '@/hooks/useQueue'
 
 export default function InboxAnalysisContainer() {
   // Get important information about the analysis state:
@@ -16,23 +17,48 @@ export default function InboxAnalysisContainer() {
   // Get progress information about the current analysis operation
   const { progress } = useAnalysisOperations()
   
+  // Get queue information to check if analysis is queued
+  const { jobs } = useQueue()
+  
   // Create a special variable to track if the user wants to analyze their inbox again
   // useState(false) means it starts as false
   const [reanalyzeRequested, setReanalyzeRequested] = useState(false)
 
+  // Check if there's an analysis job in the queue (queued or running)
+  const hasAnalysisInQueue = jobs.some(job => 
+    job.type === 'analysis' && 
+    (job.status === 'queued' || job.status === 'running')
+  )
+
   // Simplified logic - show stepper only if:
-  // 1. No existing analysis data OR
-  // 2. User explicitly requested reanalysis
-  const showingStepper = !hasAnalysis || reanalyzeRequested
+  // 1. No existing analysis data AND
+  // 2. User hasn't explicitly requested reanalysis AND  
+  // 3. No analysis job is queued/running
+  const showingStepper = (!hasAnalysis && !hasAnalysisInQueue) || reanalyzeRequested
 
   // Figure out if we should show the analysis results table
   // We show it when:
   // 1. We have analysis results OR
   // 2. We're currently analyzing OR
-  // 3. We're getting ready to analyze or in the middle of it
+  // 3. We're getting ready to analyze or in the middle of it OR
+  // 4. Analysis job is queued/running (prevents flicker)
   const showingAnalysisTable = hasAnalysis || 
     isAnalyzing || 
+    hasAnalysisInQueue ||
     ['preparing', 'analyzing'].includes(progress.status)
+
+  // Debug logging to understand state transitions
+  useEffect(() => {
+    console.log('[InboxAnalysisContainer] State check:', {
+      hasAnalysis,
+      isAnalyzing,
+      hasAnalysisInQueue,
+      reanalyzeRequested,
+      progressStatus: progress.status,
+      showingStepper,
+      showingAnalysisTable
+    });
+  }, [hasAnalysis, isAnalyzing, hasAnalysisInQueue, reanalyzeRequested, progress.status, showingStepper, showingAnalysisTable]);
 
   // This effect watches for when analysis completes or fails
   // When either happens, we reset the reanalyze request

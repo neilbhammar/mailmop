@@ -24,7 +24,9 @@ export default function Dashboard() {
   useEffect(() => {
     const checkoutStatus = searchParams.get('checkout');
     if (checkoutStatus === 'success') {
-      console.log('[Dashboard] Checkout success detected, showing modal and confetti');
+      console.log('[Dashboard] Checkout success detected (direct access), showing modal and confetti');
+      
+      // This handles direct access to dashboard?checkout=success (fallback case)
       setShowConfetti(true);
       setShowManageSubscriptionModal(true);
       

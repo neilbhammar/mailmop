@@ -1,4 +1,5 @@
 import { withBackoff } from './backoff';
+import { logger } from '@/lib/utils/logger';
 
 // Enable/disable detailed logging
 export const ENABLE_GMAIL_DEBUG = false;
@@ -95,7 +96,11 @@ async function fetchSingleMetadata(
     const data = await response.json();
     
     if (!data.payload?.headers) {
-      console.error(`[Gmail] Missing headers for message ${id}`);
+      logger.error('Missing headers for message', { 
+        component: 'fetchMetadata',
+        messageId: id,
+        hasPayload: !!data.payload
+      });
       throw new Error(`Missing headers in response for message ${id}`);
     }
 
@@ -103,7 +108,12 @@ async function fetchSingleMetadata(
   }, {
     onRetry: (attempt, error) => {
       if (ENABLE_GMAIL_DEBUG) {
-        console.warn(`[Gmail] Retrying message ${id} (attempt ${attempt})`);
+        logger.warn('Retrying message fetch', { 
+          component: 'fetchMetadata',
+          messageId: id,
+          attempt,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
     }
   });
@@ -121,7 +131,11 @@ export async function fetchMetadata(
   messageIds: string[]
 ): Promise<GmailMessageMetadata[]> {
   if (ENABLE_GMAIL_DEBUG) {
-    console.log(`[Gmail] Fetching metadata for ${messageIds.length} messages in batches of ${PARALLEL_BATCH_SIZE}...`);
+    logger.debug('Fetching metadata for messages in batches', { 
+      component: 'fetchMetadata',
+      totalMessages: messageIds.length,
+      batchSize: PARALLEL_BATCH_SIZE
+    });
   }
 
   const results: GmailMessageMetadata[] = [];
@@ -133,7 +147,11 @@ export async function fetchMetadata(
   // Process each batch with parallel requests within the batch
   for (const [batchIndex, batch] of batches.entries()) {
     if (ENABLE_GMAIL_DEBUG) {
-      console.log(`[Gmail] Processing batch ${batchIndex + 1}/${batches.length}...`);
+      logger.debug('Processing batch', { 
+        component: 'fetchMetadata',
+        batchIndex: batchIndex + 1,
+        totalBatches: batches.length
+      });
     }
 
     // Add delay between batches (except first one)
@@ -145,7 +163,11 @@ export async function fetchMetadata(
     const batchPromises = batch.map(id => 
       fetchSingleMetadata(accessToken, id)
         .catch(error => {
-          console.error(`[Gmail] Failed to fetch metadata for message ${id}:`, error);
+          logger.error('Failed to fetch metadata for message', { 
+            component: 'fetchMetadata',
+            messageId: id,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
           failures.push(id);
           return null;
         })
@@ -157,17 +179,28 @@ export async function fetchMetadata(
     results.push(...batchResults.filter((r): r is GmailMessageMetadata => r !== null));
 
     if (ENABLE_GMAIL_DEBUG) {
-      console.log(`[Gmail] Completed batch ${batchIndex + 1}: ${results.length}/${messageIds.length} total messages processed`);
+      logger.debug('Completed batch', { 
+        component: 'fetchMetadata',
+        batchIndex: batchIndex + 1,
+        totalProcessed: results.length,
+        totalMessages: messageIds.length
+      });
     }
   }
 
   // Log summary
   if (failures.length > 0) {
-    console.error(`[Gmail] Failed to fetch ${failures.length}/${messageIds.length} messages`);
-  }
-
-  if (ENABLE_GMAIL_DEBUG && results.length > 0) {
-    console.log(`[Gmail] Successfully fetched ${results.length}/${messageIds.length} messages`);
+    logger.error('Failed to fetch some messages', { 
+      component: 'fetchMetadata',
+      failedCount: failures.length,
+      totalCount: messageIds.length
+    });
+  } else {
+    logger.debug('Successfully fetched all messages', { 
+      component: 'fetchMetadata',
+      successCount: results.length,
+      totalCount: messageIds.length
+    });
   }
 
   // If we didn't get any successful results, throw an error

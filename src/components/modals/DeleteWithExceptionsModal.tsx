@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, useMemo } from "react"
 import {
   Dialog,
   DialogContent,
@@ -58,6 +58,11 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useViewInGmail } from '@/hooks/useViewInGmail'
+import { useQueue } from "@/hooks/useQueue"
+import { estimateRuntimeMs } from "@/lib/utils/estimateRuntime"
+import { buildQuery } from "@/lib/gmail/buildQuery"
+import { validateFilterConditionValue, validateDateInput } from '@/lib/utils/inputValidation'
+import { toast } from "sonner"
 
 // Operator types
 type Operator = 'and' | 'or';
@@ -96,7 +101,7 @@ interface DeleteWithExceptionsModalProps {
   onOpenChange: (open: boolean) => void;
   emailCount: number;
   senderCount: number;
-  onConfirm: (ruleGroups: RuleGroup[]) => Promise<void>;
+  onConfirm?: (ruleGroups: RuleGroup[]) => Promise<void>;
   senders?: string[];
   emailCountMap?: Record<string, number>;
 }
@@ -200,6 +205,7 @@ export function DeleteWithExceptionsModal({
   emailCountMap = {}
 }: DeleteWithExceptionsModalProps) {
   const { viewFilteredEmailsInGmail } = useViewInGmail();
+  const { enqueue } = useQueue();
 
   // Date presets for quick filters
   const datePresets = [
@@ -516,7 +522,7 @@ export function DeleteWithExceptionsModal({
     );
   };
 
-  // Update a condition's value
+  // Update a condition's value with validation
   const updateConditionValue = (groupId: string, conditionId: string, value: string | Date | null) => {
     setRuleGroups(prev => 
       prev.map(group => {
@@ -526,17 +532,30 @@ export function DeleteWithExceptionsModal({
           conditions: group.conditions.map(condition => {
             if (condition.id !== conditionId) return condition;
             
-            // Check if value makes the condition valid
+            let finalValue = value;
             let isValid = false;
-            if (value instanceof Date) {
+            
+            // Validate based on condition type
+            if (condition.type === 'contains' || condition.type === 'not-contains') {
+              if (typeof value === 'string') {
+                const validation = validateFilterConditionValue(value, condition.type);
+                finalValue = validation.sanitized;
+                isValid = validation.isValid;
+                
+                // Show error if validation failed
+                if (!validation.isValid && validation.error) {
+                  toast.error(`Filter validation: ${validation.error}`);
+                }
+              }
+            } else if (value instanceof Date) {
               isValid = true;
             } else if (value === null) {
               isValid = true;
-            } else {
+            } else if (typeof value === 'string') {
               isValid = value.trim().length > 0;
             }
             
-            return { ...condition, value, isValid };
+            return { ...condition, value: finalValue, isValid };
           })
         };
       })
@@ -569,37 +588,93 @@ export function DeleteWithExceptionsModal({
   
   // Handle confirmation
   const handleConfirm = async () => {
-    try {
-      setIsDeleting(true);
-      
-      // Get valid rule groups (with at least one valid condition)
-      const validGroups = ruleGroups.filter(
-        group => group.conditions.some(c => c.isValid)
-      );
-      
-      // If we have no filters, create a "match all" condition
-      if (validGroups.length === 0) {
-        const defaultGroup: RuleGroup = {
-          id: crypto.randomUUID(),
-          operator: 'and' as Operator,
-          conditions: [{
-            id: crypto.randomUUID(),
-            type: 'contains' as ConditionType,
-            value: '',
-            isValid: true
-          }]
-        };
+    if (onConfirm) {
+      // Legacy path - use provided onConfirm function
+      try {
+        setIsDeleting(true);
         
-        await onConfirm([defaultGroup]);
-      } else {
-        await onConfirm(validGroups);
+        // Get valid rule groups (with at least one valid condition)
+        const validGroups = ruleGroups.filter(
+          group => group.conditions.some(c => c.isValid)
+        );
+        
+        // If we have no filters, create a "match all" condition
+        if (validGroups.length === 0) {
+          const defaultGroup: RuleGroup = {
+            id: crypto.randomUUID(),
+            operator: 'and' as Operator,
+            conditions: [{
+              id: crypto.randomUUID(),
+              type: 'contains' as ConditionType,
+              value: '',
+              isValid: true
+            }]
+          };
+          
+          await onConfirm([defaultGroup]);
+        } else {
+          await onConfirm(validGroups);
+        }
+        
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Error during deletion with exceptions:", error);
+      } finally {
+        setIsDeleting(false);
       }
-      
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Error during deletion with exceptions:", error);
-    } finally {
-      setIsDeleting(false);
+    } else {
+      // New queue path - add job to queue
+      try {
+        setIsDeleting(true);
+        
+        // Get valid rule groups (with at least one valid condition)
+        const validGroups = ruleGroups.filter(
+          group => group.conditions.some(c => c.isValid)
+        );
+        
+        // If we have no filters, create a "match all" condition
+        let finalRules = validGroups;
+        if (validGroups.length === 0) {
+          const defaultGroup: RuleGroup = {
+            id: crypto.randomUUID(),
+            operator: 'and' as Operator,
+            conditions: [{
+              id: crypto.randomUUID(),
+              type: 'contains' as ConditionType,
+              value: '',
+              isValid: true
+            }]
+          };
+          finalRules = [defaultGroup];
+        }
+        
+        // Convert senders to the format expected by the queue
+        const sendersForQueue = senders.map(email => ({
+          email,
+          count: emailCountMap[email] || Math.floor(emailCount / senders.length) || 0
+        }));
+        
+        // Calculate initial ETA for stable display
+        const initialEtaMs = estimateRuntimeMs({
+          operationType: 'delete',
+          emailCount,
+          mode: 'single'
+        });
+        
+        // Add job to queue
+        enqueue('deleteWithExceptions', {
+          senders: sendersForQueue,
+          filterRules: finalRules,
+          initialEtaMs
+        });
+        
+        // Close modal immediately - user can track progress in ProcessQueue
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Error adding delete with exceptions job to queue:", error);
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -807,6 +882,22 @@ export function DeleteWithExceptionsModal({
     }
   };
 
+  // NEW: Handler for the Estimate button
+  const handleEstimate = () => {
+    // Calculate initial ETA for the estimation
+    const initialEtaMs = estimateRuntimeMs({
+      operationType: 'delete',
+      emailCount,
+      mode: 'single'
+    });
+    console.log(`Estimated runtime: ${initialEtaMs} ms`);
+  };
+
+  // Handle keyword filter changes - no sanitization needed as buildQuery.ts handles escaping
+  const handleKeywordFilterChange = (text: string) => {
+    setKeywordFilter(prev => ({ ...prev, text }));
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white dark:bg-slate-900 dark:border dark:border-slate-700 max-h-[90vh] flex flex-col">
@@ -878,7 +969,7 @@ export function DeleteWithExceptionsModal({
                         id="keyword-filter"
                         ref={keywordInputRef}
                         value={keywordFilter.text}
-                        onChange={(e) => setKeywordFilter(prev => ({ ...prev, text: e.target.value }))}
+                        onChange={(e) => handleKeywordFilterChange(e.target.value)}
                         placeholder="Enter keywords..."
                         className="pl-7 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300 dark:placeholder-slate-500"
                       />
@@ -1104,7 +1195,7 @@ export function DeleteWithExceptionsModal({
           >
             {isDeleting ? (
               <span className="flex items-center">
-                <span className="animate-pulse">Deleting</span>
+                <span className="animate-pulse">{onConfirm ? 'Deleting' : 'Adding to Queue'}</span>
                 <span className="animate-pulse">...</span>
               </span>
             ) : (

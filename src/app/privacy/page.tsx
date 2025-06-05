@@ -25,6 +25,14 @@ export default function PrivacyPolicy() {
             Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
 
+          <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 my-6">
+            <p className="font-semibold text-blue-800 dark:text-blue-200 mb-2">🔒 Privacy First Promise</p>
+            <p className="text-blue-700 dark:text-blue-300 mb-0">
+              <strong>Your emails never leave your device.</strong> All analysis happens locally in your browser. 
+              We never see, store, or have access to your email content.
+            </p>
+          </div>
+
           <section>
             <h2>Our Privacy-First Approach</h2>
             <p>
@@ -34,106 +42,192 @@ export default function PrivacyPolicy() {
               <strong>Local-First Processing:</strong> All email analysis happens directly in your browser. Your emails and their contents never leave your device or pass through our servers.
             </p>
             <p>
-              <strong>No Email Content Storage:</strong> We don't store, process, or have access to the contents of your emails. The app only accesses email metadata (such as sender information and unsubscribe links) to provide its functionality. We are committed to ensuring your email content remains private and under your control.
+              <strong>No Email Content Storage:</strong> We don't store, process, or have access to the contents of your emails. The app only accesses email metadata (such as sender information and unsubscribe links) to provide its functionality.
             </p>
+          </section>
+
+          <section>
+            <h2>📊 Exactly What Data We Collect on Our Backend</h2>
+            <p>
+              While your emails stay local, we do collect minimal data on our servers (Supabase) for essential functionality. Here's exactly what we store and why:
+            </p>
+
+            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg my-4">
+              <h3 className="text-lg font-semibold mb-3">User Account Data</h3>
+              <ul>
+                <li><strong>Google Email Address:</strong> Used for account identification and login</li>
+                <li><strong>Google User ID:</strong> Unique identifier from Google OAuth</li>
+                <li><strong>Account Creation Date:</strong> When you first signed up</li>
+                <li><strong>Last Login Date:</strong> For account security purposes</li>
+              </ul>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                <strong>Why:</strong> Required for authentication and account management
+              </p>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg my-4">
+              <h3 className="text-lg font-semibold mb-3">Beta Access Management</h3>
+              <ul>
+                <li><strong>Beta Whitelist Status:</strong> Whether you have beta access</li>
+                <li><strong>Waitlist Position:</strong> If you're on the waitlist</li>
+                <li><strong>Access Granted Date:</strong> When beta access was provided</li>
+              </ul>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                <strong>Why:</strong> To manage beta program access and notify users when ready
+              </p>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg my-4">
+              <h3 className="text-lg font-semibold mb-3">Action Analytics (Anonymous)</h3>
+              <ul>
+                <li><strong>Action Type:</strong> "delete", "unsubscribe", "mark_read", "apply_label"</li>
+                <li><strong>Action Count:</strong> How many emails were affected</li>
+                <li><strong>Timestamp:</strong> When the action was performed</li>
+                <li><strong>Anonymous User ID:</strong> Randomized identifier (not tied to your email)</li>
+              </ul>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                <strong>Why:</strong> To understand feature usage and improve the product
+              </p>
+              <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                <strong>What we DON'T store:</strong> Email content, sender names, subject lines, or any personal information from your emails
+              </p>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg my-4">
+              <h3 className="text-lg font-semibold mb-3">Subscription Data (If Applicable)</h3>
+              <ul>
+                <li><strong>Stripe Customer ID:</strong> For billing management</li>
+                <li><strong>Subscription Status:</strong> Active, inactive, cancelled</li>
+                <li><strong>Plan Type:</strong> Free or premium</li>
+                <li><strong>Billing Cycle:</strong> Monthly or annual</li>
+              </ul>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                <strong>Why:</strong> To manage billing and provide appropriate access levels
+              </p>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg my-4">
+              <h3 className="text-lg font-semibold mb-3">Aggregated Usage Statistics</h3>
+              <ul>
+                <li><strong>Total Analysis Count:</strong> How many inbox analyses have been performed</li>
+                <li><strong>Total Actions Count:</strong> How many email actions have been taken</li>
+                <li><strong>Daily/Weekly Totals:</strong> Aggregated numbers for landing page stats</li>
+              </ul>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                <strong>Why:</strong> To display usage statistics on our landing page and track product growth
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <h2>🚫 What We Absolutely DO NOT Collect</h2>
+            <ul className="space-y-2">
+              <li>❌ <strong>Email content or body text</strong></li>
+              <li>❌ <strong>Email subject lines</strong></li>
+              <li>❌ <strong>Sender names or email addresses from your inbox</strong></li>
+              <li>❌ <strong>Recipient information</strong></li>
+              <li>❌ <strong>Email attachments</strong></li>
+              <li>❌ <strong>Detailed analysis results</strong></li>
+              <li>❌ <strong>Your Gmail folder structure</strong></li>
+              <li>❌ <strong>Contact lists or email histories</strong></li>
+              <li>❌ <strong>Any personally identifiable information from your emails</strong></li>
+            </ul>
           </section>
 
           <section>
             <h2>Gmail API Access</h2>
             <p>
-              MailMop uses the Gmail API with limited, specific scopes to help analyze your inbox. We request only the minimum permissions necessary for the app to function:
+              MailMop uses the Gmail API to analyze your inbox locally. We request full Gmail scope to enable advanced queries, but all processing happens in your browser:
             </p>
             <ul>
-              <li>Reading email metadata (like sender, subject, date - not the email body).</li>
-              <li>Modifying emails when you instruct the app to (e.g., deleting emails, marking as read, applying labels).</li>
+              <li><strong>Metadata Access:</strong> Sender, date, subject, labels (processed locally only)</li>
+              <li><strong>Email Actions:</strong> Delete, unsubscribe, mark as read, apply labels (when you request them)</li>
+              <li><strong>Search Capabilities:</strong> Advanced filtering and bulk operations</li>
             </ul>
             <p>
-              Your Gmail authentication tokens (access and refresh tokens) are stored securely in your browser's local storage. They are never transmitted to or stored on our servers. This means you retain full control over MailMop's access to your Gmail account, and you can revoke this access at any time through your Google Account settings or directly within MailMop.
+              <strong>Your Gmail tokens</strong> (access and refresh tokens) are stored securely in httpOnly cookies and your browser's memory. They are never transmitted to or stored on our servers permanently.
             </p>
           </section>
 
           <section>
-            <h2>What Data Our Hosted Version Stores</h2>
+            <h2>Data Security & Infrastructure</h2>
             <p>
-              While MailMop is designed to be client-first, the hosted version of our service (app.mailmop.com) stores a minimal amount of data on our secure servers to provide and improve the service. This includes:
+              The minimal data we do store is protected using industry-standard security:
             </p>
             <ul>
-              <li>
-                <strong>User Account Information:</strong> When you sign up, we store your email address and a unique user ID provided by Google. This is used to identify your account.
-              </li>
-              <li>
-                <strong>User-Submitted Feedback:</strong> If you choose to send us feedback through the app or other channels, we will store the content of your feedback to help us understand issues and improve MailMop.
-              </li>
-              <li>
-                <strong>High-Level Analytics Logs:</strong> To understand how MailMop is used and to identify areas for improvement, we log certain actions taken within the application. This is high-level, aggregated data. For example, we might log that a user (identified by a non-personally-identifiable ID) used the "bulk delete" feature at a certain time, or that an analysis was started.
-                <br />
-                <strong>Crucially, these logs do not contain any of your email content, sender details from your inbox, subject lines, or any other sensitive information from your Gmail account.</strong> They are purely for understanding feature popularity and application performance.
-              </li>
-              <li>
-                <strong>Beta Program Status:</strong> If you are part of a beta program, we store information regarding your participation status.
-              </li>
-              <li>
-                <strong>Subscription and Plan Information:</strong> If MailMop offers paid plans, we will store information related to your subscription status, plan type, and billing cycle (managed through a secure third-party payment processor).
-              </li>
+              <li><strong>Encryption:</strong> All data encrypted in transit (HTTPS) and at rest</li>
+              <li><strong>Supabase:</strong> Our database provider with enterprise-grade security</li>
+              <li><strong>Access Controls:</strong> Strict database access controls and authentication</li>
+              <li><strong>Regular Security Audits:</strong> Ongoing security assessments and updates</li>
+              <li><strong>Google CASA Assessment:</strong> Undergoing Google's security review process</li>
             </ul>
-            <p>
-              We want to reiterate: <strong>we never store your email content, lists of senders from your inbox, or detailed analysis results on our servers.</strong> All such processing and data handling for your inbox analysis remain client-side.
-            </p>
           </section>
 
           <section>
-            <h2>Data Sharing</h2>
+            <h2>Data Sharing & Third Parties</h2>
             <p>
-              We do not sell or rent your personal information to third parties. We may share data in the following limited circumstances:
+              We do not sell, rent, or share your personal information with third parties, except:
             </p>
             <ul>
-                <li><strong>With Service Providers:</strong> We may use third-party service providers for functions like hosting, analytics (as described above, e.g., Supabase for our database and Vercel for hosting and analytics), and customer support. These providers only have access to the information necessary to perform their functions and are contractually obligated to protect your data.</li>
-                <li><strong>For Legal Reasons:</strong> We may disclose your information if required by law, subpoena, or other legal process, or if we have a good faith belief that disclosure is reasonably necessary to (a) investigate, prevent, or take action regarding suspected or actual illegal activities or to assist government enforcement agencies; (b) enforce our agreements with you; (c) investigate and defend ourselves against any third-party claims or allegations; (d) protect the security or integrity of our Service; or (e) exercise or protect the rights and safety of MailMop, our users, personnel, or others.</li>
+              <li><strong>Service Providers:</strong> Supabase (database), Vercel (hosting), Stripe (payments) - all with strict data protection agreements</li>
+              <li><strong>Legal Requirements:</strong> Only if required by law or to protect our rights and users' safety</li>
+              <li><strong>Business Transfers:</strong> In the unlikely event of a merger or acquisition, with the same privacy protections</li>
             </ul>
           </section>
-          
+
           <section>
-            <h2>Data Security</h2>
+            <h2>Your Rights & Data Control</h2>
             <p>
-                We implement industry-standard security measures to protect the minimal data we store on our servers. This includes encryption in transit (HTTPS) and at rest, access controls, and regular security assessments. However, no method of transmission over the Internet or method of electronic storage is 100% secure.
+              You have complete control over your data:
+            </p>
+            <ul>
+              <li><strong>Access:</strong> View all data we store about you</li>
+              <li><strong>Delete:</strong> Remove your account and all associated data</li>
+              <li><strong>Revoke Access:</strong> Disconnect MailMop from your Google account anytime</li>
+              <li><strong>Data Export:</strong> Request a copy of your stored data</li>
+              <li><strong>Corrections:</strong> Update or correct your account information</li>
+            </ul>
+            <p>
+              To exercise these rights, contact us through our support channels.
             </p>
           </section>
 
           <section>
-            <h2>Your Data Rights</h2>
+            <h2>Source Code Transparency</h2>
             <p>
-                Depending on your location, you may have certain rights regarding your personal data, including the right to access, correct, or delete your data. You can manage your account information and data directly through MailMop or by contacting us. To delete your account and associated data stored on our servers, please contact us. Note that deleting your account with MailMop does not affect your Gmail account or data stored within Gmail.
-            </p>
-          </section>
-
-          <section>
-            <h2>Source Availability</h2>
-            <p>
-              MailMop is source-available, meaning you can inspect our code to verify our privacy claims. The source code is available on GitHub.
+              MailMop is source-available, meaning you can inspect our code to verify our privacy claims:
             </p>
             <p>
               <a 
                 href="https://github.com/neilbhammar/mailmop" 
                 target="_blank" 
                 rel="noopener noreferrer"
+                className="inline-flex items-center text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                View MailMop Source Code on GitHub
+                🔍 View MailMop Source Code on GitHub
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
               </a>
-            </p>
-          </section>
-          
-          <section>
-            <h2>Changes to This Policy</h2>
-            <p>
-                We may update this Privacy Policy from time to time. If we make material changes, we will notify you by updating the date at the top of this policy and, in some cases, we may provide more prominent notice (such as by adding a statement to our homepage or sending you a notification). We encourage you to review this Privacy Policy periodically to stay informed about our practices.
             </p>
           </section>
 
           <section>
-            <h2>Contact Us</h2>
+            <h2>Changes to This Policy</h2>
             <p>
-              If you have any questions about this Privacy Policy or our privacy practices, please contact us at [Your Contact Email Address or Link to Contact Form].
+              We may update this Privacy Policy from time to time. If we make material changes, we will notify you by updating the date at the top of this policy and, for significant changes, we'll provide more prominent notice through the app or email. Your continued use of MailMop after any changes constitutes acceptance of the updated policy.
             </p>
+          </section>
+
+          <section>
+            <h2>Contact & Questions</h2>
+            <p>
+              If you have any questions about this Privacy Policy or our privacy practices, please contact us:
+            </p>
+            <ul>
+              <li><strong>GitHub Issues:</strong> <a href="https://github.com/neilbhammar/mailmop/issues" target="_blank" rel="noopener noreferrer">Report privacy concerns</a></li>
+              <li><strong>Website:</strong> <a href="https://mailmop.com" target="_blank" rel="noopener noreferrer">mailmop.com</a></li>
+            </ul>
           </section>
         </article>
       </div>

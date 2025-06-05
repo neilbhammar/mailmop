@@ -1,3 +1,5 @@
+import { logger } from '@/lib/utils/logger';
+
 // Memory-only state
 let memToken: { value: string; exp: number } | null = null;
 let refreshTokenState: 'unknown' | 'present' | 'absent' = 'unknown';
@@ -28,7 +30,10 @@ export async function initializeTokenState() {
     refreshTokenState = hasToken ? 'present' : 'absent';
     emitTokenChange();
   } catch (error) {
-    console.error('[Token] Failed to check refresh token status:', error);
+    logger.error('Failed to check refresh token status', { 
+      component: 'token', 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
     refreshTokenState = 'absent';
     emitTokenChange();
   }
@@ -40,30 +45,40 @@ export async function initializeTokenState() {
  * - Otherwise hit our refresh route to get a new one, then cache it.
  */
 export async function getAccessToken(): Promise<string> {
-  console.log('[Token] getAccessToken called');
+  logger.debug('getAccessToken called', { component: 'token' });
   
   if (memToken && memToken.exp > Date.now()) {
-    console.log('[Token] Using cached token, expires at:', new Date(memToken.exp));
-    console.log('[Token] Cached token value (first 20 chars):', memToken.value.substring(0, 20) + '...');
+    logger.debug('Using cached token', { 
+      component: 'token', 
+      expiresAt: new Date(memToken.exp),
+      isValid: true
+    });
     return memToken.value;                 // still good
   }
 
-  console.log('[Token] No valid cached token, refreshing...');
+  logger.debug('No valid cached token, refreshing', { component: 'token' });
   const res = await fetch('/api/auth/refresh', {
     method: 'POST',
     credentials: 'include',                // sends the cookie
   });
 
   if (!res.ok) {
-    console.error('[Token] Refresh failed with status:', res.status);
+    logger.error('Refresh failed', { 
+      component: 'token', 
+      status: res.status,
+      statusText: res.statusText
+    });
     // If refresh fails, we should revoke and clean up since the refresh token is invalid
     await revokeAndClearToken();  // This will handle setting hasRefreshToken to false
     throw new Error('Unable to refresh Gmail token');
   }
 
   const { access_token, expires_in } = await res.json();
-  console.log('[Token] Got fresh token from refresh, expires in:', expires_in, 'seconds');
-  console.log('[Token] Fresh token value (first 20 chars):', access_token.substring(0, 20) + '...');
+  logger.debug('Got fresh token from refresh', { 
+    component: 'token', 
+    expiresInSeconds: expires_in,
+    tokenReceived: !!access_token
+  });
   
   memToken = { value: access_token, exp: Date.now() + expires_in * 1000 };
   refreshTokenState = 'present';
@@ -108,7 +123,7 @@ export async function revokeAndClearToken() {
  * if the current token is nearing expiry.
  */
 export async function forceRefreshAccessToken(): Promise<string> {
-  console.log('[Token] Forcing refresh of access token...');
+  logger.debug('Forcing refresh of access token', { component: 'token' });
   // Directly attempt to refresh
   const res = await fetch('/api/auth/refresh', {
     method: 'POST',
@@ -124,7 +139,10 @@ export async function forceRefreshAccessToken(): Promise<string> {
   memToken = { value: access_token, exp: Date.now() + expires_in * 1000 };
   refreshTokenState = 'present';
   emitTokenChange();
-  console.log('[Token] Force refresh successful.');
+  logger.debug('Force refresh successful', { 
+    component: 'token',
+    tokenReceived: !!access_token
+  });
   return memToken.value;
 }
 
@@ -163,7 +181,7 @@ export function getRefreshTokenState(): 'unknown' | 'present' | 'absent' {
  * This does NOT affect the refresh token status.
  */
 export function clearAccessTokenOnlyInStorage(): void {
-  console.warn('[Token] TEST: Clearing in-memory access token only.');
+  logger.warn('TEST: Clearing in-memory access token only', { component: 'token' });
   memToken = null;
   emitTokenChange(); 
 }
@@ -174,7 +192,7 @@ export function clearAccessTokenOnlyInStorage(): void {
  * This does NOT affect the refresh token status.
  */
 export function expireAccessTokenInStorage(): void {
-  console.warn('[Token] TEST: Expiring in-memory access token.');
+  logger.warn('TEST: Expiring in-memory access token', { component: 'token' });
   if (memToken) {
     memToken.exp = Date.now() + 10000; // Expire in 1 second
   }

@@ -6,8 +6,9 @@
  * 1. Does not mark senders as "deleted" in IndexedDB
  * 2. Supports filter rules for partial deletion
  * 3. Maintains separate progress tracking
+ * 4. Support queue integration for centralized task management
  */
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthProvider';
@@ -33,6 +34,7 @@ import {
 
 // --- Types ---
 import { ActionEndType } from '@/types/actions';
+import { DeleteWithExceptionsJobPayload, ProgressCallback, ExecutorResult } from '@/types/queue';
 
 // --- Constants ---
 const TWO_MINUTES_MS = 2 * 60 * 1000;
@@ -102,9 +104,22 @@ export function useDeleteWithExceptions() {
   const actionLogIdRef = useRef<string | null>(null);
   const isCancelledRef = useRef<boolean>(false);
 
+  // Add cancellation ref to avoid React closure issues (critical pattern from analysis)
+  const cancellationRef = useRef<boolean>(false);
+  const progressRef = useRef<DeletingProgress>({
+    status: 'idle',
+    progressPercent: 0,
+    totalEmailsToProcess: 0,
+    emailsDeletedSoFar: 0,
+  });
+
   const updateProgress = useCallback(
     (newProgress: Partial<DeletingProgress>) => {
-      setProgress((prev) => ({ ...prev, ...newProgress }));
+      setProgress((prev) => {
+        const updated = { ...prev, ...newProgress };
+        progressRef.current = updated; // Keep ref in sync for queue access
+        return updated;
+      });
     },
     []
   );
@@ -117,6 +132,7 @@ export function useDeleteWithExceptions() {
   const cancelDelete = useCallback(async () => {
     console.log('[DeleteWithExceptions] Cancellation requested');
     isCancelledRef.current = true;
+    cancellationRef.current = true; // Also set the queue-compatible ref
     updateProgress({ status: 'cancelled' }); // Pass partial object
     setReauthModal({ isOpen: false, type: 'expired' });
 
@@ -137,11 +153,18 @@ export function useDeleteWithExceptions() {
   const startDeleteWithExceptions = useCallback(
     async (
       senders: SenderToDelete[],
-      filterRules: RuleGroup[]
+      filterRules: RuleGroup[],
+      queueProgressCallback?: ProgressCallback,
+      abortSignal?: AbortSignal
     ): Promise<{ success: boolean }> => {
       console.log('[DeleteWithExceptions] Starting filtered deletion for senders:', senders);
       console.log('[DeleteWithExceptions] Using filter rules:', filterRules);
+      console.log('[DeleteWithExceptions] Queue mode:', !!queueProgressCallback);
+      
+      // Reset cancellation flags
       isCancelledRef.current = false;
+      cancellationRef.current = false;
+      
       updateProgress({ status: 'preparing', progressPercent: 0, emailsDeletedSoFar: 0 });
 
       // --- 0. Basic Checks --- 
@@ -190,6 +213,16 @@ export function useDeleteWithExceptions() {
       const formattedEta = formatDuration(estimatedRuntimeMs);
       updateProgress({ eta: formattedEta });
 
+      // Initial progress for queue (ensure UI renders properly)
+      if (queueProgressCallback) {
+        queueProgressCallback(0, totalEmailsEstimate);
+      }
+
+      // Add minimum delay for very small operations (UX polish pattern)
+      if (totalEmailsEstimate <= 5) {
+        await sleep(500);
+      }
+
       // Removed pre-operation token expiry checks
       if (estimatedRuntimeMs > (55 * 60 * 1000)) {
          toast.warning("Long Deletion Detected", {
@@ -215,7 +248,11 @@ export function useDeleteWithExceptions() {
           user_id: user.id,
           type: 'delete_with_exceptions',
           status: 'started',
-          filters: { senders: senders.map(s => s.email), rules: filterRules, estimatedCount: totalEmailsEstimate },
+          filters: { 
+            senderCount: senders.length, 
+            ruleGroupCount: filterRules.length,
+            estimatedCount: totalEmailsEstimate 
+          },
           estimated_emails: totalEmailsEstimate,
         });
         supabaseLogId = actionLog.id;
@@ -240,7 +277,8 @@ export function useDeleteWithExceptions() {
 
         try {
           for (const sender of senders) {
-            if (isCancelledRef.current) {
+            // Check both cancellation sources (critical pattern from analysis)
+            if (isCancelledRef.current || cancellationRef.current || abortSignal?.aborted) {
               endType = 'user_stopped';
               break;
             }
@@ -263,7 +301,8 @@ export function useDeleteWithExceptions() {
             let senderProcessedSuccessfully = true;
 
             do {
-              if (isCancelledRef.current) {
+              // Check both cancellation sources (critical pattern from analysis)
+              if (isCancelledRef.current || cancellationRef.current || abortSignal?.aborted) {
                 endType = 'user_stopped';
                 break;
               }
@@ -318,6 +357,11 @@ export function useDeleteWithExceptions() {
                 });
                 updateActionProgress(batchFetchAttempts, totalSuccessfullyDeleted);
 
+                // Update queue progress callback if provided
+                if (queueProgressCallback) {
+                  queueProgressCallback(totalSuccessfullyDeleted, totalEmailsEstimate);
+                }
+
                 if (BATCH_DELAY_MS > 0 && nextPageToken) {
                   await sleep(BATCH_DELAY_MS);
                 }
@@ -338,7 +382,7 @@ export function useDeleteWithExceptions() {
                 break;
               }
 
-            } while (nextPageToken && endType === 'success' && !isCancelledRef.current);
+            } while (nextPageToken && endType === 'success' && !isCancelledRef.current && !cancellationRef.current && !(abortSignal?.aborted));
 
             // Do NOT mark sender action taken for filtered deletions
 
@@ -403,6 +447,74 @@ export function useDeleteWithExceptions() {
       updateProgress,
     ]
   );
+
+  // --- Queue Integration (Wrap Pattern) ---
+  const queueExecutor = useCallback(async (
+    payload: DeleteWithExceptionsJobPayload,
+    onProgress: ProgressCallback,
+    abortSignal: AbortSignal
+  ): Promise<ExecutorResult> => {
+    console.log('[DeleteWithExceptions] Queue executor called with payload:', payload);
+    
+    // Convert queue payload to hook format  
+    const senders: SenderToDelete[] = payload.senders;
+    const filterRules: RuleGroup[] = payload.filterRules;
+    
+    // Set up cancellation handling
+    const handleAbort = () => {
+      console.log('[DeleteWithExceptions] Queue abort signal received');
+      cancelDelete();
+    };
+    abortSignal.addEventListener('abort', handleAbort);
+    
+    try {
+      // Call existing function with progress callback
+      const result = await startDeleteWithExceptions(senders, filterRules, onProgress, abortSignal);
+      
+      // Wait for completion and determine final result
+      return new Promise((resolve) => {
+        const checkCompletion = () => {
+          const currentProgress = progressRef.current;
+          
+          if (currentProgress.status === 'completed') {
+            resolve({
+              success: true,
+              processedCount: currentProgress.emailsDeletedSoFar
+            });
+          } else if (currentProgress.status === 'cancelled') {
+            resolve({
+              success: false,
+              error: 'Operation cancelled by user',
+              processedCount: currentProgress.emailsDeletedSoFar
+            });
+          } else if (currentProgress.status === 'error') {
+            resolve({
+              success: false,
+              error: currentProgress.error || 'Unknown error occurred',
+              processedCount: currentProgress.emailsDeletedSoFar
+            });
+          } else {
+            // Still processing, check again in 1 second
+            setTimeout(checkCompletion, 1000);
+          }
+        };
+        
+        // Start checking immediately
+        checkCompletion();
+      });
+      
+    } finally {
+      abortSignal.removeEventListener('abort', handleAbort);
+    }
+  }, [startDeleteWithExceptions, cancelDelete]);
+
+  // Register executor with queue system
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).__queueRegisterExecutor) {
+      console.log('[DeleteWithExceptions] Registering queue executor');
+      (window as any).__queueRegisterExecutor('deleteWithExceptions', queueExecutor);
+    }
+  }, [queueExecutor]);
 
   return {
     progress,
