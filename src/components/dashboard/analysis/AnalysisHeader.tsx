@@ -97,11 +97,11 @@ export function AnalysisHeader({
     300 // 300ms delay
   );
 
-  // Handle search input changes
+  // Handle search input changes - no sanitization needed for client-side search
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSearchTerm = e.target.value;
-    setSearchTerm(newSearchTerm);
-    debouncedSearchChange(newSearchTerm);
+    const value = e.target.value;
+    setSearchTerm(value);
+    debouncedSearchChange(value);
   };
 
   // Handle unread only toggle

@@ -3,6 +3,7 @@ import { Lightbulb } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/supabase/client'
 import { useAuth } from '@/context/AuthProvider'
+import { sanitizeTextInput } from '@/lib/utils/inputValidation'
 import {
   Dialog,
   DialogContent,
@@ -28,10 +29,12 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const { user } = useAuth()
 
   const handleTextChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    const text = e.target.value
-    if (text.length <= maxCharCount) {
-      setFeedbackContent(text)
-      setCharCount(text.length)
+    const rawText = e.target.value;
+    
+    // Only apply length limit, don't sanitize during typing for better UX
+    if (rawText.length <= maxCharCount) {
+      setFeedbackContent(rawText);
+      setCharCount(rawText.length);
     }
   }
 
@@ -52,13 +55,29 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
       return
     }
 
+    // Sanitize the feedback content before submission
+    const sanitizedContent = sanitizeTextInput(feedbackContent.trim(), maxCharCount);
+    
+    // Check if content was modified during sanitization
+    if (sanitizedContent !== feedbackContent.trim()) {
+      toast.warning('Some characters were removed from your feedback for security');
+    }
+    
+    // Validate that we still have content after sanitization
+    if (!sanitizedContent || sanitizedContent.length === 0) {
+      toast.error('Feedback content is invalid', {
+        description: 'Please provide valid feedback text'
+      });
+      return;
+    }
+
     setIsSubmitting(true)
 
     try {
       const { error } = await supabase.from('feedback').insert([{
         user_id: user.id,
         feedback_type: selectedType,
-        content: feedbackContent.trim(),
+        content: sanitizedContent, // Use sanitized content
         user_email: user.email
       }])
       

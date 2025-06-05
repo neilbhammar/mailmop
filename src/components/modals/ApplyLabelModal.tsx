@@ -51,6 +51,9 @@ import { estimateRuntimeMs } from "@/lib/utils/estimateRuntime"
 import { ReauthDialog } from '@/components/modals/ReauthDialog';
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'; // Import the hook
 
+// Import validation utility
+import { validateLabelName } from '@/lib/utils/inputValidation'
+
 interface ApplyLabelModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -292,9 +295,25 @@ export function ApplyLabelModal({
     }
   }
 
-  // Create a new label
+  // Handle search input changes - no sanitization needed for client-side search
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchValue(value);
+  };
+
+  // Create a new label with validation
   const handleCreateLabel = async () => {
     if (!searchValue.trim()) return;
+    
+    // Validate the label name before creating
+    const validation = validateLabelName(searchValue.trim());
+    
+    if (!validation.isValid) {
+      toast.error(validation.error || 'Invalid label name');
+      // Update search value to the sanitized version
+      setSearchValue(validation.sanitized);
+      return;
+    }
     
     setIsCreatingLabel(true);
     try {
@@ -317,8 +336,8 @@ export function ApplyLabelModal({
         return;
       }
       
-      // Create the label
-      const newLabel = await createSimpleLabel(accessTokenForCreate, searchValue.trim());
+      // Create the label using the validated/sanitized name
+      const newLabel = await createSimpleLabel(accessTokenForCreate, validation.sanitized);
       
       if (newLabel) {
         // Add to available labels
@@ -331,7 +350,7 @@ export function ApplyLabelModal({
           color: newLabel.color
         }]);
         
-        toast.success(`Label "${searchValue.trim()}" created successfully`);
+        toast.success(`Label "${validation.sanitized}" created successfully`);
       } else {
         // If null is returned, the label already exists but wasn't in our list
         // Refresh the labels to get the existing one
@@ -339,7 +358,7 @@ export function ApplyLabelModal({
         
         // Find the label in the refreshed list
         const existingLabel = getStoredLabels()?.find(
-          label => label.name.toLowerCase() === searchValue.trim().toLowerCase()
+          label => label.name.toLowerCase() === validation.sanitized.toLowerCase()
         );
         
         if (existingLabel) {
@@ -349,9 +368,9 @@ export function ApplyLabelModal({
             color: existingLabel.color
           }]);
           
-          toast.info(`Label "${searchValue.trim()}" already exists and has been selected`);
+          toast.info(`Label "${validation.sanitized}" already exists and has been selected`);
         } else {
-          toast.error(`Failed to create or find label "${searchValue.trim()}"`);
+          toast.error(`Failed to create or find label "${validation.sanitized}"`);
         }
       }
       
@@ -359,7 +378,7 @@ export function ApplyLabelModal({
       setSearchValue("");
     } catch (error) {
       console.error("Error creating label:", error);
-      toast.error(`Failed to create label "${searchValue.trim()}". Please try again.`);
+      toast.error(`Failed to create label "${validation.sanitized}". Please try again.`);
     } finally {
       setIsCreatingLabel(false);
     }
@@ -599,7 +618,7 @@ export function ApplyLabelModal({
                         ref={inputRef}
                         type="text"
                         value={searchValue}
-                        onChange={(e) => setSearchValue(e.target.value)}
+                        onChange={handleSearchChange}
                         onFocus={() => setInputFocused(true)}
                         onKeyDown={handleInputKeyDown}
                         className="flex-1 bg-transparent outline-none placeholder:text-slate-500 dark:placeholder:text-slate-400 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-50 p-0 text-sm"

@@ -44,6 +44,23 @@ export interface RuleGroup {
 }
 
 /**
+ * Safely escapes a string for use in Gmail search queries
+ * @param value - The string value to escape
+ * @returns Escaped string safe for Gmail search
+ */
+function escapeGmailSearchValue(value: string): string {
+  if (!value || typeof value !== 'string') {
+    return '';
+  }
+  
+  // Remove any characters that could break Gmail search syntax
+  return value
+    .replace(/[{}[\]]/g, '') // Remove regex-like characters
+    .replace(/"/g, '\\"') // Escape quotes properly
+    .trim();
+}
+
+/**
  * Builds Gmail API search queries for different operations
  * 
  * @param operation - The operation and its parameters
@@ -88,9 +105,11 @@ export function buildQuery(operation: QueryOperation): string {
     case 'delete': {
       let query = baseQuery;
 
-      // Add sender filter if provided
+      // Add sender filter if provided (with proper escaping)
       if (operation.mode === 'single' && operation.senderEmail) {
-        query = `${query} from:${operation.senderEmail}`;
+        // Ensure the email is properly escaped for Gmail search
+        const escapedEmail = escapeGmailSearchValue(operation.senderEmail);
+        query = `${query} from:${escapedEmail}`;
       }
 
       // Add rule group filters if provided
@@ -109,9 +128,17 @@ export function buildQuery(operation: QueryOperation): string {
             const conditionQueries = validConditions.map(condition => {
               switch (condition.type) {
                 case 'contains':
-                  return `"${condition.value}"`;
+                  if (typeof condition.value === 'string') {
+                    const escapedValue = escapeGmailSearchValue(condition.value);
+                    return `"${escapedValue}"`;
+                  }
+                  return '';
                 case 'not-contains':
-                  return `-"${condition.value}"`;
+                  if (typeof condition.value === 'string') {
+                    const escapedValue = escapeGmailSearchValue(condition.value);
+                    return `-"${escapedValue}"`;
+                  }
+                  return '';
                 case 'date-after':
                   return `after:${condition.value instanceof Date ? 
                     condition.value.toISOString().split('T')[0].replace(/-/g, '/') : 
@@ -155,14 +182,19 @@ export function buildQuery(operation: QueryOperation): string {
     case 'mark':
       let query = baseQuery;
       
-      // Add sender filter if specified
+      // Add sender filter if specified (with proper escaping)
       if (operation.senderEmail) {
-        query = `${query} from:${operation.senderEmail}`;
+        const escapedEmail = escapeGmailSearchValue(operation.senderEmail);
+        query = `${query} from:${escapedEmail}`;
       }
 
       // Add any additional terms (like 'is:unread')
       if (operation.additionalTerms && operation.additionalTerms.length > 0) {
-        query = `${query} ${operation.additionalTerms.join(' ')}`;
+        // Escape additional terms as well
+        const escapedTerms = operation.additionalTerms.map(term => 
+          escapeGmailSearchValue(term)
+        );
+        query = `${query} ${escapedTerms.join(' ')}`;
       }
 
       return query;

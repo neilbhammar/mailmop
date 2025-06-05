@@ -61,6 +61,8 @@ import { useViewInGmail } from '@/hooks/useViewInGmail'
 import { useQueue } from "@/hooks/useQueue"
 import { estimateRuntimeMs } from "@/lib/utils/estimateRuntime"
 import { buildQuery } from "@/lib/gmail/buildQuery"
+import { validateFilterConditionValue, validateDateInput } from '@/lib/utils/inputValidation'
+import { toast } from "sonner"
 
 // Operator types
 type Operator = 'and' | 'or';
@@ -520,7 +522,7 @@ export function DeleteWithExceptionsModal({
     );
   };
 
-  // Update a condition's value
+  // Update a condition's value with validation
   const updateConditionValue = (groupId: string, conditionId: string, value: string | Date | null) => {
     setRuleGroups(prev => 
       prev.map(group => {
@@ -530,17 +532,30 @@ export function DeleteWithExceptionsModal({
           conditions: group.conditions.map(condition => {
             if (condition.id !== conditionId) return condition;
             
-            // Check if value makes the condition valid
+            let finalValue = value;
             let isValid = false;
-            if (value instanceof Date) {
+            
+            // Validate based on condition type
+            if (condition.type === 'contains' || condition.type === 'not-contains') {
+              if (typeof value === 'string') {
+                const validation = validateFilterConditionValue(value, condition.type);
+                finalValue = validation.sanitized;
+                isValid = validation.isValid;
+                
+                // Show error if validation failed
+                if (!validation.isValid && validation.error) {
+                  toast.error(`Filter validation: ${validation.error}`);
+                }
+              }
+            } else if (value instanceof Date) {
               isValid = true;
             } else if (value === null) {
               isValid = true;
-            } else {
+            } else if (typeof value === 'string') {
               isValid = value.trim().length > 0;
             }
             
-            return { ...condition, value, isValid };
+            return { ...condition, value: finalValue, isValid };
           })
         };
       })
@@ -878,6 +893,11 @@ export function DeleteWithExceptionsModal({
     console.log(`Estimated runtime: ${initialEtaMs} ms`);
   };
 
+  // Handle keyword filter changes - no sanitization needed as buildQuery.ts handles escaping
+  const handleKeywordFilterChange = (text: string) => {
+    setKeywordFilter(prev => ({ ...prev, text }));
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white dark:bg-slate-900 dark:border dark:border-slate-700 max-h-[90vh] flex flex-col">
@@ -949,7 +969,7 @@ export function DeleteWithExceptionsModal({
                         id="keyword-filter"
                         ref={keywordInputRef}
                         value={keywordFilter.text}
-                        onChange={(e) => setKeywordFilter(prev => ({ ...prev, text: e.target.value }))}
+                        onChange={(e) => handleKeywordFilterChange(e.target.value)}
                         placeholder="Enter keywords..."
                         className="pl-7 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300 dark:placeholder-slate-500"
                       />
