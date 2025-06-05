@@ -37,8 +37,6 @@ const getEmailTemplate = (firstName: string) => `
 
   <p style="margin: 0 0 25px;">You're now on the waitlist. MailMop is currently in beta, but I'll shoot you an email as soon as you have access.</p>
 
-  <p style="margin: 0 0 25px;">In the meantime, here's a 2-minute demo: <a href="https://www.youtube.com/embed/IfTeb3zfTL4?si=hND8Y9IHwdbf0Czu&autoplay=1" style="color: #4B0082; text-decoration: underline;">Watch demo</a></p>
-
   <p style="margin: 0 0 25px;">Also, MailMop is source-available! You can check out all the code here: <a href="https://github.com/neilbhammar/mailmop" style="color: #4B0082; text-decoration: underline;">github.com/neilbhammar/mailmop</a></p>
 
   <p style="margin: 0 0 25px;">Thanks again! I'm excited to help you reclaim your inbox.</p>

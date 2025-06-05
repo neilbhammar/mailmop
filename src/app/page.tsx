@@ -381,7 +381,7 @@ export default function Home() {
                   <div className="absolute inset-0 w-full scale-x-0 h-1 bg-gradient-to-r from-transparent via-blue-300 to-transparent bottom-0 group-hover:scale-x-100 transition-transform duration-700 origin-left z-0 opacity-80 dark:via-blue-400"></div>
                   <div className="absolute inset-0 w-full scale-x-0 h-1 bg-gradient-to-r from-transparent via-blue-200 to-transparent bottom-2 group-hover:scale-x-100 transition-transform duration-1000 origin-right z-0 opacity-60 delay-100 dark:via-blue-300"></div>
                 </button>
-                <a href="#how-it-works" onClick={openVideoModal} className="text-gray-600 font-medium flex items-center hover:text-gray-800 transition-all group mt-2 sm:mt-0 sm:ml-4 py-2 dark:text-slate-400 dark:hover:text-slate-200">
+                <a href="#how-it-works" className="text-gray-600 font-medium flex items-center hover:text-gray-800 transition-all group mt-2 sm:mt-0 sm:ml-4 py-2 dark:text-slate-400 dark:hover:text-slate-200">
                   <span>See how it works</span>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
