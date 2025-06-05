@@ -28,6 +28,12 @@ I was drowning in my Gmail inbox with over 50,000 emails. Most existing inbox cl
 ### The Solution
 I built MailMop to be the email cleaning tool I wanted to exist. It uses the Gmail API's metadata-only scope to analyze your inbox locally, identifying bulk senders, promotions, and noise—all while keeping your emails on your device.
 
+### A Note on Experience
+
+**Full transparency**: I'm not a professional developer, in fact, I'm not even technical! I've always had an appreciation for the engineers I've worked with and a fascination for making things, so this was my way of dipping my toes in the water. This is my first time building something substantial and (despite 95% of the code surely being Cursor generated) I tried to be really intentional about architecture and quality. That said, I'm certain I made a lot of suboptimal decisions and trade-offs along the way.
+
+If you're an experienced developer and see things that could be improved, I'd genuinely love your feedback! The goal was to build something that works well and is maintainable, but I know there's going to be tons of room for improvement.
+
 ## 🔐 Privacy-First Architecture
 
 ### Why Local Processing Matters
@@ -57,6 +63,7 @@ Your Gmail → Your Browser → Analysis → Results
 - **Local Storage**: IndexedDB for efficient local data caching
 - **State Management**: React Context with custom providers
 - **UI Components**: Radix UI + ShadCN for accessible components
+- **AI Development Stack**: [Cursor](https://cursor.so/) with Claude Sonnet for AI-assisted development
 
 ### Key Architectural Decisions
 
@@ -112,12 +119,6 @@ I'm making MailMop **source available** for several reasons:
 2. **Trust**: You can audit the code to verify privacy claims
 3. **Learning**: This is my first major project—I'd love feedback from experienced developers
 4. **Community**: Others might want to contribute improvements or fork for their needs
-
-### A Note on Experience
-
-**Full transparency**: I'm not a professional developer - I'm actually not even technical, just curious! This is my first time building something substantial, and I tried to be really intentional about architecture and code quality, but I'm sure I made tons of suboptimal decisions along the way.
-
-If you're an experienced developer and see things that could be improved, I'd genuinely love your feedback! The goal was to build something that works well and is maintainable, but I know there's going to be tons of room for improvement.
 
 ## 🛠️ Local Development Setup
 
