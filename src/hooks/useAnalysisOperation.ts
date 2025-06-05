@@ -27,6 +27,7 @@ import { ActionEndType } from '@/types/actions';
 import { fetchMessageIds } from '@/lib/gmail/fetchMessageIds';
 import { fetchMetadata } from '@/lib/gmail/fetchMetadata';
 import { parseMetadataBatch } from '@/lib/gmail/parseHeaders';
+import { logger } from '@/lib/utils/logger';
 
 // --- Queue System Integration ---
 import { AnalysisJobPayload, ProgressCallback, ExecutorResult } from '@/types/queue';
@@ -84,14 +85,14 @@ interface AnalysisFilters {
 
 // Helper to dispatch status change event
 function dispatchStatusChange() {
-  console.log('[Analysis] Dispatching status change event');
+  logger.debug('Dispatching status change event', { component: 'analysis' });
   window.dispatchEvent(new Event('mailmop:analysis-status-change'));
 }
 
 // Helper function to send desktop notification
 function sendDesktopNotification(title: string, options?: NotificationOptions) {
   if (!('Notification' in window)) {
-    console.log('[Analysis] Desktop notifications not supported by this browser.');
+    logger.debug('Desktop notifications not supported by this browser', { component: 'analysis' });
     return;
   }
   if (Notification.permission === 'granted') {
@@ -102,13 +103,13 @@ function sendDesktopNotification(title: string, options?: NotificationOptions) {
       // Potentially navigate to a relevant page or close notification
       notification.close();
     };
-    console.log(`[Analysis] Desktop notification sent: ${title}`);
+    logger.debug('Desktop notification sent', { component: 'analysis', title });
   } else if (Notification.permission === 'denied') {
-    console.log('[Analysis] Desktop notification permission has been denied.');
+    logger.debug('Desktop notification permission has been denied', { component: 'analysis' });
   } else {
     // 'default' state - permission not yet asked or explicitly denied.
     // The UI should ideally handle requesting permission at an appropriate time.
-    console.log('[Analysis] Desktop notification permission not yet granted (is default).');
+    logger.debug('Desktop notification permission not yet granted (is default)', { component: 'analysis' });
   }
 }
 
@@ -142,7 +143,11 @@ export function useAnalysisOperations() {
       }
       
       if (prevProgress.status !== nextProgress.status) {
-        console.log(`[Analysis] Status changing from ${prevProgress.status} to ${nextProgress.status}`);
+        logger.debug('Status change', { 
+          component: 'analysis', 
+          from: prevProgress.status, 
+          to: nextProgress.status 
+        });
         dispatchStatusChange();
       }
       return nextProgress;
@@ -165,13 +170,13 @@ export function useAnalysisOperations() {
   const { user } = useAuth();
 
   const closeReauthModal = useCallback(() => {
-    console.log('[Analysis] Closing reauth modal');
+    logger.debug('Closing reauth modal', { component: 'analysis' });
     setReauthModal(prev => ({ ...prev, isOpen: false }));
   }, []);
 
   const stopSilentAudio = useCallback(() => {
     if (audioRef.current) {
-      console.log('[Analysis] Stopping silent audio...');
+      logger.debug('Stopping silent audio', { component: 'analysis' });
       audioRef.current.pause();
       // Release the audio file and abort network activity
       audioRef.current.src = ''; 
@@ -182,26 +187,28 @@ export function useAnalysisOperations() {
 
   const startAnalysis = useCallback(async (options: AnalysisOptions, queueProgressCallback?: ProgressCallback, abortSignal?: AbortSignal) => {
     updateProgress({ status: 'preparing', progress: 0 });
-    console.log('[Analysis] Preparing analysis...');
+    logger.debug('Preparing analysis', { component: 'analysis', options });
 
     // 0. Request Notification permission if in 'default' state.
     if ('Notification' in window && Notification.permission === 'default') {
-      console.log('[Analysis] Notification permission is default, requesting...');
+      logger.debug('Requesting notification permission', { component: 'analysis' });
       try {
         const permissionResult = await Notification.requestPermission();
-        console.log(`[Analysis] Notification permission request result: ${permissionResult}`);
+        logger.debug('Notification permission result', { component: 'analysis', result: permissionResult });
         // The sendDesktopNotification function will check the permission status again before sending.
       } catch (error) {
-        console.error('[Analysis] Error requesting notification permission:', error);
+        logger.error('Error requesting notification permission', { 
+          component: 'analysis', 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        });
       }
     }
 
     // 1. Check basic Gmail connection (refresh token presence)
     if (!isGmailConnected) {
-      console.log('[Analysis] No Gmail connection (no refresh token), requesting reauth via modal.');
+      logger.debug('No Gmail connection, requesting reauth via modal', { component: 'analysis' });
       setReauthModal({ isOpen: true, type: 'expired' });
-      updateProgress({ status: 'error', error: 'Gmail not connected. Please reconnect.', progress: 0 });
-      stopSilentAudio(); // Stop audio if it was somehow started
+      updateProgress({ status: 'error', progress: 0, error: 'Gmail connection required. Please reconnect your account.' });
       return { success: false };
     }
 
@@ -209,173 +216,167 @@ export function useAnalysisOperations() {
     // If refresh fails (e.g., refresh token revoked by Google), it will throw.
     try {
       await getAccessToken(); // This ensures we have a working token or throws
-      console.log('[Analysis] Access token acquired successfully.');
+      logger.debug('Access token acquired successfully', { component: 'analysis' });
     } catch (error) {
-      console.error('[Analysis] Failed to get initial access token:', error);
+      logger.error('Failed to get initial access token', { 
+        component: 'analysis', 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
       setReauthModal({ isOpen: true, type: 'expired' });
-      updateProgress({ status: 'error', error: 'Gmail authentication failed. Please reconnect.', progress: 0 });
-      stopSilentAudio();
+      updateProgress({ status: 'error', progress: 0, error: 'Gmail authentication failed. Please reconnect your account.' });
       return { success: false };
     }
 
-    // 3. Pre-flight checks (User, Stats)
     if (!stats?.totalEmails) {
-      updateProgress({ status: 'error', error: 'Unable to determine inbox size. Please try again.', progress: 0 });
-      stopSilentAudio();
+      updateProgress({ status: 'error', progress: 0, error: 'No Gmail stats available. Please refresh and try again.' });
       return { success: false };
     }
+
     if (!user?.id) {
-      updateProgress({ status: 'error', error: 'User not authenticated.', progress: 0 });
-      stopSilentAudio();
+      updateProgress({ status: 'error', progress: 0, error: 'User authentication required. Please sign in again.' });
       return { success: false };
     }
 
-    const effectiveEmailCount = getEffectiveEmailCount(
-      stats.totalEmails,
-      options.type,
-      'analysis'
-    );
-    console.log(`[Analysis] Processing ${effectiveEmailCount.toLocaleString()} out of ${stats.totalEmails.toLocaleString()} total emails`);
-
+    // 3. Estimate runtime and get effective email count based on analysis type
+    const operationType: OperationType = 'analysis';
+    const operationMode: OperationMode = options.type === 'quick' ? 'quick' : 'full';
+    const effectiveEmailCount = getEffectiveEmailCount(stats.totalEmails, operationMode, operationType);
     const estimatedRuntimeMs = estimateRuntimeMs({
-      operationType: 'analysis' as OperationType,
-      emailCount: effectiveEmailCount, // Base ETA on effective count
-      mode: options.type as OperationMode
+      operationType,
+      emailCount: effectiveEmailCount,
+      mode: operationMode
     });
-    
-    // Apply UX polish - minimum time estimates  
-    const minimumTimeMs = 30000; // 30 seconds minimum
-    const finalEstimatedRuntimeMs = Math.max(minimumTimeMs, estimatedRuntimeMs);
-    const formattedEta = formatDuration(finalEstimatedRuntimeMs);
-    console.log(`[Analysis] Estimated runtime: ${formattedEta}`);
+    const formattedEta = formatDuration(estimatedRuntimeMs);
+
+    logger.info('Starting analysis', { 
+      component: 'analysis',
+      totalEmails: stats.totalEmails,
+      effectiveEmails: effectiveEmailCount,
+      estimatedRuntimeMs,
+      formattedEta
+    });
+
     updateProgress(prev => ({ ...prev, eta: formattedEta }));
 
-    // Removed pre-operation token expiry checks as getAccessToken handles this implicitly.
+    // Removed pre-flight checks as getAccessToken handles this implicitly.
     // If token is > 55 mins, a toast warning is still fine.
-    if (finalEstimatedRuntimeMs > (55 * 60 * 1000)) { // 55 minutes
-      toast.warning(
-        "Long Operation Detected",
-        {
-          description: `This analysis may take around ${formattedEta}. You can leave this page; we'll notify you. If your Gmail session expires (usually after 1 hour of inactivity with Google), you might need to reconnect later.`,
-          duration: 8000
-        }
-      );
-    }
 
-    const hasExisting = await hasSenderAnalysis();
-    if (hasExisting) {
-      console.log('[Analysis] Clearing previous analysis data...');
+    // 4. Clear any previous analysis data
+    if (await hasSenderAnalysis()) {
+      logger.debug('Clearing previous analysis data', { component: 'analysis' });
       await clearSenderAnalysis();
-      clearCurrentAnalysis();
     }
 
-    await getDB();
+    // 5. Build the Gmail query based on analysis type
     const query = buildQuery({ type: 'analysis', mode: options.type });
-    console.log(`[Analysis] Using query: ${query}`);
+    logger.debug('Using query for analysis', { component: 'analysis', query });
 
-    const clientActionId = uuidv4();
-    const analysisId = new Date().toISOString();
-    const totalEstimatedBatches = Math.ceil(effectiveEmailCount / BATCH_SIZE);
+    let analysisId = '';
+    let supabaseLogId = '';
 
-    createLocalActionLog({
-      clientActionId,
-      type: 'analysis',
-      estimatedRuntimeMs,
-      totalEmails: effectiveEmailCount,
-      totalEstimatedBatches,
-      filters: { type: options.type }
-    });
-
-    let supabaseLogId: string;
+    // 6. Create action logs
     try {
-      const actionLog = await createActionLog({
+      // Supabase log
+      const result = await createActionLog({
         user_id: user.id,
         type: 'analysis',
         status: 'started',
-        filters: { type: options.type, effectiveEmailCount } as AnalysisFilters,
+        filters: {
+          analysisType: options.type,
+          estimatedDuration: formattedEta,
+          totalEmails: stats.totalEmails,
+          effectiveEmailCount
+        },
         estimated_emails: effectiveEmailCount
       });
-      supabaseLogId = actionLog.id!;
-      updateAnalysisId(supabaseLogId);
-    } catch (error) {
-      console.error('[Analysis] Failed to create Supabase action log:', error);
-      updateProgress({ status: 'error', error: 'Failed to start analysis logging. Please try again.', progress: 0 });
-      return { success: false };
-    }
-    
-    updateProgress({ status: 'analyzing', progress: 0 });
-    await updateActionLog(supabaseLogId, { status: 'analyzing' });
+      supabaseLogId = result.id!;
+      analysisId = result.id!;
 
-    // Initial queue progress callback if provided
-    if (queueProgressCallback) {
-      queueProgressCallback(0, effectiveEmailCount);
-    }
-    
-    // For very small operations, add a small delay to ensure UI can render
-    if (effectiveEmailCount <= 100) {
-      await sleep(500); // 500ms delay for very small operations
-    }
-
-    console.log('[Analysis] Pre-flight checks passed, proceeding with background analysis');
-    
-    // Start silent audio playback
-    if (!audioRef.current) {
-      console.log('[Analysis] Creating and playing silent audio for anti-throttling...');
-      audioRef.current = new Audio('/sample.mp3'); // Assuming silent.mp3 is in public folder
-      audioRef.current.loop = true;
-      audioRef.current.volume = .2; // Ensure it's truly silent
-      audioRef.current.play().catch(error => {
-        console.warn('[Analysis] Silent audio playback failed. This might be due to browser autoplay restrictions or other media issues. Analysis will continue, but background throttling might occur.', error);
-        // Don't nullify audioRef.current here, as stopSilentAudio will handle it
+      // Local log
+      const clientActionId = supabaseLogId;
+      await createLocalActionLog({
+        clientActionId,
+        type: 'analysis',
+        estimatedRuntimeMs,
+        totalEmails: effectiveEmailCount,
+        totalEstimatedBatches: Math.ceil(effectiveEmailCount / BATCH_SIZE),
+        filters: {
+          analysisType: options.type,
+          estimatedDuration: formattedEta,
+          totalEmails: stats.totalEmails,
+          effectiveEmailCount
+        }
       });
+      await updateAnalysisId(analysisId);
+    } catch (error) {
+      logger.error('Failed to create Supabase action log', { 
+        component: 'analysis', 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+      // Continue without logging - the operation can still proceed
     }
 
-    // Request Wake Lock
-    if ('wakeLock' in navigator && !wakeLockRef.current) {
-      try {
-        wakeLockRef.current = await navigator.wakeLock.request('screen');
-        console.log('[Analysis] Screen Wake Lock Acquired.');
-        wakeLockRef.current.addEventListener('release', () => {
-          console.log('[Analysis] Screen Wake Lock was released externally (e.g., page hidden).');
-          // If analysis is still ongoing and wakeLockRef.current exists, it means it was released by the browser.
-          // We set it to null so we know we don't hold the lock anymore.
-          // Re-acquiring might be an option if the page becomes visible again, but for now, just note it.
-          if (wakeLockRef.current) { // Check if it wasn't already released by our code
-            wakeLockRef.current = null;
-          }
-        });
-      } catch (err: any) {
-        console.error(`[Analysis] Screen Wake Lock API error: ${err.name}, ${err.message}`);
-        wakeLockRef.current = null; // Ensure it's null if request failed
-      }
-    } else if (!('wakeLock' in navigator)) {
-      console.log('[Analysis] Screen Wake Lock API not supported by this browser.');
-    }
-    
-    // Start the batch processing in the background
+    updateProgress({ status: 'analyzing', progress: 0 });
+
+    // 7. Background processing via async IIFE
     (async () => {
       let totalProcessed = 0;
       let batchIndex = 0;
-      const senderMap = new Map<string, SenderResult>();
-      let nextPageToken: string | undefined;
-      let currentAccessToken: string;
 
       try {
-        do {
-          if (batchIndex > 0) {
-            await sleep(BATCH_DELAY_MS);
+        logger.debug('Pre-flight checks passed, proceeding with background analysis', { component: 'analysis' });
+
+        // Create and play silent audio to keep the page active
+        try {
+          logger.debug('Creating and playing silent audio for anti-throttling', { component: 'analysis' });
+          audioRef.current = new Audio('/sample.mp3'); // Path to your silent audio file
+          audioRef.current.loop = true;
+          audioRef.current.volume = 0.2; // Ensure it's truly silent
+          await audioRef.current.play();
+        } catch (error) {
+          logger.warn('Silent audio playback failed. Analysis will continue, but background throttling might occur', { 
+            component: 'analysis', 
+            error: error instanceof Error ? error.message : 'Unknown error' 
+          });
+        }
+
+        // Acquire Screen Wake Lock if supported
+        try {
+          if ('wakeLock' in navigator) {
+            wakeLockRef.current = await navigator.wakeLock.request('screen');
+            logger.debug('Screen Wake Lock Acquired', { component: 'analysis' });
+            wakeLockRef.current.addEventListener('release', () => {
+              logger.debug('Screen Wake Lock was released externally (e.g., page hidden)', { component: 'analysis' });
+            });
+          } else {
+            logger.debug('Screen Wake Lock API not supported by this browser', { component: 'analysis' });
           }
-          
-          // 🛑 CRITICAL: Check for cancellation before each batch
-          // This prevents the stale closure issue where progress.status doesn't update
+        } catch (err: any) {
+          logger.error('Screen Wake Lock API error', { 
+            component: 'analysis', 
+            error: `${err.name}, ${err.message}` 
+          });
+        }
+
+        // Batch processing
+        const senderMap = new Map<string, SenderResult>();
+        let nextPageToken: string | undefined;
+        let currentAccessToken: string;
+
+        do {
+          const batchNumber = batchIndex + 1;
+
+          // Check for cancellation before starting each batch
           if (cancellationRef.current || (abortSignal && abortSignal.aborted)) {
-            console.log(`[Analysis] Cancellation detected before batch ${batchIndex + 1}, stopping analysis`);
-            console.log(`[Analysis] Cancellation source: ${cancellationRef.current ? 'cancellationRef' : 'abortSignal'}`);
+            logger.debug('Cancellation detected before batch', { 
+              component: 'analysis', 
+              batchNumber,
+              source: cancellationRef.current ? 'cancellationRef' : 'abortSignal'
+            });
             break;
           }
-          
-          const batchNumber = batchIndex + 1;
-          console.log(`\n[Analysis] Starting Batch ${batchNumber}`);
+
+          logger.debug('Starting batch', { component: 'analysis', batchNumber });
 
           // Get token for the batch, force refresh if current one is about to expire
           const tokenDetails = peekAccessToken();
@@ -383,19 +384,27 @@ export function useAnalysisOperations() {
 
           try {
             if (tokenDetails && timeRemaining < TWO_MINUTES_MS) {
-              console.warn(`[Analysis] Token expiring in ${formatDuration(timeRemaining)}, forcing refresh for batch ${batchNumber}...`);
+              logger.warn('Token expiring soon, forcing refresh', { 
+                component: 'analysis', 
+                batchNumber, 
+                timeRemaining: formatDuration(timeRemaining) 
+              });
               currentAccessToken = await forceRefreshAccessToken();
             } else {
               currentAccessToken = await getAccessToken(); // Efficiently gets from memory or refreshes if naturally expired
             }
           } catch (tokenError) {
-            console.error(`[Analysis] Token acquisition failed for batch ${batchNumber}:`, tokenError);
+            logger.error('Token acquisition failed for batch', { 
+              component: 'analysis', 
+              batchNumber, 
+              error: tokenError instanceof Error ? tokenError.message : 'Unknown error' 
+            });
             setReauthModal({ isOpen: true, type: 'expired' });
             // This error will be caught by the outer try-catch of this IIFE
             throw new Error('Gmail authentication failed during batch processing.'); 
           }
           
-          console.log(`[Analysis] Fetching IDs for batch ${batchNumber}... Access token first 10 chars: ${currentAccessToken.substring(0,10)}`);
+          logger.debug('Fetching IDs for batch', { component: 'analysis', batchNumber });
           const { messageIds, nextPageToken: newPageTokenResult } = await fetchMessageIds(
             currentAccessToken,
             query,
@@ -405,14 +414,14 @@ export function useAnalysisOperations() {
           nextPageToken = newPageTokenResult;
 
           if (messageIds.length === 0) {
-            console.log(`[Analysis] No more messages to process after batch ${batchNumber - 1}`);
+            logger.debug('No more messages to process', { component: 'analysis', afterBatch: batchNumber - 1 });
             break;
           }
 
-          console.log(`[Analysis] Fetching metadata for batch ${batchNumber} (${messageIds.length} messages)...`);
+          logger.debug('Fetching metadata for batch', { component: 'analysis', batchNumber, messageCount: messageIds.length });
           const metadata = await fetchMetadata(currentAccessToken, messageIds);
           
-          console.log(`[Analysis] Parsing headers for batch ${batchNumber}...`);
+          logger.debug('Parsing headers for batch', { component: 'analysis', batchNumber });
           const parsedSenders = parseMetadataBatch(metadata);
 
           for (const sender of parsedSenders) {
@@ -443,7 +452,13 @@ export function useAnalysisOperations() {
           totalProcessed += messageIds.length;
           const progressPercent = Math.min(100, Math.round((totalProcessed / effectiveEmailCount) * 100));
           
-          console.log(`[Analysis] Batch ${batchNumber} complete. Progress: ${progressPercent}% (${totalProcessed.toLocaleString()}/${effectiveEmailCount.toLocaleString()} emails)`);
+          logger.debug('Batch complete', { 
+            component: 'analysis', 
+            batchNumber, 
+            progressPercent, 
+            processed: totalProcessed, 
+            total: effectiveEmailCount 
+          });
           updateProgress(prev => ({ ...prev, progress: progressPercent }));
           updateAnalysisProgress(batchIndex, totalProcessed);
           
@@ -457,7 +472,7 @@ export function useAnalysisOperations() {
         } while (nextPageToken && !cancellationRef.current && !(abortSignal && abortSignal.aborted));
 
         if (cancellationRef.current || (abortSignal && abortSignal.aborted)) {
-           console.log('[Analysis] Analysis was cancelled by the user.');
+           logger.debug('Analysis was cancelled by the user', { component: 'analysis' });
            await completeActionLog(supabaseLogId, 'user_stopped', totalProcessed);
            completeAnalysis('user_stopped');
            updateProgress({ status: 'cancelled', progress: progress.progress }); // Keep current progress on cancel
@@ -465,7 +480,7 @@ export function useAnalysisOperations() {
              body: `The analysis was stopped after processing approximately ${totalProcessed.toLocaleString()} emails.`,
            });
         } else {
-          console.log('\n[Analysis] Analysis successfully completed!');
+          logger.info('Analysis successfully completed', { component: 'analysis', totalProcessed });
           await completeActionLog(supabaseLogId, 'success', totalProcessed);
           completeAnalysis('success');
           updateProgress({ status: 'completed', progress: 100 });
@@ -475,7 +490,10 @@ export function useAnalysisOperations() {
         }
 
       } catch (error) {
-        console.error('[Analysis] Critical error during background batch processing:', error);
+        logger.error('Critical error during background batch processing', { 
+          component: 'analysis', 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        });
         const errorMessage = error instanceof Error ? error.message : 'Analysis failed during batch processing';
         
         await completeActionLog(supabaseLogId, 'runtime_error', totalProcessed, errorMessage);
@@ -491,9 +509,12 @@ export function useAnalysisOperations() {
         if (wakeLockRef.current) {
           try {
             await wakeLockRef.current.release();
-            console.log('[Analysis] Screen Wake Lock Released in finally block.');
+            logger.debug('Screen Wake Lock Released in finally block', { component: 'analysis' });
           } catch (err: any) {
-            console.error(`[Analysis] Error releasing Screen Wake Lock: ${err.name}, ${err.message}`);
+            logger.error('Error releasing Screen Wake Lock', { 
+              component: 'analysis', 
+              error: `${err.name}, ${err.message}` 
+            });
           } finally {
             wakeLockRef.current = null; // Ensure it's null even if release throws
           }
@@ -520,16 +541,19 @@ export function useAnalysisOperations() {
     updateProgress(prev => ({ ...prev, status: 'cancelled' }));
     setReauthModal({ isOpen: false, type: 'expired' }); // Close reauth modal if open
     // Logging of cancellation will be handled in the batch loop when it terminates.
-    console.log('[Analysis] Cancellation signal sent.');
+    logger.debug('Cancellation signal sent', { component: 'analysis' });
     // Stop silent audio on explicit cancellation
     stopSilentAudio();
     // Release Wake Lock on cancellation
     if (wakeLockRef.current) {
       try {
         await wakeLockRef.current.release();
-        console.log('[Analysis] Screen Wake Lock Released due to cancellation.');
+        logger.debug('Screen Wake Lock Released due to cancellation', { component: 'analysis' });
       } catch (err: any) {
-        console.error(`[Analysis] Error releasing Screen Wake Lock on cancellation: ${err.name}, ${err.message}`);
+        logger.error('Error releasing Screen Wake Lock on cancellation', { 
+          component: 'analysis', 
+          error: `${err.name}, ${err.message}` 
+        });
       } finally {
         wakeLockRef.current = null;
       }
@@ -555,20 +579,20 @@ export function useAnalysisOperations() {
     onProgress: ProgressCallback,
     abortSignal: AbortSignal
   ): Promise<ExecutorResult> => {
-    console.log('[Analysis] Queue executor called with payload:', payload);
+    logger.debug('Queue executor called', { component: 'analysis', payload });
     
     // Set up cancellation handling
     const handleAbort = () => {
-      console.log('[Analysis] Queue cancellation requested via abort event');
+      logger.debug('Queue cancellation requested via abort event', { component: 'analysis' });
       cancelAnalysis();
     };
     
-    console.log('[Analysis] Setting up abort signal listener, signal aborted:', abortSignal.aborted);
+    logger.debug('Setting up abort signal listener', { component: 'analysis', aborted: abortSignal.aborted });
     abortSignal.addEventListener('abort', handleAbort);
     
     // Also check if already aborted before we set up the listener
     if (abortSignal.aborted) {
-      console.log('[Analysis] Abort signal already aborted before listener setup');
+      logger.debug('Abort signal already aborted before listener setup', { component: 'analysis' });
       handleAbort();
     }
     
@@ -578,7 +602,7 @@ export function useAnalysisOperations() {
       
       // Create a custom progress callback that bridges to the queue system
       const bridgeProgressCallback: ProgressCallback = (current, total) => {
-        console.log(`[Analysis] Queue progress update: ${current}/${total}`);
+        logger.debug('Queue progress update', { component: 'analysis', current, total });
         onProgress(current, total);
       };
       
@@ -587,83 +611,61 @@ export function useAnalysisOperations() {
       
       if (!setupResult.success) {
         // Setup failed, return immediately
-        return {
-          success: false,
-          error: 'Failed to start analysis',
-          processedCount: 0
-        };
+        return { success: false, error: 'Analysis setup failed' };
       }
       
-      // Setup succeeded, now we need to wait for the actual completion
-      // We'll poll the progress state until completion
-      console.log('[Analysis] Analysis setup complete, monitoring for completion...');
+      logger.debug('Analysis setup complete, monitoring for completion', { component: 'analysis' });
       
+      // Wait for completion by monitoring progress state
       return new Promise<ExecutorResult>((resolve) => {
-        const pollInterval = setInterval(() => {
-          // Check for cancellation via abort signal OR cancellation ref
+        const checkStatus = () => {
+          const currentProgress = progressRef.current;
+          
           if (abortSignal.aborted || cancellationRef.current) {
-            clearInterval(pollInterval);
-            console.log('[Analysis] Queue executor detected cancellation via', abortSignal.aborted ? 'abort signal' : 'cancellation ref');
-            resolve({
-              success: false,
-              error: 'Operation cancelled by user',
-              processedCount: progressRef.current.progress
+            logger.debug('Queue executor detected cancellation', { 
+              component: 'analysis', 
+              via: abortSignal.aborted ? 'abort signal' : 'cancellation ref' 
             });
+            resolve({ success: false, error: 'Operation cancelled by user' });
             return;
           }
           
-          // Check completion status using current progress state from ref
-          const currentProgress = progressRef.current;
           if (currentProgress.status === 'completed') {
-            clearInterval(pollInterval);
-            console.log('[Analysis] Queue executor detected completion');
-            resolve({
-              success: true,
-              processedCount: currentProgress.progress
-            });
-          } else if (currentProgress.status === 'error') {
-            clearInterval(pollInterval);
-            console.log('[Analysis] Queue executor detected error:', currentProgress.error);
-            resolve({
-              success: false,
-              error: currentProgress.error || 'Analysis failed',
-              processedCount: currentProgress.progress
-            });
+            logger.debug('Queue executor detected completion', { component: 'analysis' });
+            resolve({ success: true });
+            return;
           }
-          // Continue polling for other statuses (preparing, analyzing)
-        }, 500); // Poll every 500ms
+          
+          if (currentProgress.status === 'error') {
+            logger.debug('Queue executor detected error', { component: 'analysis', error: currentProgress.error });
+            resolve({ success: false, error: currentProgress.error || 'Analysis failed' });
+            return;
+          }
+          
+          // Continue monitoring
+          setTimeout(checkStatus, 500); // Check every 500ms
+        };
+        
+        checkStatus();
       });
       
-    } catch (error: any) {
-      // Provide specific error messages based on the error type
-      let errorMessage = 'Unknown error occurred';
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Queue executor error', { component: 'analysis', error: errorMessage });
       
-      if (abortSignal.aborted) {
-        errorMessage = 'Operation cancelled by user';
-      } else if (error.message?.includes('authentication') || error.message?.includes('token')) {
-        errorMessage = 'Gmail authentication failed - please reconnect';
-      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
-        errorMessage = 'Network error - please check your connection';
-      } else if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
-        errorMessage = 'Gmail API rate limit reached - please try again later';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      return {
-        success: false,
-        error: errorMessage,
-        processedCount: progressRef.current.progress
-      };
+      return { success: false, error: errorMessage };
     } finally {
       abortSignal.removeEventListener('abort', handleAbort);
     }
-  }, [startAnalysis, cancelAnalysis]);
+  }, [startAnalysis, cancelAnalysis, progressRef]);
 
-  // Register with queue system
+  // Register the executor when the hook mounts
   useEffect(() => {
+    logger.debug('Registering executor with queue system', { component: 'analysis' });
+    
+    // Register with the queue system using the proper method
     if (typeof window !== 'undefined' && (window as any).__queueRegisterExecutor) {
-      console.log('[Analysis] Registering executor with queue system');
+      logger.debug('Registering analysis executor with queue', { component: 'analysis' });
       (window as any).__queueRegisterExecutor('analysis', queueExecutor);
     }
   }, [queueExecutor]);
@@ -673,6 +675,7 @@ export function useAnalysisOperations() {
     startAnalysis,
     cancelAnalysis,
     reauthModal,
-    closeReauthModal
+    closeReauthModal,
+    queueExecutor
   };
 } 

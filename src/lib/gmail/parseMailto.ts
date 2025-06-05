@@ -1,5 +1,6 @@
 // Placeholder for parseMailto.ts
 // This utility will parse a mailto: string into an object: { to, subject?, body? }
+import { logger } from '@/lib/utils/logger';
 
 /**
  * Parses a mailto: string into its components.
@@ -30,7 +31,7 @@ export function parseMailto(mailtoInput: string): {
     const to = url.pathname || null; 
 
     if (!to) {
-        console.warn("Could not extract recipient from mailto link:", mailtoLink);
+        logger.warn('Could not extract recipient from mailto link', { component: 'parseMailto' });
         return null; // Cannot proceed without a recipient
     }
 
@@ -49,7 +50,10 @@ export function parseMailto(mailtoInput: string): {
 
   } catch (error) {
     // Log the error but don't necessarily fail if it's a simple mailto without query params
-    console.error("Error parsing mailto link using URL constructor:", mailtoLink, error);
+    logger.error('Error parsing mailto link using URL constructor', { 
+      component: 'parseMailto', 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
 
     // Fallback: try simple parsing for cases like "mailto:address@example.com"
     // This handles cases where URL constructor might fail on simpler valid mailto links.
@@ -57,10 +61,10 @@ export function parseMailto(mailtoInput: string): {
         const toAddress = mailtoLink.substring("mailto:".length);
         // Basic validation: check for presence of '@'
         if (toAddress && toAddress.includes('@')) { 
-            console.log("Parsed simple mailto using fallback:", toAddress);
+            logger.debug('Parsed simple mailto using fallback', { component: 'parseMailto' });
             return { to: toAddress };
         } else {
-            console.warn("Fallback parsing failed for simple mailto link:", mailtoLink);
+            logger.warn('Fallback parsing failed for simple mailto link', { component: 'parseMailto' });
         }
     }
     

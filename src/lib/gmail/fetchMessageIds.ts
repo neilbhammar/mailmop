@@ -1,5 +1,6 @@
 import { withBackoff } from './backoff';
 import { ENABLE_GMAIL_DEBUG } from './fetchMetadata';
+import { logger } from '@/lib/utils/logger';
 
 interface MessageListResponse {
   messages?: { id: string }[];
@@ -23,7 +24,10 @@ export async function fetchMessageIds(
   maxResults: number = 45 // Default to 45, allow override
 ): Promise<{ messageIds: string[]; nextPageToken?: string }> {
   if (ENABLE_GMAIL_DEBUG) {
-    console.log(`[Gmail Debug] Fetching message IDs with query: ${query}${pageToken ? ' (with page token)' : ''}`);
+    logger.debug('Fetching message IDs with query', { 
+      component: 'fetchMessageIds', 
+      hasPageToken: !!pageToken 
+    });
   }
 
   // Build request URL with query and pagination
@@ -39,7 +43,7 @@ export async function fetchMessageIds(
   // Make request with backoff retry logic
   const response = await withBackoff(async () => {
     if (ENABLE_GMAIL_DEBUG) {
-      console.log(`[Gmail Debug] Making request to: ${url.toString()}`);
+      logger.debug('Making Gmail API request', { component: 'fetchMessageIds' });
     }
 
     const res = await fetch(url.toString(), {
@@ -57,20 +61,29 @@ export async function fetchMessageIds(
     const data = await res.json();
 
     if (ENABLE_GMAIL_DEBUG) {
-      console.log('[Gmail Debug] Message list response:', JSON.stringify(data, null, 2));
+      logger.debug('Message list response received', { 
+        component: 'fetchMessageIds',
+        hasMessages: !!data.messages,
+        resultSizeEstimate: data.resultSizeEstimate
+      });
     }
 
     // Validate response structure
     // A valid response can have messages, or just resultSizeEstimate (often 0 if no messages found)
     if (typeof data.resultSizeEstimate === 'undefined' && !data.messages) {
-      console.error('[Gmail Debug] Invalid response structure (missing messages and resultSizeEstimate):', data);
+      logger.error('Invalid response structure (missing messages and resultSizeEstimate)', { 
+        component: 'fetchMessageIds',
+        responseKeys: Object.keys(data)
+      });
       throw new Error('Invalid response structure from Gmail API');
     }
     
     // If messages array is missing BUT resultSizeEstimate is 0, it's a valid "no messages" response.
     if (!data.messages && data.resultSizeEstimate === 0) {
       if (ENABLE_GMAIL_DEBUG) {
-         console.log('[Gmail Debug] Received resultSizeEstimate: 0 and no messages array. Treating as 0 results.');
+         logger.debug('Received resultSizeEstimate: 0 and no messages array. Treating as 0 results', { 
+           component: 'fetchMessageIds' 
+         });
       }
       return { messages: [], nextPageToken: undefined }; // Return empty results
     }
@@ -80,7 +93,11 @@ export async function fetchMessageIds(
   }, {
     onRetry: (attempt, error) => {
       if (ENABLE_GMAIL_DEBUG) {
-        console.warn(`[Gmail Debug] Retrying message ID fetch (attempt ${attempt}):`, error);
+        logger.warn('Retrying message ID fetch', { 
+          component: 'fetchMessageIds',
+          attempt,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
     }
   });
@@ -89,10 +106,17 @@ export async function fetchMessageIds(
 
   if (ENABLE_GMAIL_DEBUG) {
     if (messageIds.length === 0) {
-      console.warn('[Gmail Debug] No message IDs returned for query:', query);
+      logger.warn('No message IDs returned for query', { component: 'fetchMessageIds' });
     } else {
-      console.log(`[Gmail Debug] Successfully fetched ${messageIds.length} message IDs${response.nextPageToken ? ' with next page token' : ''}`);
-      console.log('[Gmail Debug] First few message IDs:', messageIds.slice(0, 3));
+      logger.debug('Successfully fetched message IDs', { 
+        component: 'fetchMessageIds',
+        count: messageIds.length,
+        hasNextPageToken: !!response.nextPageToken
+      });
+      logger.debug('First few message IDs', { 
+        component: 'fetchMessageIds',
+        sampleIds: messageIds.slice(0, 3)
+      });
     }
   }
 

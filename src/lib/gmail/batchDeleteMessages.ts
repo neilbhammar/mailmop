@@ -1,3 +1,5 @@
+import { logger } from '@/lib/utils/logger';
+
 /**
  * batchDeleteMessages.ts
  *
@@ -22,13 +24,12 @@ export async function batchDeleteMessages(
   // We need to cast window to access gapi directly if not using types
   const gapi = (window as any).gapi;
   
-  // --- DEBUG LOG --- 
-  console.log('[batchDeleteMessages] Checking gapi client status:', {
+  logger.debug('Checking gapi client status', {
+    component: 'batchDeleteMessages',
     gapiExists: !!gapi,
     clientExists: !!gapi?.client,
     gmailClientExists: !!gapi?.client?.gmail
   });
-  // --- END DEBUG LOG ---
   
   if (!gapi?.client?.gmail) {
     throw new Error("Gmail API client is not loaded.");
@@ -36,58 +37,68 @@ export async function batchDeleteMessages(
 
   // Don't make an API call if there are no IDs to delete.
   if (!messageIds || messageIds.length === 0) {
-    console.warn("[batchDeleteMessages] No message IDs provided for deletion.");
+    logger.warn('No message IDs provided for deletion', { component: 'batchDeleteMessages' });
     return;
   }
 
   // The batchDelete API has a limit of 1000 IDs per request.
   if (messageIds.length > 1000) {
-    console.warn(
-      `[batchDeleteMessages] Attempted to delete ${messageIds.length} messages, but the limit is 1000. Truncating the list.`
-    );
+    logger.warn('Message count exceeds API limit, truncating', {
+      component: 'batchDeleteMessages',
+      requested: messageIds.length,
+      limit: 1000
+    });
     // Although we should ideally handle splitting into multiple batches upstream,
     // we'll truncate here as a safeguard to prevent API errors.
     messageIds = messageIds.slice(0, 1000);
   }
 
-  console.log(
-    `[batchDeleteMessages] Attempting to delete ${messageIds.length} messages.`
-  );
+  logger.debug('Attempting to delete messages', {
+    component: 'batchDeleteMessages',
+    messageCount: messageIds.length
+  });
 
   try {
     // Set the access token for this API request.
     // It's generally good practice to set this before each gapi call,
     // although it might be set globally elsewhere.
-    console.log('[batchDeleteMessages] Setting access token');
-    console.log('[batchDeleteMessages] Token being used (first 20 chars):', accessToken.substring(0, 20) + '...');
+    logger.debug('Setting access token for gapi client', { component: 'batchDeleteMessages' });
     gapi.client.setToken({ access_token: accessToken });
 
-    // Debug: Check what scopes the token has
+    // Check token scopes for debugging (WITHOUT logging the actual token)
     try {
+      // SECURITY: Use a separate fetch to check token info without logging the token URL
       const tokenInfo = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${accessToken}`);
       const tokenData = await tokenInfo.json();
-      console.log('[batchDeleteMessages] Token info:', {
-        scope: tokenData.scope,
-        expires_in: tokenData.expires_in,
-        audience: tokenData.audience
+      
+      logger.debug('Token scope validation', {
+        component: 'batchDeleteMessages',
+        hasScope: tokenData.scope?.includes('gmail.modify'),
+        expiresIn: tokenData.expires_in,
+        audience: tokenData.audience?.substring(0, 20) + '...' // Truncate for safety
       });
       
       // Check if we have the modify scope
       const hasModifyScope = tokenData.scope?.includes('gmail.modify');
       if (!hasModifyScope) {
-        console.error('[batchDeleteMessages] ❌ Token missing gmail.modify scope!');
-        console.error('[batchDeleteMessages] Current scopes:', tokenData.scope);
-        console.error('[batchDeleteMessages] Required scope: https://www.googleapis.com/auth/gmail.modify');
+        logger.error('Token missing gmail.modify scope', {
+          component: 'batchDeleteMessages',
+          currentScopes: tokenData.scope,
+          requiredScope: 'https://www.googleapis.com/auth/gmail.modify'
+        });
       } else {
-        console.log('[batchDeleteMessages] ✅ Token has gmail.modify scope');
+        logger.debug('Token has required gmail.modify scope', { component: 'batchDeleteMessages' });
       }
     } catch (tokenDebugError) {
-      console.warn('[batchDeleteMessages] Could not debug token:', tokenDebugError);
+      logger.warn('Could not validate token scopes', { 
+        component: 'batchDeleteMessages',
+        error: tokenDebugError instanceof Error ? tokenDebugError.message : 'Unknown error'
+      });
     }
 
     // Make the API call to batch delete the messages.
     // We use 'me' to refer to the authenticated user.
-    console.log('[batchDeleteMessages] Making API call to batch delete');
+    logger.debug('Making API call to batch delete', { component: 'batchDeleteMessages' });
     const response = await gapi.client.gmail.users.messages.batchDelete({
       userId: "me",
       ids: messageIds, // Pass the array of message IDs in the request body
@@ -98,11 +109,11 @@ export async function batchDeleteMessages(
     // The gapi client library usually throws an error for non-2xx responses,
     // so we might not even reach here if there's a failure.
     if (response.status !== 204) {
-      console.error(
-        "[batchDeleteMessages] Unexpected status code:",
-        response.status,
-        response.result
-      );
+      logger.error('Unexpected status code from batch delete', {
+        component: 'batchDeleteMessages',
+        status: response.status,
+        hasResult: !!response.result
+      });
       // We construct an error message, trying to get useful details from the response.
       const errorDetails = response.result?.error?.message || "Unknown error";
       throw new Error(
@@ -110,17 +121,25 @@ export async function batchDeleteMessages(
       );
     }
 
-    console.log(
-      `[batchDeleteMessages] Successfully deleted ${messageIds.length} messages.`
-    );
+    logger.debug('Successfully deleted messages', {
+      component: 'batchDeleteMessages',
+      messageCount: messageIds.length
+    });
   } catch (error: any) {
     // Catch any errors during the API call.
-    console.error("[batchDeleteMessages] Error during batch deletion:", error);
+    logger.error('Error during batch deletion', { 
+      component: 'batchDeleteMessages',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      errorCode: error?.result?.error?.code
+    });
     
     // Check for scope insufficiency error
     if (error?.result?.error?.code === 403 && 
         error?.result?.error?.message?.includes('insufficient authentication scopes')) {
-      console.error('[batchDeleteMessages] Insufficient scopes detected. Token scopes:', error?.result?.error);
+      logger.error('Insufficient scopes detected', { 
+        component: 'batchDeleteMessages',
+        errorCode: error?.result?.error?.code
+      });
       
       // Provide specific guidance for scope issues
       throw new Error(
