@@ -1,6 +1,6 @@
 # MailMop 📧🧹
 
-> As of June 2025, Currently beta-testing with a few folks prior to submitting for Google's CASA 2 verification.
+> As of June 2025: Currently beta-testing with a few folks prior to submitting for Google's CASA 2 verification.
 
 **A privacy-first Gmail inbox decluttering tool that processes everything locally in your browser**
 
@@ -93,8 +93,8 @@ Your Gmail → Your Browser → Analysis → Results
 ```
 mailmop/
 ├── src/
-│   ├── app/                     # Next.js App Router
-│   │   ├── dashboard/           # Main analysis interface
+│   ├── app/                    # Next.js App Router
+│   │   ├── dashboard/          # Main analysis interface
 │   │   ├── api/auth/           # OAuth token management
 │   │   └── api/stripe/         # Subscription handling
 │   ├── components/
