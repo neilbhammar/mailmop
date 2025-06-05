@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     siteName: 'MailMop',
     images: [
       {
-        url: '/social-share.png',
+        url: '/social-share.png?v=2',
         width: 1200,
         height: 630,
         alt: 'MailMop - Gmail Inbox Cleanup Tool',
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'MailMop - Clean Your Gmail Inbox in Minutes',
     description: 'MailMop helps you declutter your Gmail inbox by analyzing thousands of emails and organizing them by sender. Delete unwanted emails in bulk, unsubscribe from newsletters, and reclaim your inbox in minutes.',
-    images: ['/social-share.png'],
+    images: ['/social-share.png?v=2'],
     creator: '@mailmop',
     site: '@mailmop',
   },
