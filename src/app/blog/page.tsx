@@ -37,7 +37,15 @@ function formatISODate(dateString: string): string {
   return new Date(dateString).toISOString()
 }
 
-export default async function BlogPage() {
+// Next.js 15 page component type
+export default async function BlogPage({
+  params,
+  searchParams
+}: {
+  params?: Promise<Record<string, string>>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  // We don't need to await params/searchParams here since we're not using them
   const posts = await getBlogPosts()
   const featuredPost = posts.find(post => post.featured)
   const otherPosts = posts.filter(post => !post.featured)

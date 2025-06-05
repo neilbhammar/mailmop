@@ -20,9 +20,10 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }): Promise<Metadata> {
-  const post = await getBlogPost(params.slug)
+  const resolvedParams = await params
+  const post = await getBlogPost(resolvedParams.slug)
 
   if (!post) {
     return {
@@ -93,12 +94,15 @@ function extractHeadings(content: string) {
   return headings
 }
 
+// Updated type definition for Next.js 15 compatibility
 export default async function BlogPostPage({
   params,
 }: {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }) {
-  const post = await getBlogPost(params.slug)
+  // Use await to resolve the params Promise
+  const resolvedParams = await params
+  const post = await getBlogPost(resolvedParams.slug)
 
   if (!post) {
     notFound()
