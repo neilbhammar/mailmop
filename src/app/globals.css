@@ -93,3 +93,78 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Line clamping utilities */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Text balance for better typography */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Enhanced prose styles for blog content */
+  .prose {
+    /* Better paragraph spacing */
+    p {
+      @apply mb-6 leading-7;
+    }
+    
+    /* Better heading hierarchy */
+    h1, h2, h3, h4, h5, h6 {
+      @apply font-bold;
+      line-height: 1.25;
+    }
+    
+    h1 {
+      @apply text-3xl mb-6 mt-8;
+    }
+    
+    h2 {
+      @apply text-2xl mb-4 mt-8 border-b pb-2;
+    }
+    
+    h3 {
+      @apply text-xl mb-4 mt-6;
+    }
+    
+    /* Better list styling */
+    ul, ol {
+      @apply mb-6 pl-6;
+    }
+    
+    li {
+      @apply mb-2;
+    }
+    
+    /* Better blockquote styling */
+    blockquote {
+      @apply border-l-4 border-primary/20 pl-6 italic my-6 text-muted-foreground;
+    }
+    
+    /* Better code styling */
+    code {
+      @apply bg-muted px-1 py-0.5 rounded text-sm;
+    }
+    
+    pre {
+      @apply bg-muted p-4 rounded-lg overflow-x-auto mb-6;
+    }
+    
+    pre code {
+      @apply bg-transparent p-0;
+    }
+  }
+}
