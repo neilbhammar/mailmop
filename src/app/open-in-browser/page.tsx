@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ExternalLinkIcon, SmartphoneIcon, MonitorIcon, ArrowRightIcon, RefreshCwIcon, CopyIcon } from 'lucide-react'
+import { ExternalLinkIcon, SmartphoneIcon, MonitorIcon, ArrowRightIcon, RefreshCwIcon, CopyIcon, ShareIcon } from 'lucide-react'
 import { getEmbeddedBrowserName, getSystemBrowserName, isEmbeddedBrowser } from '@/lib/utils/embeddedBrowser'
 import { useMounted } from '@/hooks/useMounted'
 
@@ -29,25 +29,6 @@ export default function OpenInBrowserPage() {
       }
     }
   }, [mounted])
-
-  const handleOpenInBrowser = () => {
-    const url = 'https://mailmop.com'
-    
-    try {
-      // Try multiple methods to open in external browser
-      
-      // Method 1: window.open with specific parameters
-      const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
-      
-      // Method 2: If window.open doesn't work, try location.href
-      if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-        window.location.href = url
-      }
-    } catch (error) {
-      // Method 3: Fallback to location.href
-      window.location.href = url
-    }
-  }
 
   const handleCopyUrl = async () => {
     try {
@@ -122,7 +103,7 @@ export default function OpenInBrowserPage() {
               <ExternalLinkIcon className="w-10 h-10 text-orange-600 dark:text-orange-400" />
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">
-              Open in {systemBrowser}
+              Please open in {systemBrowser}
             </h1>
             <p className="text-gray-600 dark:text-slate-400">
               Google sign-in doesn't work inside {detectedApp} for security reasons
@@ -142,103 +123,113 @@ export default function OpenInBrowserPage() {
             </p>
           </div>
 
-          {/* Instructions */}
-          <div className="space-y-4 mb-8">
-            <h3 className="font-semibold text-gray-900 dark:text-slate-100">To continue with MailMop:</h3>
+          {/* Step-by-step instructions */}
+          <div className="space-y-6 mb-8">
+            <h3 className="font-semibold text-gray-900 dark:text-slate-100">Follow these steps:</h3>
             
-            <div className="flex items-start space-x-3">
-              <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                1
-              </div>
-              <div>
-                <p className="text-gray-700 dark:text-slate-300 font-medium">
-                  Tap the button below to open MailMop in {systemBrowser}
-                </p>
+            {/* Step 1: Copy URL */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
+                  1
+                </div>
+                <div className="flex-1">
+                  <p className="text-gray-900 dark:text-slate-100 font-semibold mb-3">
+                    Copy MailMop's URL
+                  </p>
+                  <button
+                    onClick={handleCopyUrl}
+                    className="inline-flex items-center justify-center w-full px-4 py-3 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-all duration-300 group border border-gray-200 dark:border-slate-600"
+                  >
+                    <CopyIcon className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                    <span className="font-mono text-sm">{copiedUrl ? '✓ Copied: mailmop.com' : 'Copy: mailmop.com'}</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-start space-x-3">
-              <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                2
-              </div>
-              <div>
-                <p className="text-gray-700 dark:text-slate-300 font-medium">
-                  Sign in with Google when prompted
-                </p>
+            {/* Step 2: Open Browser */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
+                  2
+                </div>
+                <div className="flex-1">
+                  <p className="text-gray-900 dark:text-slate-100 font-semibold mb-2">
+                    Open {systemBrowser}
+                  </p>
+                  {systemBrowser.includes('Safari') && (
+                    <div className="text-sm text-gray-700 dark:text-slate-300 space-y-1">
+                      <p className="flex items-center">
+                        <ShareIcon className="w-4 h-4 mr-2 text-blue-600" />
+                        Look for a share/open icon in {detectedApp}
+                      </p>
+                      <p className="flex items-center">
+                        <SmartphoneIcon className="w-4 h-4 mr-2 text-blue-600" />
+                        Tap "Open in Safari" or "Open in Browser"
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-slate-400">
+                        Or manually open Safari and paste the URL
+                      </p>
+                    </div>
+                  )}
+                  {systemBrowser.includes('Chrome') && (
+                    <div className="text-sm text-gray-700 dark:text-slate-300 space-y-1">
+                      <p className="flex items-center">
+                        <ShareIcon className="w-4 h-4 mr-2 text-blue-600" />
+                        Look for a menu (⋮) in {detectedApp}
+                      </p>
+                      <p className="flex items-center">
+                        <SmartphoneIcon className="w-4 h-4 mr-2 text-blue-600" />
+                        Tap "Open in Chrome" or "Open in Browser"
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-slate-400">
+                        Or manually open Chrome and paste the URL
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="flex items-start space-x-3">
-              <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                3
-              </div>
-              <div>
-                <p className="text-gray-700 dark:text-slate-300 font-medium">
-                  Start cleaning your Gmail inbox!
-                </p>
+            {/* Step 3: Paste and Go */}
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
+                  3
+                </div>
+                <div className="flex-1">
+                  <p className="text-gray-900 dark:text-slate-100 font-semibold mb-2">
+                    Paste and visit MailMop
+                  </p>
+                  <div className="text-sm text-gray-700 dark:text-slate-300 space-y-1">
+                    <p>• Paste <code className="bg-white dark:bg-slate-700 px-1 py-0.5 rounded text-xs border">mailmop.com</code> in the address bar</p>
+                    <p>• Press Enter/Go</p>
+                    <p>• Sign in with Google and start cleaning! 🧹</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="text-center space-y-4">
-            <button
-              onClick={handleOpenInBrowser}
-              className="inline-flex items-center justify-center w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl group"
-            >
-              <ExternalLinkIcon className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-              <span>Open MailMop in {systemBrowser}</span>
-              <ArrowRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-            </button>
-            
-            {/* Alternative: Copy URL button */}
-            <button
-              onClick={handleCopyUrl}
-              className="inline-flex items-center justify-center w-full px-6 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-all duration-300 group"
-            >
-              <CopyIcon className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-              <span>{copiedUrl ? 'URL Copied!' : 'Copy URL to Paste in Browser'}</span>
-            </button>
-            
-            <p className="text-xs text-gray-500 dark:text-slate-500">
-              If the first button doesn't work, use the copy button and paste "mailmop.com" in {systemBrowser}
-            </p>
-          </div>
-
-          {/* Device-specific tips */}
+          {/* Alternative help */}
           <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700">
             <details className="group">
               <summary className="cursor-pointer text-sm font-medium text-gray-700 dark:text-slate-300 hover:text-gray-900 dark:hover:text-slate-100 transition-colors flex items-center">
-                <span>Need help opening in {systemBrowser}?</span>
+                <span>Don't see an "Open in Browser" option?</span>
                 <svg className="w-4 h-4 ml-2 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </summary>
               <div className="mt-3 space-y-3 text-sm text-gray-600 dark:text-slate-400">
-                {systemBrowser.includes('Safari') && (
-                  <div className="flex items-start space-x-2">
-                    <SmartphoneIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">On iPhone/iPad:</p>
-                      <p>Look for the "Open in Safari" option in the share menu or toolbar, or copy the URL and paste it in Safari</p>
-                    </div>
-                  </div>
-                )}
-                {systemBrowser.includes('Chrome') && (
-                  <div className="flex items-start space-x-2">
-                    <SmartphoneIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">On Android:</p>
-                      <p>Look for "Open in Chrome" or "Open in browser" in the menu, or copy the URL and paste it in Chrome</p>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-start space-x-2">
-                  <MonitorIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium">Alternative method:</p>
-                    <p>Copy this URL: <code className="bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded text-xs">mailmop.com</code> and paste it into your browser</p>
-                  </div>
+                <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3">
+                  <p className="font-medium text-gray-900 dark:text-slate-100 mb-2">Manual method:</p>
+                  <ol className="space-y-1 text-sm">
+                    <li>1. Close or minimize {detectedApp}</li>
+                    <li>2. Open {systemBrowser} directly from your home screen</li>
+                    <li>3. Type or paste: <code className="bg-white dark:bg-slate-800 px-1 py-0.5 rounded border">mailmop.com</code></li>
+                    <li>4. Press Enter and sign in with Google</li>
+                  </ol>
                 </div>
               </div>
             </details>

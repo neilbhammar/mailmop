@@ -10,71 +10,79 @@ export function isEmbeddedBrowser(): boolean {
 
   const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera || '';
   
-  // List of known embedded browsers/webviews that Google blocks
-  const embeddedBrowserPatterns = [
-    // Social media embedded browsers
-    /FBAN|FBAV/i,           // Facebook
-    /Instagram/i,           // Instagram
-    /LinkedIn/i,            // LinkedIn
-    /Line/i,                // Line
-    /Snapchat/i,            // Snapchat
-    /Twitter/i,             // Twitter
-    /Pinterest/i,           // Pinterest
-    /TikTok/i,              // TikTok
+  // Be very conservative - only flag browsers we KNOW are embedded
+  // These patterns are specific enough to avoid false positives with legitimate mobile browsers
+  const knownEmbeddedBrowserPatterns = [
+    // Social media embedded browsers - very specific patterns
+    /FBAN\/\w+/i,           // Facebook app browser (specific pattern)
+    /FBAV\/[\d.]+/i,        // Facebook app version pattern
+    /Instagram/i,           // Instagram (usually safe to detect)
+    /LinkedIn/i,            // LinkedIn (usually safe to detect)
+    /Snapchat/i,            // Snapchat (usually safe to detect)
+    /TikTok/i,              // TikTok (usually safe to detect)
+    
+    // Messaging apps - very specific
+    /Messenger/i,           // Facebook Messenger
     /WhatsApp/i,            // WhatsApp
     /Telegram/i,            // Telegram
-    /Discord/i,             // Discord
-    
-    // General webview patterns
-    /WebView/i,             // Android WebView
-    /wv\)/i,                // Android WebView (alternative pattern)
-    
-    // Email client embedded browsers
-    /Outlook/i,             // Outlook
-    /Thunderbird/i,         // Thunderbird
-    
-    // Other messaging/social apps
-    /Messenger/i,           // Facebook Messenger
     /WeChat/i,              // WeChat
-    /QQBrowser/i,           // QQ Browser
-    /MicroMessenger/i,      // WeChat (alternative pattern)
+    /MicroMessenger/i,      // WeChat alternative pattern
     /KakaoTalk/i,           // KakaoTalk
-    /KAKAOTALK/i,           // KakaoTalk (alternative pattern)
+    /KAKAOTALK/i,           // KakaoTalk alternative pattern
     
-    // News/content apps
-    /NewsArticle/i,         // News apps
-    /SmartNews/i,           // SmartNews
-    /FlipboardProxy/i,      // Flipboard
-    
-    // Additional patterns for safety
-    /GSA\/\d+\.\d+/i,       // Google Search App
-    /Embeddable/i,          // Generic embedded indicator
+    // Only very specific webview patterns that are clear
+    /; wv\)/i,              // Android WebView specific pattern (note the semicolon and space)
     /InAppBrowser/i,        // Cordova InAppBrowser
   ];
 
-  // Check if any pattern matches
-  const isDetectedEmbedded = embeddedBrowserPatterns.some(pattern => pattern.test(userAgent));
+  // Check if any of the known embedded patterns match
+  const isKnownEmbedded = knownEmbeddedBrowserPatterns.some(pattern => pattern.test(userAgent));
   
-  // Special handling for iOS: exclude real Safari mobile browsers
-  // Real Safari mobile has "Version/" and "Safari/" but NOT the embedded app patterns above
+  if (isKnownEmbedded) {
+    return true;
+  }
+
+  // For iOS, be extra careful - only flag if we have very specific indicators
   if (/iPhone|iPad|iPod/i.test(userAgent)) {
-    // If it has Version/ and Safari/ and none of the embedded patterns, it's real Safari
+    // Real Safari mobile always has both "Version/" and "Safari/"
     const hasVersionAndSafari = /Version\/[\d.]+.*Safari\/[\d.]+/i.test(userAgent);
-    if (hasVersionAndSafari && !isDetectedEmbedded) {
-      return false; // This is real Safari mobile, not embedded
+    
+    // If it has Version/ and Safari/, it's real Safari - never flag as embedded
+    if (hasVersionAndSafari) {
+      return false;
     }
     
-    // Additional check: if it's missing "Version/" but has "Mobile/" it's likely embedded
-    // But we need to be careful not to catch real Safari
+    // If it's missing Version/ but has Mobile/, it MIGHT be embedded
+    // But only flag if it also has other suspicious patterns
     const isMobileWithoutVersion = /Mobile\/[\w\d]+/i.test(userAgent) && !/Version\//i.test(userAgent);
-    if (isMobileWithoutVersion && !isDetectedEmbedded) {
-      // This could be an embedded browser, but let's be conservative
-      // Only flag as embedded if we have other indicators
+    if (isMobileWithoutVersion) {
+      // Only flag as embedded if it has additional suspicious indicators
+      // For now, be conservative and don't flag these
       return false;
     }
   }
 
-  return isDetectedEmbedded;
+  // For Android, be very careful too
+  if (/Android/i.test(userAgent)) {
+    // Legitimate Chrome mobile has "Chrome/" and doesn't have suspicious patterns
+    const hasChrome = /Chrome\/[\d.]+/i.test(userAgent);
+    
+    // Google app has specific patterns we can check for
+    const isGoogleApp = /GSA\/[\d.]+/i.test(userAgent);
+    
+    // If it's Google app, don't flag as embedded (it's a legitimate browser context)
+    if (isGoogleApp) {
+      return false;
+    }
+    
+    // If it has Chrome/, it's likely legitimate
+    if (hasChrome) {
+      return false;
+    }
+  }
+
+  // Default to not embedded - be conservative
+  return false;
 }
 
 /**
@@ -90,17 +98,13 @@ export function getEmbeddedBrowserName(): string {
   if (/FBAN|FBAV/i.test(userAgent)) return 'Facebook';
   if (/Instagram/i.test(userAgent)) return 'Instagram';
   if (/LinkedIn/i.test(userAgent)) return 'LinkedIn';
-  if (/Line/i.test(userAgent)) return 'Line';
   if (/Snapchat/i.test(userAgent)) return 'Snapchat';
-  if (/Twitter/i.test(userAgent)) return 'Twitter';
-  if (/Pinterest/i.test(userAgent)) return 'Pinterest';
   if (/TikTok/i.test(userAgent)) return 'TikTok';
   if (/WhatsApp/i.test(userAgent)) return 'WhatsApp';
   if (/Telegram/i.test(userAgent)) return 'Telegram';
   if (/Discord/i.test(userAgent)) return 'Discord';
   if (/Messenger/i.test(userAgent)) return 'Messenger';
   if (/WeChat|MicroMessenger/i.test(userAgent)) return 'WeChat';
-  if (/Outlook/i.test(userAgent)) return 'Outlook';
   if (/KakaoTalk|KAKAOTALK/i.test(userAgent)) return 'KakaoTalk';
   
   // Generic fallback
