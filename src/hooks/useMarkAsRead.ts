@@ -6,6 +6,13 @@
  * 1. Only targets unread messages
  * 2. Uses batchModify instead of delete
  * 3. Doesn't need IndexedDB tracking
+ * 4. Updates sender unread counts to 0 after successful processing (GitHub issue #41)
+ * 
+ * UNREAD COUNT UPDATES:
+ * After successfully marking emails as read for each sender, this hook automatically:
+ * - Updates the sender's unread_count to 0 in IndexedDB
+ * - Triggers UI updates through the existing event system
+ * - Maintains data consistency between Gmail and the local sender table
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
@@ -32,6 +39,7 @@ import {
   completeActionLog as completeLocalActionLog,
   clearCurrentActionLog,
 } from '@/lib/storage/actionLog';
+import { updateSenderUnreadCount } from '@/lib/storage/senderAnalysis';
 import { logger } from '@/lib/utils/logger';
 
 // --- Types ---
@@ -337,6 +345,7 @@ export function useMarkAsRead() {
       let errorMessage: string | undefined;
       let endType: ActionEndType = 'success';
       let currentAccessToken: string; // To store the token for the current batch
+      let processedSenders: string[] = []; // Track successfully processed senders
 
       try {
         for (const sender of senders) {
@@ -367,6 +376,7 @@ export function useMarkAsRead() {
           let nextPageToken: string | undefined = undefined;
           let batchFetchAttempts = 0;
           const MAX_FETCH_ATTEMPTS = 30;
+          let senderProcessedSuccessfully = true;
 
           do {
             if (isCancelledRef.current) {
@@ -374,6 +384,7 @@ export function useMarkAsRead() {
                 component: 'useMarkAsRead' 
               });
               endType = 'user_stopped';
+              senderProcessedSuccessfully = false;
               break;
             }
 
@@ -478,6 +489,7 @@ export function useMarkAsRead() {
               logger.error('Error during batch', { component: 'useMarkAsRead', error });
               errorMessage = `Failed during batch operation: ${error.message || 'Unknown error'}`;
               endType = 'runtime_error';
+              senderProcessedSuccessfully = false;
               toast.error('Error marking as read', { description: errorMessage });
               break;
             }
@@ -486,10 +498,30 @@ export function useMarkAsRead() {
               logger.warn('Reached max fetch attempts', { component: 'useMarkAsRead' });
               errorMessage = `Reached maximum processing attempts.`;
               endType = 'runtime_error';
+              senderProcessedSuccessfully = false;
               break;
             }
 
           } while (nextPageToken && endType === 'success');
+          
+          // 📧 UPDATE UNREAD COUNT: After finishing with this sender, update their unread count to 0
+          if (senderProcessedSuccessfully && endType === 'success') {
+            try {
+              await updateSenderUnreadCount(sender.email, 0);
+              processedSenders.push(sender.email);
+              logger.debug('Updated unread count to 0 for sender', { 
+                component: 'useMarkAsRead', 
+                senderEmail: sender.email 
+              });
+            } catch (updateError: any) {
+              logger.error('Failed to update unread count for sender', { 
+                component: 'useMarkAsRead', 
+                senderEmail: sender.email, 
+                error: updateError 
+              });
+              // Don't fail the entire operation for this, just log it
+            }
+          }
           
           if (endType !== 'success') break;
         }
