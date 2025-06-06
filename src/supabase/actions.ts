@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import { logger } from '@/lib/utils/logger';
 
 // Base function to fetch actions - keeps it reusable for different purposes
 export async function getUserActions(userId: string) {
@@ -13,7 +14,10 @@ export async function getUserActions(userId: string) {
 
 // Specific aggregation function for stats
 export async function getActionStats(userId: string) {
-  console.log('Fetching stats for user:', userId);
+  logger.debug('Fetching stats for user', { 
+    component: 'actions',
+    userId 
+  });
   
   const { data, error } = await supabase
     .from('actions')
@@ -22,11 +26,18 @@ export async function getActionStats(userId: string) {
     .eq('status', 'completed');
 
   if (error) {
-    console.error('Error fetching stats:', error);
+    logger.error('Error fetching stats', { 
+      component: 'actions',
+      userId,
+      error: error.message 
+    });
     throw error;
   }
 
-  console.log('Raw action data:', data);
+  logger.debug('Raw action data retrieved', { 
+    component: 'actions',
+    dataCount: data?.length || 0 
+  });
 
   // Aggregate counts by type
   const result = (data || []).reduce((acc, action) => {
@@ -34,6 +45,9 @@ export async function getActionStats(userId: string) {
     return acc;
   }, {} as Record<string, number>);
 
-  console.log('Aggregated stats:', result);
+  logger.debug('Aggregated stats calculated', { 
+    component: 'actions',
+    result 
+  });
   return result;
 } 

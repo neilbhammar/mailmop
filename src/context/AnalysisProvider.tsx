@@ -4,6 +4,7 @@ import { createContext, useContext, useCallback, useEffect, useState, ReactNode 
 import { hasSenderAnalysis, ANALYSIS_CHANGE_EVENT } from '@/lib/storage/senderAnalysis';
 import { getCurrentAnalysis, completeAnalysis } from '@/lib/storage/actionLog';
 import { ActionEndType, LocalActionLog } from '@/types/actions';
+import { logger } from '@/lib/utils/logger';
 
 interface AnalysisContextType {
   hasAnalysis: boolean;
@@ -23,7 +24,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
   // Function to check both IndexedDB and current analysis state
   const checkAnalysisState = useCallback(async () => {
     try {
-      console.log('[AnalysisProvider] Checking analysis state...');
+      logger.debug('Checking analysis state', { component: 'AnalysisProvider' });
       
       const [hasData, analysis] = await Promise.all([
         hasSenderAnalysis(),
@@ -34,7 +35,12 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
       
       // Log state changes
       if (hasData !== hasAnalysis || currentStatus !== lastAnalysisStatus) {
-        console.log(`[AnalysisProvider] State updated: hasData=${hasData}, status=${currentStatus}, current isAnalyzing=${isAnalyzing}`);
+        logger.debug('State updated', { 
+          component: 'AnalysisProvider',
+          hasData,
+          status: currentStatus,
+          currentIsAnalyzing: isAnalyzing
+        });
       }
 
       // Always update hasAnalysis immediately
@@ -48,13 +54,19 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         analysis?.status === 'analyzing';
         
       if (isAnalyzing !== newIsAnalyzing) {
-        console.log(`[AnalysisProvider] Updating isAnalyzing from ${isAnalyzing} to ${newIsAnalyzing}`);
+        logger.debug('Updating isAnalyzing state', { 
+          component: 'AnalysisProvider',
+          from: isAnalyzing,
+          to: newIsAnalyzing
+        });
         setIsAnalyzing(newIsAnalyzing);
         
         // If analysis just completed (was analyzing, now not analyzing),
         // dispatch an additional event to ensure UI updates
         if (isAnalyzing && !newIsAnalyzing) {
-          console.log('[AnalysisProvider] Analysis just completed, dispatching immediate update');
+          logger.debug('Analysis just completed, dispatching immediate update', { 
+            component: 'AnalysisProvider' 
+          });
           window.dispatchEvent(new Event('mailmop:analysis-status-change'));
         }
       }
@@ -68,18 +80,27 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         
         // If analysis hasn't been updated in more than 15 seconds, consider it interrupted
         if (timeSinceUpdate > 15000) {
-          console.log(`[AnalysisProvider] Analysis hasn't been updated for ${Math.round(timeSinceUpdate/1000)}s, marking as interrupted`);
+          logger.debug('Analysis appears interrupted, marking as error', { 
+            component: 'AnalysisProvider',
+            timeSinceUpdateSeconds: Math.round(timeSinceUpdate/1000)
+          });
           completeAnalysis('error' as ActionEndType, 'Analysis was interrupted by page refresh');
           setIsAnalyzing(false);
           
           // Dispatch event to notify other components
           window.dispatchEvent(new Event('mailmop:analysis-status-change'));
         } else {
-          console.log(`[AnalysisProvider] Analysis still active, last updated ${Math.round(timeSinceUpdate/1000)}s ago`);
+          logger.debug('Analysis still active', { 
+            component: 'AnalysisProvider',
+            lastUpdatedSeconds: Math.round(timeSinceUpdate/1000)
+          });
         }
       }
     } catch (error) {
-      console.error('[AnalysisProvider] Error checking state:', error);
+      logger.error('Error checking analysis state', { 
+        component: 'AnalysisProvider', 
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   }, [hasAnalysis, isAnalyzing, lastAnalysisStatus]);
 
@@ -90,7 +111,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     if (isAnalyzing) {
       // Poll every 2 seconds while analyzing
       interval = setInterval(() => {
-        console.log('[AnalysisProvider] Polling for analysis status...');
+        logger.debug('Polling for analysis status', { component: 'AnalysisProvider' });
         checkAnalysisState();
       }, 2000);
     }
@@ -108,14 +129,18 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     const handleFocus = () => {
       // Only check state on focus if we're currently analyzing or might have missed updates
       if (isAnalyzing) {
-        console.log('[Analysis] Window focused during analysis, checking state');
+        logger.debug('Window focused during analysis, checking state', { 
+          component: 'AnalysisProvider' 
+        });
         checkAnalysisState();
       }
     };
 
     // Handle analysis changes from other components
     const handleAnalysisChange = () => {
-      console.log('[Analysis] Analysis data changed, updating state');
+      logger.debug('Analysis data changed, updating state', { 
+        component: 'AnalysisProvider' 
+      });
       checkAnalysisState();
       
       // Double-check after a short delay to catch all updates

@@ -1,13 +1,14 @@
 import { clearSenderAnalysis } from "./senderAnalysis";
+import { logger } from '@/lib/utils/logger';
 
 // Constants for localStorage keys
 const GMAIL_STATS_KEY = 'mailmop:gmail-stats';
 
 /**
-3 * Clears all user data from localStorage, sessionStorage, IndexedDB, and attempts to clear HttpOnly cookie.
+ * Clears all user data from localStorage, sessionStorage, IndexedDB, and attempts to clear HttpOnly cookie.
  */
 export async function clearAllUserData() {
-  console.log('[Storage] Clearing all user data...');
+  logger.debug('Clearing all user data', { component: 'userStorage' });
   
   // Clear localStorage
   localStorage.clear();
@@ -20,7 +21,9 @@ export async function clearAllUserData() {
 
   // Attempt to clear the HttpOnly session cookie by calling the revoke endpoint
   try {
-    console.log('[Storage] Attempting to revoke server session and clear HttpOnly cookie...');
+    logger.debug('Attempting to revoke server session and clear HttpOnly cookie', { 
+      component: 'userStorage' 
+    });
     const response = await fetch('/api/auth/revoke', {
       method: 'POST',
       headers: {
@@ -28,15 +31,25 @@ export async function clearAllUserData() {
       },
     });
     if (response.ok) {
-      console.log('[Storage] Server session revoke request successful.');
+      logger.debug('Server session revoke request successful', { 
+        component: 'userStorage' 
+      });
     } else {
-      console.warn('[Storage] Server session revoke request failed:', response.statusText);
+      logger.warn('Server session revoke request failed', { 
+        component: 'userStorage',
+        statusText: response.statusText 
+      });
     }
   } catch (error) {
-    console.error('[Storage] Error calling /api/auth/revoke:', error);
+    logger.error('Error calling /api/auth/revoke', { 
+      component: 'userStorage',
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
   
-  console.log('[Storage] All user data cleared (including attempt to clear HttpOnly cookie)');
+  logger.debug('All user data cleared (including attempt to clear HttpOnly cookie)', { 
+    component: 'userStorage' 
+  });
 }
 
 /**
@@ -44,12 +57,17 @@ export async function clearAllUserData() {
  * Returns true if there's a mismatch (different user), false if same user or no previous user
  */
 export async function checkUserMismatch(currentEmail: string): Promise<boolean> {
-  console.log('[Storage] Checking user mismatch for:', currentEmail);
+  logger.debug('Checking user mismatch', { 
+    component: 'userStorage',
+    currentEmail 
+  });
   
   // First, check if we have any stored data
   const stats = localStorage.getItem(GMAIL_STATS_KEY);
   if (!stats) {
-    console.log('[Storage] No stored Gmail stats found - first time user');
+    logger.debug('No stored Gmail stats found - first time user', { 
+      component: 'userStorage' 
+    });
     return false;
   }
   
@@ -61,21 +79,31 @@ export async function checkUserMismatch(currentEmail: string): Promise<boolean> 
     // Compare the stored email with current user's email
     const isMismatch = storedEmail !== currentEmail;
     
-    console.log('[Storage] Stored email:', storedEmail);
-    console.log('[Storage] Current email:', currentEmail);
-    console.log('[Storage] Is mismatch:', isMismatch);
+    logger.debug('User mismatch check result', { 
+      component: 'userStorage',
+      storedEmail,
+      currentEmail,
+      isMismatch
+    });
     
     // Only clear data if we detect a different user
     if (isMismatch) {
-      console.log('[Storage] Different user detected, clearing previous data');
+      logger.debug('Different user detected, clearing previous data', { 
+        component: 'userStorage' 
+      });
       await clearAllUserData();
     } else {
-      console.log('[Storage] Same user detected, preserving data');
+      logger.debug('Same user detected, preserving data', { 
+        component: 'userStorage' 
+      });
     }
     
     return isMismatch;
   } catch (error) {
-    console.error('[Storage] Error parsing Gmail stats:', error);
+    logger.error('Error parsing Gmail stats', { 
+      component: 'userStorage',
+      error: error instanceof Error ? error.message : String(error)
+    });
     return false;
   }
 }

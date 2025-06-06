@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { SenderResult } from '@/types/gmail';
 import { getAllSenders, ANALYSIS_CHANGE_EVENT } from '@/lib/storage/senderAnalysis';
 import { useAnalysis } from '@/context/AnalysisProvider';
+import { logger } from '@/lib/utils/logger';
 
 // Valid action types
 type ActionType = "delete" | "unsubscribe" | "markUnread" | "block";
@@ -55,7 +56,8 @@ export function useSenderData() {
 
   // Debug logging
   useEffect(() => {
-    console.log('[useSenderData] Hook state:', {
+    logger.debug('Hook state update', {
+      component: 'useSenderData',
       senderMapSize: senderMap.size,
       isInitialLoading,
       hasHydrated: hasHydratedRef.current,
@@ -68,7 +70,10 @@ export function useSenderData() {
 
   // Merge new senders into the existing map - STABLE function
   const mergeSenders = useCallback((newSenders: SenderResult[]) => {
-    console.log('[useSenderData] Merging senders:', newSenders.length);
+    logger.debug('Merging senders', { 
+      component: 'useSenderData',
+      newSendersCount: newSenders.length 
+    });
     setSenderMap(prevMap => {
       const newMap = new Map(prevMap);
       let hasChanges = false;
@@ -88,7 +93,10 @@ export function useSenderData() {
       });
 
       if (hasChanges) {
-        console.log('[useSenderData] Sender map updated, new size:', newMap.size);
+        logger.debug('Sender map updated', { 
+          component: 'useSenderData',
+          newSize: newMap.size 
+        });
       }
       return hasChanges ? newMap : prevMap;
     });
@@ -97,25 +105,31 @@ export function useSenderData() {
   // Load initial data from IndexedDB only once - STABLE function
   const hydrateFromStorage = useCallback(async () => {
     if (hasHydratedRef.current) {
-      console.log('[useSenderData] Already hydrated, skipping');
+      logger.debug('Already hydrated, skipping', { component: 'useSenderData' });
       return;
     }
     
     try {
-      console.log('[useSenderData] Starting initial hydration from IndexedDB...');
+      logger.debug('Starting initial hydration from IndexedDB', { component: 'useSenderData' });
       const senders = await getAllSenders();
       
       if (senders.length > 0) {
-        console.log('[useSenderData] Found', senders.length, 'senders in storage');
+        logger.debug('Found senders in storage', { 
+          component: 'useSenderData',
+          sendersCount: senders.length 
+        });
         setSenderMap(new Map(senders.map(s => [s.senderEmail, convertToTableFormat(s)])));
       } else {
-        console.log('[useSenderData] No senders found in storage');
+        logger.debug('No senders found in storage', { component: 'useSenderData' });
       }
       
       hasHydratedRef.current = true;
-      console.log('[useSenderData] Hydration complete');
+      logger.debug('Hydration complete', { component: 'useSenderData' });
     } catch (error) {
-      console.error('[useSenderData] Hydration failed:', error);
+      logger.error('Hydration failed', { 
+        component: 'useSenderData',
+        error: error instanceof Error ? error.message : String(error)
+      });
     } finally {
       setIsInitialLoading(false);
     }
@@ -125,9 +139,12 @@ export function useSenderData() {
   useEffect(() => {
     const handleAnalysisChange = (event: Event) => {
       if (event instanceof CustomEvent && event.detail?.type === 'senders') {
-        console.log('[useSenderData] Batch update received');
+        logger.debug('Batch update received', { component: 'useSenderData' });
         getAllSenders().then(senders => {
-          console.log('[useSenderData] Analysis change - updating with', senders.length, 'senders');
+          logger.debug('Analysis change - updating with senders', { 
+            component: 'useSenderData',
+            sendersCount: senders.length 
+          });
           mergeSenders(senders);
         });
       }

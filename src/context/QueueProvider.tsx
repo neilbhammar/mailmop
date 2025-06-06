@@ -6,6 +6,7 @@ import { Job, JobType, JobStatus, ProgressCallback, ExecutorResult, JobExecutor 
 import { toast } from 'sonner';
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
 import { ReauthDialog } from '@/components/modals/ReauthDialog';
+import { logger } from '@/lib/utils/logger';
 
 // Context types
 interface QueueContextType {
@@ -141,7 +142,7 @@ export function QueueProvider({ children }: { children: ReactNode }) {
 
   // Register an executor for a specific job type
   const registerExecutor = useCallback((type: JobType, executor: JobExecutor) => {
-    console.log(`[Queue] Registering executor for type: ${type}`);
+    logger.debug(`[Queue] Registering executor for type: ${type}`);
     executorsRef.current[type] = executor;
   }, []);
 
@@ -174,19 +175,24 @@ export function QueueProvider({ children }: { children: ReactNode }) {
     // Reset reauth dialog dismissal when new job is added
     setReauthDialogDismissed(false);
     
-    console.log(`[Queue] Job ${jobId} enqueued:`, { type, payload });
+    logger.debug('Job enqueued', { 
+      component: 'QueueProvider', 
+      jobId, 
+      type, 
+      payload 
+    });
     return jobId;
   }, []);
 
   // Cancel a job
   const cancel = useCallback((jobId: string) => {
-    console.log(`[Queue] Cancelling job ${jobId}`);
+    logger.debug('Cancelling job', { component: 'QueueProvider', jobId });
     dispatch({ type: 'CANCEL_JOB', payload: { id: jobId } });
   }, []);
 
   // Clear completed jobs
   const clearCompleted = useCallback(() => {
-    console.log('[Queue] Clearing completed jobs');
+    logger.debug('Clearing completed jobs', { component: 'QueueProvider' });
     dispatch({ type: 'CLEAR_COMPLETED' });
   }, []);
 
@@ -205,12 +211,20 @@ export function QueueProvider({ children }: { children: ReactNode }) {
 
     // 🔒 CRITICAL: Check for refresh token before starting any job
     if (!hasRefreshToken) {
-      console.log(`[Queue] No refresh token available. Pausing queue until reconnection.`);
-      console.log(`[Queue] Job ${nextJob.id} (${nextJob.type}) waiting for Gmail reconnection`);
+      logger.debug('No refresh token available, pausing queue until reconnection', { 
+        component: 'QueueProvider' 
+      });
+      logger.debug('Job waiting for Gmail reconnection', { 
+        component: 'QueueProvider', 
+        jobId: nextJob.id, 
+        jobType: nextJob.type 
+      });
       
       // Show the Reauth Dialog only if user hasn't dismissed it
       if (!showReauthDialog && !reauthDialogDismissed) {
-        console.log('[Queue] Opening Reauth dialog for queue processing');
+        logger.debug('Opening Reauth dialog for queue processing', { 
+          component: 'QueueProvider' 
+        });
         setShowReauthDialog(true);
         
         // Also show a toast to explain why the modal appeared
@@ -227,7 +241,10 @@ export function QueueProvider({ children }: { children: ReactNode }) {
     // Check if we have an executor for this job type
     const executor = executorsRef.current[nextJob.type];
     if (!executor) {
-      console.error(`[Queue] No executor found for job type: ${nextJob.type}`);
+      logger.error('No executor found for job type', { 
+        component: 'QueueProvider', 
+        jobType: nextJob.type 
+      });
       dispatch({ 
         type: 'COMPLETE_JOB', 
         payload: { 
@@ -241,7 +258,11 @@ export function QueueProvider({ children }: { children: ReactNode }) {
 
     // Start processing
     processingRef.current = true;
-    console.log(`[Queue] Starting job ${nextJob.id} (${nextJob.type})`);
+    logger.debug('Starting job', { 
+      component: 'QueueProvider', 
+      jobId: nextJob.id, 
+      jobType: nextJob.type 
+    });
     dispatch({ type: 'START_JOB', payload: { id: nextJob.id } });
 
     try {
@@ -265,13 +286,20 @@ export function QueueProvider({ children }: { children: ReactNode }) {
 
       // Handle completion
       if (result.success) {
-        console.log(`[Queue] Job ${nextJob.id} completed successfully`);
+        logger.debug('Job completed successfully', { 
+          component: 'QueueProvider', 
+          jobId: nextJob.id 
+        });
         dispatch({ 
           type: 'COMPLETE_JOB', 
           payload: { id: nextJob.id, status: 'success' } 
         });
       } else {
-        console.error(`[Queue] Job ${nextJob.id} failed:`, result.error);
+        logger.error('Job failed', { 
+          component: 'QueueProvider', 
+          jobId: nextJob.id, 
+          error: result.error 
+        });
         dispatch({ 
           type: 'COMPLETE_JOB', 
           payload: { 
@@ -282,7 +310,11 @@ export function QueueProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (error: any) {
-      console.error(`[Queue] Job ${nextJob.id} threw exception:`, error);
+      logger.error('Job threw exception', { 
+        component: 'QueueProvider', 
+        jobId: nextJob.id, 
+        error 
+      });
       dispatch({ 
         type: 'COMPLETE_JOB', 
         payload: { 
@@ -308,11 +340,15 @@ export function QueueProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // If refresh token becomes available and there are queued jobs, show resume message
     if (hasRefreshToken && state.jobs.some(j => j.status === 'queued') && !state.isProcessing) {
-      console.log('[Queue] Refresh token available, resuming queue processing');
+      logger.debug('Refresh token available, resuming queue processing', { 
+        component: 'QueueProvider' 
+      });
       
       // Close the reauth dialog if it's open
       if (showReauthDialog) {
-        console.log('[Queue] Closing Reauth dialog - auth restored');
+        logger.debug('Closing Reauth dialog - auth restored', { 
+          component: 'QueueProvider' 
+        });
         setShowReauthDialog(false);
       }
       
@@ -355,7 +391,9 @@ export function QueueProvider({ children }: { children: ReactNode }) {
             setShowReauthDialog(open);
             if (!open) {
               // User explicitly closed the dialog - mark as dismissed
-              console.log('[Queue] User dismissed ReauthDialog - will not show again until new job or reconnect');
+              logger.debug('User dismissed ReauthDialog - will not show again until new job or reconnect', { 
+                component: 'QueueProvider' 
+              });
               setReauthDialogDismissed(true);
             }
           }}

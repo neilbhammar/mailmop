@@ -38,6 +38,7 @@ import {
   completeActionLog as completeLocalActionLog,
   clearCurrentActionLog,
 } from '@/lib/storage/actionLog'; // New imports for action logging
+import { logger } from '@/lib/utils/logger';
 
 // --- Components ---
 import { ReauthDialog } from '@/components/modals/ReauthDialog'; // For prompting re-login
@@ -143,12 +144,12 @@ export function useDelete() {
   );
 
   const closeReauthModal = useCallback(() => {
-    console.log('[Delete] Closing reauth modal');
+    logger.debug('Closing reauth modal', { component: 'useDelete' });
     setReauthModal((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
   const cancelDelete = useCallback(async () => {
-    console.log('[Delete] Cancellation requested');
+    logger.debug('Cancellation requested', { component: 'useDelete' });
     isCancelledRef.current = true; // Signal the running process to stop
     cancellationRef.current = true; // Also set the queue-compatible ref
     updateProgress({ status: 'cancelled' }); // Pass partial update object
@@ -159,9 +160,9 @@ export function useDelete() {
       try {
         await completeActionLog(logId, 'user_stopped', progress.emailsDeletedSoFar);
         completeLocalActionLog('user_stopped');
-        console.log('[Delete] Logged cancellation to Supabase and local storage');
+        logger.debug('Logged cancellation to Supabase and local storage', { component: 'useDelete' });
       } catch (error) {
-        console.error('[Delete] Failed to log cancellation:', error);
+        logger.error('Failed to log cancellation', { component: 'useDelete', error });
       } finally {
         actionLogIdRef.current = null; // Clear the ref
       }
@@ -175,32 +176,41 @@ export function useDelete() {
       abortSignal?: AbortSignal,
       options?: DeleteOptions
     ): Promise<{ success: boolean }> => {
-      console.log('[Delete] Starting deletion process for senders:', senders);
-      console.log('[Delete] With filter rules:', options?.filterRules);
-      console.log('[Delete] Queue mode:', !!queueProgressCallback);
+      logger.debug('Starting deletion process for senders', { 
+        component: 'useDelete', 
+        senderCount: senders.length 
+      });
+      logger.debug('With filter rules', { 
+        component: 'useDelete', 
+        filterRules: options?.filterRules 
+      });
+      logger.debug('Queue mode', { 
+        component: 'useDelete', 
+        queueMode: !!queueProgressCallback 
+      });
       
       // Reset cancellation flags
       isCancelledRef.current = false;
       cancellationRef.current = false;
       
       updateProgress({ status: 'preparing', progressPercent: 0, emailsDeletedSoFar: 0 });
-      console.log('[Delete] Preparing deletion...');
+      logger.debug('Preparing deletion...', { component: 'useDelete' });
 
       // --- 0. Basic Checks --- (User, Senders, GAPI Client)
       if (!user?.id) {
         toast.error('You must be logged in to delete emails.');
-        console.error('[Delete] User not logged in.');
+        logger.error('User not logged in', { component: 'useDelete' });
         updateProgress({ status: 'error', error: 'User not logged in.' });
         return { success: false };
       }
       if (!senders || senders.length === 0) {
         toast.warning('No senders selected for deletion.');
-        console.warn('[Delete] No senders provided.');
+        logger.warn('No senders provided', { component: 'useDelete' });
         updateProgress({ status: 'idle' }); // Go back to idle
         return { success: false };
       }
       if (!isClientLoaded) {
-        console.error('[Delete] Gmail API client is not loaded yet.');
+        logger.error('Gmail API client is not loaded yet', { component: 'useDelete' });
         toast.error('Gmail client not ready', { description: 'Please wait a moment and try again.' });
         updateProgress({ status: 'error', error: 'Gmail client not loaded.' });
         return { success: false };
@@ -208,16 +218,16 @@ export function useDelete() {
 
       // --- 1. Initial Token & Connection Check ---
       if (!isGmailConnected) {
-        console.log('[Delete] No Gmail connection, showing reauth modal.');
+        logger.debug('No Gmail connection, showing reauth modal', { component: 'useDelete' });
         setReauthModal({ isOpen: true, type: 'expired' });
         updateProgress({ status: 'error', error: 'Gmail not connected.' });
         return { success: false };
       }
       try {
         await getAccessToken(); // Verify refresh token validity and get initial access token
-        console.log('[Delete] Initial access token validated/acquired.');
+        logger.debug('Initial access token validated/acquired', { component: 'useDelete' });
       } catch (error) {
-        console.error('[Delete] Failed to validate/acquire initial token:', error);
+        logger.error('Failed to validate/acquire initial token', { component: 'useDelete', error });
         setReauthModal({ isOpen: true, type: 'expired' });
         updateProgress({ status: 'error', error: 'Gmail authentication failed.' });
         return { success: false };
@@ -226,7 +236,10 @@ export function useDelete() {
       // --- 2. Calculate Estimates --- 
       const totalEmailsEstimate = senders.reduce((sum, s) => sum + s.count, 0);
       updateProgress({ totalEmailsToProcess: totalEmailsEstimate });
-      console.log(`[Delete] Total estimated emails: ${totalEmailsEstimate}`);
+      logger.debug('Total estimated emails', { 
+        component: 'useDelete', 
+        totalEmails: totalEmailsEstimate 
+      });
 
       const estimatedRuntimeMs = estimateRuntimeMs({
         operationType: 'delete',
@@ -235,7 +248,10 @@ export function useDelete() {
       });
       const formattedEta = formatDuration(estimatedRuntimeMs);
       updateProgress({ eta: formattedEta });
-      console.log(`[Delete] Estimated runtime: ${formattedEta}`);
+      logger.debug('Estimated runtime', { 
+        component: 'useDelete', 
+        eta: formattedEta 
+      });
 
       // Initial progress for queue (ensure UI renders properly)
       if (queueProgressCallback) {
@@ -266,7 +282,10 @@ export function useDelete() {
         totalEstimatedBatches: Math.ceil(totalEmailsEstimate / DELETION_BATCH_SIZE),
         query: `Deleting from ${senders.length} senders`,
       });
-      console.log(`[Delete] Created local action log: ${clientActionId}`);
+      logger.debug('Created local action log', { 
+        component: 'useDelete', 
+        clientActionId 
+      });
 
       let supabaseLogId: string | undefined;
       try {
@@ -280,9 +299,12 @@ export function useDelete() {
         supabaseLogId = actionLog.id;
         actionLogIdRef.current = supabaseLogId ?? null;
         updateSupabaseLogId(supabaseLogId!); // Update local log with Supabase ID
-        console.log(`[Delete] Created Supabase action log: ${supabaseLogId}`);
+        logger.debug('Created Supabase action log', { 
+          component: 'useDelete', 
+          supabaseLogId 
+        });
       } catch (error) {
-        console.error('[Delete] Failed to create Supabase action log:', error);
+        logger.error('Failed to create Supabase action log', { component: 'useDelete', error });
         updateProgress({ status: 'error', error: 'Failed to log action start.' });
         clearCurrentActionLog(); // Clean up local log
         return { success: false };
@@ -291,7 +313,7 @@ export function useDelete() {
       // --- 4. Execution Phase --- 
       updateProgress({ status: 'deleting', progressPercent: 0 });
       await updateActionLog(supabaseLogId!, { status: 'deleting' });
-      console.log('[Delete] Starting active deletion...');
+      logger.debug('Starting active deletion...', { component: 'useDelete' });
 
       (async () => {
         let totalSuccessfullyDeleted = 0;
@@ -303,12 +325,19 @@ export function useDelete() {
           for (const sender of senders) {
             // Check both cancellation sources (critical pattern from analysis)
             if (isCancelledRef.current || cancellationRef.current || abortSignal?.aborted) {
-              console.log(`[Delete] Cancellation detected before processing ${sender.email}`);
+              logger.debug('Cancellation detected before processing sender', { 
+                component: 'useDelete', 
+                senderEmail: sender.email 
+              });
               endType = 'user_stopped';
               break; // Exit the sender loop
             }
 
-            console.log(`\n[Delete] Processing sender: ${sender.email} (Est: ${sender.count})`);
+            logger.debug('Processing sender', { 
+              component: 'useDelete', 
+              senderEmail: sender.email, 
+              estimatedCount: sender.count 
+            });
             updateProgress({ currentSender: sender.email });
 
             const query = buildQuery({ 
@@ -317,7 +346,7 @@ export function useDelete() {
               senderEmail: sender.email,
               filterRules: options?.filterRules
             });
-            console.log(`[Delete] Using query: ${query}`);
+            logger.debug('Using query', { component: 'useDelete', query });
 
             let nextPageToken: string | undefined = undefined;
             let senderDeletedCount = 0;
@@ -328,7 +357,10 @@ export function useDelete() {
             do {
               // Check both cancellation sources (critical pattern from analysis)
               if (isCancelledRef.current || cancellationRef.current || abortSignal?.aborted) {
-                console.log(`[Delete] Cancellation detected during batch processing for ${sender.email}`);
+                logger.debug('Cancellation detected during batch processing', { 
+                  component: 'useDelete', 
+                  senderEmail: sender.email 
+                });
                 endType = 'user_stopped';
                 break;
               }
@@ -338,20 +370,30 @@ export function useDelete() {
               const timeRemaining = tokenTimeRemaining();
               try {
                 if (tokenDetails && timeRemaining < TWO_MINUTES_MS) {
-                  console.warn(`[Delete] Token expiring soon (in ${formatDuration(timeRemaining)}), forcing refresh...`);
+                  logger.warn('Token expiring soon, forcing refresh', { 
+                    component: 'useDelete', 
+                    timeRemaining: formatDuration(timeRemaining) 
+                  });
                   currentAccessToken = await forceRefreshAccessToken();
                 } else {
                   currentAccessToken = await getAccessToken(); // Gets from memory or refreshes if expired
                 }
               } catch (tokenError) {
-                console.error(`[Delete] Token acquisition failed for batch:`, tokenError);
+                logger.error('Token acquisition failed for batch', { 
+                  component: 'useDelete', 
+                  error: tokenError 
+                });
                 setReauthModal({ isOpen: true, type: 'expired' });
                 throw new Error('Gmail authentication failed during deletion.');
               }
               // ---------------------------------------------
 
               batchFetchAttempts++;
-              console.log(`[Delete] Fetching message IDs batch (Attempt ${batchFetchAttempts}) for ${sender.email}...`);
+              logger.debug('Fetching message IDs batch', { 
+                component: 'useDelete', 
+                attempt: batchFetchAttempts, 
+                senderEmail: sender.email 
+              });
 
               try {
                 const { messageIds, nextPageToken: newPageTokenResult } = await fetchMessageIds(
@@ -363,11 +405,17 @@ export function useDelete() {
                 nextPageToken = newPageTokenResult;
 
                 if (messageIds.length === 0) {
-                  console.log(`[Delete] No more message IDs found for ${sender.email}.`);
+                  logger.debug('No more message IDs found for sender', { 
+                    component: 'useDelete', 
+                    senderEmail: sender.email 
+                  });
                   break;
                 }
 
-                console.log(`[Delete] Found ${messageIds.length} IDs. Attempting batch delete...`);
+                logger.debug('Found IDs, attempting batch delete', { 
+                  component: 'useDelete', 
+                  messageCount: messageIds.length 
+                });
                 await batchDeleteMessages(currentAccessToken, messageIds);
 
                 senderDeletedCount += messageIds.length;
@@ -376,7 +424,11 @@ export function useDelete() {
                   ? Math.min(100, Math.round((totalSuccessfullyDeleted / totalEmailsEstimate) * 100))
                   : (nextPageToken ? 50 : 100); 
 
-                console.log(`[Delete] Batch successful for ${sender.email}. Total deleted so far: ${totalSuccessfullyDeleted}`);
+                logger.debug('Batch successful for sender', { 
+                  component: 'useDelete', 
+                  senderEmail: sender.email, 
+                  totalDeleted: totalSuccessfullyDeleted 
+                });
                 updateProgress({
                     emailsDeletedSoFar: totalSuccessfullyDeleted,
                     progressPercent: overallProgress,
@@ -393,7 +445,11 @@ export function useDelete() {
                 }
 
               } catch (fetchOrDeleteError: any) {
-                  console.error(`[Delete] Error during fetch/delete batch for ${sender.email}:`, fetchOrDeleteError);
+                  logger.error('Error during fetch/delete batch for sender', { 
+                    component: 'useDelete', 
+                    senderEmail: sender.email, 
+                    error: fetchOrDeleteError 
+                  });
                   errorMessage = `Failed during batch operation for ${sender.email}: ${fetchOrDeleteError.message || 'Unknown error'}`;
                   endType = 'runtime_error';
                   toast.error('Deletion error', { description: errorMessage });
@@ -402,7 +458,10 @@ export function useDelete() {
               }
 
               if (batchFetchAttempts > MAX_FETCH_ATTEMPTS) {
-                  console.warn(`[Delete] Reached max fetch attempts (${MAX_FETCH_ATTEMPTS}) for ${sender.email}. Stopping.`);
+                  logger.warn('Reached max fetch attempts', { 
+                    component: 'useDelete', 
+                    maxAttempts: MAX_FETCH_ATTEMPTS 
+                  });
                    errorMessage = `Reached maximum processing attempts for ${sender.email}.`;
                    endType = 'runtime_error';
                   break;
@@ -414,7 +473,11 @@ export function useDelete() {
               try {
                 await markSenderActionTaken(sender.email, 'delete');
               } catch (markError) {
-                console.error(`[Delete] Failed to mark action taken for ${sender.email}:`, markError);
+                logger.error('Failed to mark action taken for sender', { 
+                  component: 'useDelete', 
+                  senderEmail: sender.email, 
+                  error: markError 
+                });
               }
             }
 
@@ -424,8 +487,14 @@ export function useDelete() {
           } // End of sender loop
 
           // --- 5. Finalization ---
-          console.log(`\n[Delete] Deletion process finished. End type: ${endType}`);
-          console.log(`[Delete] Total emails successfully deleted: ${totalSuccessfullyDeleted}`);
+          logger.debug('Deletion process finished', { 
+            component: 'useDelete', 
+            endType 
+          });
+          logger.debug('Total emails successfully deleted', { 
+            component: 'useDelete', 
+            totalDeleted: totalSuccessfullyDeleted 
+          });
 
           await completeActionLog(supabaseLogId!, endType, totalSuccessfullyDeleted, errorMessage);
           completeLocalActionLog(endType, errorMessage);
@@ -445,7 +514,10 @@ export function useDelete() {
           } // Errors already toasted
 
         } catch (processError: any) {
-            console.error('[Delete] Critical error during deletion process:', processError);
+            logger.error('Critical error during deletion process', { 
+              component: 'useDelete', 
+              error: processError 
+            });
             errorMessage = `An unexpected error occurred: ${processError.message || 'Unknown error'}`;
             endType = 'runtime_error';
 
@@ -454,7 +526,10 @@ export function useDelete() {
                     await completeActionLog(supabaseLogId, endType, totalSuccessfullyDeleted, errorMessage);
                     completeLocalActionLog(endType, errorMessage);
                 } catch (logError) {
-                    console.error("[Delete] Failed to log critical error:", logError);
+                    logger.error('Failed to log critical error', { 
+                      component: 'useDelete', 
+                      error: logError 
+                    });
                 }
             }
 
@@ -487,14 +562,19 @@ export function useDelete() {
     onProgress: ProgressCallback,
     abortSignal: AbortSignal
   ): Promise<ExecutorResult> => {
-    console.log('[Delete] Queue executor called with payload:', payload);
+    logger.debug('Queue executor called with payload', { 
+      component: 'useDelete', 
+      payload 
+    });
     
     // Convert queue payload to hook format  
     const senders: SenderToDelete[] = payload.senders;
     
     // Set up cancellation handling
     const handleAbort = () => {
-      console.log('[Delete] Queue abort signal received');
+      logger.debug('Queue abort signal received', { 
+        component: 'useDelete' 
+      });
       cancelDelete();
     };
     abortSignal.addEventListener('abort', handleAbort);
@@ -543,7 +623,9 @@ export function useDelete() {
   // Register executor with queue system
   useEffect(() => {
     if (typeof window !== 'undefined' && (window as any).__queueRegisterExecutor) {
-      console.log('[Delete] Registering queue executor');
+      logger.debug('Registering queue executor', { 
+        component: 'useDelete' 
+      });
       (window as any).__queueRegisterExecutor('delete', queueExecutor);
     }
   }, [queueExecutor]);

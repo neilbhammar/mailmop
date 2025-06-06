@@ -5,6 +5,7 @@ import { useAnalysisOperations } from '@/hooks/useAnalysisOperation'
 import { Button } from '@/components/ui/button'
 import { RefreshCw } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { logger } from '@/lib/utils/logger'
 
 export default function ReanalyzeButton() {
   const { hasAnalysis, isAnalyzing, checkAnalysisState } = useAnalysis()
@@ -16,7 +17,12 @@ export default function ReanalyzeButton() {
     // Check if analysis data exists but we're not currently analyzing
     const shouldBeVisible = hasAnalysis && !isAnalyzing
     
-    console.log(`[ReanalyzeButton] Visibility check: hasAnalysis=${hasAnalysis}, isAnalyzing=${isAnalyzing}, shouldBeVisible=${shouldBeVisible}`)
+    logger.debug('Visibility check', {
+      component: 'ReanalyzeButton',
+      hasAnalysis,
+      isAnalyzing,
+      shouldBeVisible
+    });
     
     // Set visibility immediately (no delay)
     setIsVisible(shouldBeVisible)
@@ -24,14 +30,18 @@ export default function ReanalyzeButton() {
 
   // Force check analysis state when the component mounts
   useEffect(() => {
-    console.log('[ReanalyzeButton] Component mounted, checking analysis state')
+    logger.debug('Component mounted, checking analysis state', {
+      component: 'ReanalyzeButton'
+    });
     checkAnalysisState()
   }, [checkAnalysisState])
 
   // Always listen for analysis status changes to update visibility
   useEffect(() => {
     const handleAnalysisStatusChange = () => {
-      console.log('[ReanalyzeButton] Analysis status changed, checking state')
+      logger.debug('Analysis status changed, checking state', {
+        component: 'ReanalyzeButton'
+      });
       checkAnalysisState()
     }
 
@@ -44,13 +54,19 @@ export default function ReanalyzeButton() {
   }, [checkAnalysisState])
 
   const handleReanalyze = () => {
-    console.log('[ReanalyzeButton] Triggering reanalyze event')
+    logger.debug('Triggering reanalyze event', { component: 'ReanalyzeButton' });
     window.dispatchEvent(new Event('mailmop:reanalyze-requested'))
   }
 
   // Debug logging
   useEffect(() => {
-    console.log(`[ReanalyzeButton] Render state: hasAnalysis=${hasAnalysis}, isAnalyzing=${isAnalyzing}, isVisible=${isVisible}, progress=${progress.status}`)
+    logger.debug('Render state', {
+      component: 'ReanalyzeButton',
+      hasAnalysis,
+      isAnalyzing,
+      isVisible,
+      progressStatus: progress.status
+    });
   }, [hasAnalysis, isAnalyzing, isVisible, progress.status])
 
   if (!isVisible) return null

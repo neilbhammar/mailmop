@@ -31,6 +31,7 @@ import {
   completeActionLog as completeLocalActionLog,
   clearCurrentActionLog,
 } from '@/lib/storage/actionLog';
+import { logger } from '@/lib/utils/logger';
 
 // --- Types ---
 import { ActionEndType } from '@/types/actions';
@@ -144,7 +145,7 @@ export function useModifyLabel() {
    * Cancels an ongoing label modification process
    */
   const cancelModifyLabel = useCallback(async () => {
-    console.log('[ModifyLabel] Cancellation requested');
+    logger.debug('Cancellation requested', { component: 'useModifyLabel' });
     isCancelledRef.current = true;
     cancellationRef.current = true;
     updateProgress({ status: 'cancelled', progressPercent: 0 });
@@ -160,9 +161,9 @@ export function useModifyLabel() {
           progress.processedSoFar
         );
         completeLocalActionLog('user_stopped');
-        console.log('[ModifyLabel] Logged cancellation');
+        logger.debug('Logged cancellation', { component: 'useModifyLabel' });
       } catch (error) {
-        console.error('[ModifyLabel] Failed to log cancellation:', error);
+        logger.error('Failed to log cancellation', { component: 'useModifyLabel', error });
       } finally {
         actionLogIdRef.current = null;
       }
@@ -173,7 +174,7 @@ export function useModifyLabel() {
    * Closes the re-authentication modal
    */
   const closeReauthModal = useCallback(() => {
-    console.log('[ModifyLabel] Closing reauth modal');
+    logger.debug('Closing reauth modal', { component: 'useModifyLabel' });
     setReauthModal((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
@@ -186,7 +187,12 @@ export function useModifyLabel() {
       queueProgressCallback?: ProgressCallback,
       abortSignal?: AbortSignal
     ): Promise<{ success: boolean }> => {
-      console.log('[ModifyLabel] Starting label modification:', options);
+      logger.debug('Starting label modification', { 
+        component: 'useModifyLabel', 
+        senderCount: options.senders.length,
+        labelCount: options.labelIds.length,
+        actionType: options.actionType
+      });
       isCancelledRef.current = false;
       cancellationRef.current = false;
 
@@ -204,7 +210,7 @@ export function useModifyLabel() {
       updateProgress({ status: 'preparing', progressPercent: 0, processedSoFar: 0 });
       
       if (!isClientLoaded) {
-        console.error('[ModifyLabel] Gmail API client is not loaded yet.');
+        logger.error('Gmail API client is not loaded yet', { component: 'useModifyLabel' });
         toast.error('Gmail client not ready', {
           description: 'Please wait a moment and try again.'
         });
@@ -230,7 +236,9 @@ export function useModifyLabel() {
 
       // --- Token & Permission Checks (New Strategy) ---
       if (!isGmailConnected) {
-        console.log('[ModifyLabel] No Gmail connection (no refresh token), showing reauth modal.');
+        logger.debug('No Gmail connection (no refresh token), showing reauth modal', { 
+          component: 'useModifyLabel' 
+        });
         setReauthModal({ isOpen: true, type: 'expired', eta: formattedEta });
         updateProgress({ status: 'error', error: 'Gmail not connected. Please reconnect.' });
         return { success: false };
@@ -238,9 +246,14 @@ export function useModifyLabel() {
 
       try {
         await getAccessToken(); // Verify refresh token validity and get initial access token
-        console.log('[ModifyLabel] Initial access token validated/acquired.');
+        logger.debug('Initial access token validated/acquired', { 
+          component: 'useModifyLabel' 
+        });
       } catch (error) {
-        console.error('[ModifyLabel] Failed to validate/acquire initial token:', error);
+        logger.error('Failed to validate/acquire initial token', { 
+          component: 'useModifyLabel', 
+          error 
+        });
         setReauthModal({ isOpen: true, type: 'expired', eta: formattedEta });
         updateProgress({ status: 'error', error: 'Gmail authentication failed. Please reconnect.' });
         return { success: false };
@@ -276,7 +289,7 @@ export function useModifyLabel() {
         actionLogIdRef.current = supabaseLogId ?? null;
         updateSupabaseLogId(supabaseLogId!);
       } catch (error) {
-        console.error('[ModifyLabel] Failed to create action log:', error);
+        logger.error('Failed to create action log', { component: 'useModifyLabel', error });
         toast.error('Failed to start label modification.');
         updateProgress({ status: 'error', error: 'Failed to log action start.' });
         clearCurrentActionLog();
@@ -297,12 +310,18 @@ export function useModifyLabel() {
         for (const sender of options.senders) {
           // Check both cancellation sources (critical pattern from analysis)
           if (isCancelledRef.current || cancellationRef.current || abortSignal?.aborted) {
-            console.log(`[ModifyLabel] Cancellation detected before processing ${sender.email}`);
+            logger.debug('Cancellation detected before processing sender', { 
+              component: 'useModifyLabel', 
+              senderEmail: sender.email 
+            });
             endType = 'user_stopped';
             break;
           }
 
-          console.log(`\n[ModifyLabel] Processing sender: ${sender.email}`);
+          logger.debug('Processing sender', { 
+            component: 'useModifyLabel', 
+            senderEmail: sender.email 
+          });
           updateProgress({ currentSender: sender.email });
 
           // Build query to get messages from this sender
@@ -312,7 +331,7 @@ export function useModifyLabel() {
             senderEmail: sender.email,
             additionalTerms: []
           });
-          console.log(`[ModifyLabel] Using query: ${query}`);
+          logger.debug('Using query', { component: 'useModifyLabel', query });
 
           let nextPageToken: string | undefined = undefined;
           let batchFetchAttempts = 0;
@@ -321,7 +340,9 @@ export function useModifyLabel() {
           do {
             // Check both cancellation sources (critical pattern from analysis)
             if (isCancelledRef.current || cancellationRef.current || abortSignal?.aborted) {
-              console.log(`[ModifyLabel] Cancellation detected during batch processing`);
+              logger.debug('Cancellation detected during batch processing', { 
+                component: 'useModifyLabel' 
+              });
               endType = 'user_stopped';
               break;
             }
@@ -331,14 +352,24 @@ export function useModifyLabel() {
             const timeRemaining = tokenTimeRemaining();
             try {
               if (tokenDetails && timeRemaining < TWO_MINUTES_MS) {
-                console.warn(`[ModifyLabel] Token expiring soon (in ${formatDuration(timeRemaining)}), forcing refresh...`);
+                logger.warn('Token expiring soon, forcing refresh', { 
+                  component: 'useModifyLabel', 
+                  timeRemaining: formatDuration(timeRemaining) 
+                });
                 currentAccessToken = await forceRefreshAccessToken();
               } else {
                 currentAccessToken = await getAccessToken(); // Gets from memory or refreshes if expired
               }
-              console.log(`[ModifyLabel] Token acquired for batch processing sender: ${sender.email}`);
+              logger.debug('Token acquired for batch processing sender', { 
+                component: 'useModifyLabel', 
+                senderEmail: sender.email 
+              });
             } catch (tokenError: any) {
-              console.error(`[ModifyLabel] Token acquisition failed for batch processing ${sender.email}:`, tokenError);
+              logger.error('Token acquisition failed for batch processing', { 
+                component: 'useModifyLabel', 
+                senderEmail: sender.email, 
+                error: tokenError 
+              });
               const remainingEmailsForEta = totalToProcess - totalProcessed;
               const remainingTimeMsForEta = estimateRuntimeMs({ 
                 operationType: 'mark', // Assuming 'mark' is generic enough for ETA here
@@ -355,7 +386,10 @@ export function useModifyLabel() {
             // ---------------------------------------------
 
             batchFetchAttempts++;
-            console.log(`[ModifyLabel] Fetching message IDs batch (Attempt ${batchFetchAttempts})`);
+            logger.debug('Fetching message IDs batch', { 
+              component: 'useModifyLabel', 
+              attempt: batchFetchAttempts 
+            });
 
             try {
               // Use currentAccessToken obtained above
@@ -369,11 +403,14 @@ export function useModifyLabel() {
               nextPageToken = newPageToken;
 
               if (messageIds.length === 0) {
-                console.log(`[ModifyLabel] No more messages found.`);
+                logger.debug('No more messages found', { component: 'useModifyLabel' });
                 break;
               }
 
-              console.log(`[ModifyLabel] Found ${messageIds.length} messages. Modifying labels...`);
+              logger.debug('Found messages, modifying labels', { 
+                component: 'useModifyLabel', 
+                messageCount: messageIds.length 
+              });
 
               // Use currentAccessToken obtained above
               const failedBatches = await processBatchModifyLabels(
@@ -386,7 +423,10 @@ export function useModifyLabel() {
               );
 
               if (failedBatches.length > 0) {
-                console.warn(`[ModifyLabel] Some batches failed:`, failedBatches);
+                logger.warn('Some batches failed', { 
+                  component: 'useModifyLabel', 
+                  failedBatches 
+                });
               }
               
               totalProcessed += messageIds.length;
@@ -394,7 +434,10 @@ export function useModifyLabel() {
                 ? Math.min(100, Math.round((totalProcessed / totalToProcess) * 100))
                 : (nextPageToken ? 50 : 100);
 
-              console.log(`[ModifyLabel] Batch successful. Total processed: ${totalProcessed}`);
+              logger.debug('Batch successful', { 
+                component: 'useModifyLabel', 
+                totalProcessed 
+              });
               updateProgress({
                 processedSoFar: totalProcessed,
                 progressPercent: overallProgress,
@@ -410,7 +453,7 @@ export function useModifyLabel() {
               }
 
             } catch (error: any) {
-              console.error(`[ModifyLabel] Error during batch:`, error);
+              logger.error('Error during batch', { component: 'useModifyLabel', error });
               errorMessage = `Failed during batch operation: ${error.message || 'Unknown error'}`;
               toast.error('Error modifying labels', { description: errorMessage });
               endType = 'runtime_error';
@@ -418,7 +461,7 @@ export function useModifyLabel() {
             }
 
             if (batchFetchAttempts > MAX_FETCH_ATTEMPTS) {
-              console.warn(`[ModifyLabel] Reached max fetch attempts`);
+              logger.warn('Reached max fetch attempts', { component: 'useModifyLabel' });
               errorMessage = `Reached maximum processing attempts.`;
               endType = 'runtime_error';
               break;
@@ -430,8 +473,8 @@ export function useModifyLabel() {
         }
 
         // --- Finalization ---
-        console.log(`\n[ModifyLabel] Process finished. End type: ${endType}`);
-        console.log(`[ModifyLabel] Total emails processed: ${totalProcessed}`);
+        logger.debug('Process finished', { component: 'useModifyLabel' });
+        logger.debug('Total emails processed', { component: 'useModifyLabel', totalProcessed });
 
         // Update Supabase log
         await completeActionLog(
@@ -466,7 +509,7 @@ export function useModifyLabel() {
         return { success: endType === 'success' };
 
       } catch (error: any) {
-        console.error('[ModifyLabel] Critical error:', error);
+        logger.error('Critical error', { component: 'useModifyLabel', error });
         errorMessage = `An unexpected error occurred: ${error.message || 'Unknown error'}`;
         endType = 'runtime_error';
 
@@ -475,7 +518,7 @@ export function useModifyLabel() {
             await completeActionLog(supabaseLogId, endType, totalProcessed, errorMessage);
             completeLocalActionLog(endType, errorMessage);
           } catch (logError) {
-            console.error("[ModifyLabel] Failed to log critical error:", logError);
+            logger.error('Failed to log critical error', { component: 'useModifyLabel', error: logError });
           }
         }
 
@@ -509,7 +552,7 @@ export function useModifyLabel() {
     onProgress: ProgressCallback,
     abortSignal: AbortSignal
   ): Promise<ExecutorResult> => {
-    console.log('[ModifyLabel] Queue executor called with payload:', payload);
+    logger.debug('Queue executor called with payload', { component: 'useModifyLabel', payload });
     
     // Convert queue payload to hook format
     const options: ModifyLabelOptions = {
@@ -520,7 +563,7 @@ export function useModifyLabel() {
     
     // Set up cancellation handling
     const handleAbort = () => {
-      console.log('[ModifyLabel] Queue abort signal received');
+      logger.debug('Queue abort signal received', { component: 'useModifyLabel' });
       cancelModifyLabel();
     };
     abortSignal.addEventListener('abort', handleAbort);

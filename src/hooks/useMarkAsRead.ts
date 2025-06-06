@@ -32,6 +32,7 @@ import {
   completeActionLog as completeLocalActionLog,
   clearCurrentActionLog,
 } from '@/lib/storage/actionLog';
+import { logger } from '@/lib/utils/logger';
 
 // --- Types ---
 import { ActionEndType } from '@/types/actions';
@@ -143,7 +144,7 @@ export function useMarkAsRead() {
 
   /** Closes the re-authentication modal */
   const closeReauthModal = useCallback(() => {
-    console.log('[MarkAsRead] Closing reauth modal');
+    logger.debug('Closing reauth modal', { component: 'useMarkAsRead' });
     setReauthModal((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
@@ -151,7 +152,7 @@ export function useMarkAsRead() {
    * Cancels an ongoing mark as read process
    */
   const cancelMarkAsRead = useCallback(async () => {
-    console.log('[MarkAsRead] Cancellation requested');
+    logger.debug('Cancellation requested', { component: 'useMarkAsRead' });
     isCancelledRef.current = true;
     updateProgress({ status: 'cancelled', progressPercent: 0 });
     setReauthModal({ isOpen: false, type: 'expired' }); // Ensure type is 'expired'
@@ -166,9 +167,9 @@ export function useMarkAsRead() {
           progress.markedSoFar
         );
         completeLocalActionLog('user_stopped');
-        console.log('[MarkAsRead] Logged cancellation');
+        logger.debug('Logged cancellation', { component: 'useMarkAsRead' });
       } catch (error) {
-        console.error('[MarkAsRead] Failed to log cancellation:', error);
+        logger.error('Failed to log cancellation', { component: 'useMarkAsRead', error });
       } finally {
         actionLogIdRef.current = null;
       }
@@ -190,12 +191,21 @@ export function useMarkAsRead() {
    */
   const startMarkAsRead = useCallback(
     async (senders: SenderToMark[], queueProgressCallback?: ProgressCallback): Promise<{ success: boolean }> => {
-      console.log('[MarkAsRead] Starting mark as read for senders:', senders);
-      console.log('[MarkAsRead] Current plan status from useAuth():', authPlan);
+      logger.debug('Starting mark as read for senders', { 
+        component: 'useMarkAsRead', 
+        senderCount: senders.length 
+      });
+      logger.debug('Current plan status from useAuth()', { 
+        component: 'useMarkAsRead', 
+        plan: authPlan 
+      });
 
       // --- Premium Feature Check ---
       if (authPlan !== 'pro') {
-        console.warn('[MarkAsRead] Non-pro user attempting to mark as read. Plan:', authPlan);
+        logger.warn('Non-pro user attempting to mark as read', { 
+          component: 'useMarkAsRead', 
+          plan: authPlan 
+        });
         toast.error('Upgrade to Pro', { description: 'Mark as Read is a premium feature.' });
         return { success: false };
       }
@@ -216,7 +226,7 @@ export function useMarkAsRead() {
       updateProgress({ status: 'preparing', progressPercent: 0, markedSoFar: 0 });
       
       if (!isClientLoaded) {
-        console.error('[MarkAsRead] Gmail API client is not loaded yet.');
+        logger.error('Gmail API client is not loaded yet', { component: 'useMarkAsRead' });
         toast.error('Gmail client not ready', {
           description: 'Please wait a moment and try again.'
         });
@@ -257,7 +267,9 @@ export function useMarkAsRead() {
 
       // --- Token & Permission Checks (New Strategy) ---
       if (!isGmailConnected) {
-        console.log('[MarkAsRead] No Gmail connection (no refresh token), showing reauth modal.');
+        logger.debug('No Gmail connection (no refresh token), showing reauth modal', { 
+          component: 'useMarkAsRead' 
+        });
         setReauthModal({ isOpen: true, type: 'expired', eta: formattedEta });
         updateProgress({ status: 'error', error: 'Gmail not connected. Please reconnect.' });
         return { success: false };
@@ -265,9 +277,12 @@ export function useMarkAsRead() {
 
       try {
         await getAccessToken(); // Verify refresh token validity and get initial access token
-        console.log('[MarkAsRead] Initial access token validated/acquired.');
+        logger.debug('Initial access token validated/acquired', { component: 'useMarkAsRead' });
       } catch (error) {
-        console.error('[MarkAsRead] Failed to validate/acquire initial token:', error);
+        logger.error('Failed to validate/acquire initial token', { 
+          component: 'useMarkAsRead', 
+          error 
+        });
         setReauthModal({ isOpen: true, type: 'expired', eta: formattedEta });
         updateProgress({ status: 'error', error: 'Gmail authentication failed. Please reconnect.' });
         return { success: false };
@@ -301,7 +316,7 @@ export function useMarkAsRead() {
         actionLogIdRef.current = supabaseLogId ?? null;
         updateSupabaseLogId(supabaseLogId!);
       } catch (error) {
-        console.error('[MarkAsRead] Failed to create action log:', error);
+        logger.error('Failed to create action log', { component: 'useMarkAsRead', error });
         toast.error('Failed to start marking as read.');
         updateProgress({ status: 'error', error: 'Failed to log action start.' });
         clearCurrentActionLog();
@@ -326,12 +341,18 @@ export function useMarkAsRead() {
       try {
         for (const sender of senders) {
           if (isCancelledRef.current) {
-            console.log(`[MarkAsRead] Cancellation detected before processing ${sender.email}`);
+            logger.debug('Cancellation detected before processing sender', { 
+              component: 'useMarkAsRead', 
+              senderEmail: sender.email 
+            });
             endType = 'user_stopped';
             break;
           }
 
-          console.log(`\n[MarkAsRead] Processing sender: ${sender.email}`);
+          logger.debug('Processing sender', { 
+            component: 'useMarkAsRead', 
+            senderEmail: sender.email 
+          });
           updateProgress({ currentSender: sender.email });
 
           // Build query to get only unread messages from this sender
@@ -341,7 +362,7 @@ export function useMarkAsRead() {
             senderEmail: sender.email,
             additionalTerms: ['is:unread']
           });
-          console.log(`[MarkAsRead] Using query: ${query}`);
+          logger.debug('Using query', { component: 'useMarkAsRead', query });
 
           let nextPageToken: string | undefined = undefined;
           let batchFetchAttempts = 0;
@@ -349,7 +370,9 @@ export function useMarkAsRead() {
 
           do {
             if (isCancelledRef.current) {
-              console.log(`[MarkAsRead] Cancellation detected during batch processing`);
+              logger.debug('Cancellation detected during batch processing', { 
+                component: 'useMarkAsRead' 
+              });
               endType = 'user_stopped';
               break;
             }
@@ -359,14 +382,24 @@ export function useMarkAsRead() {
             const timeRemaining = tokenTimeRemaining();
             try {
               if (tokenDetails && timeRemaining < TWO_MINUTES_MS) {
-                console.warn(`[MarkAsRead] Token expiring soon (in ${formatDuration(timeRemaining)}), forcing refresh...`);
+                logger.warn('Token expiring soon, forcing refresh', { 
+                  component: 'useMarkAsRead', 
+                  timeRemaining: formatDuration(timeRemaining) 
+                });
                 currentAccessToken = await forceRefreshAccessToken();
               } else {
                 currentAccessToken = await getAccessToken(); // Gets from memory or refreshes if expired
               }
-              console.log(`[MarkAsRead] Token acquired for batch processing sender: ${sender.email}`);
+              logger.debug('Token acquired for batch processing sender', { 
+                component: 'useMarkAsRead', 
+                senderEmail: sender.email 
+              });
             } catch (tokenError: any) {
-              console.error(`[MarkAsRead] Token acquisition failed for batch processing ${sender.email}:`, tokenError);
+              logger.error('Token acquisition failed for batch processing', { 
+                component: 'useMarkAsRead', 
+                senderEmail: sender.email, 
+                error: tokenError 
+              });
               // Determine remaining ETA for the modal if needed
               const remainingEmailsForEta = totalToProcess - totalMarkedAsRead;
               const remainingTimeMsForEta = estimateRuntimeMs({ 
@@ -385,7 +418,10 @@ export function useMarkAsRead() {
             // ---------------------------------------------
             
             batchFetchAttempts++;
-            console.log(`[MarkAsRead] Fetching message IDs batch (Attempt ${batchFetchAttempts})`);
+            logger.debug('Fetching message IDs batch', { 
+              component: 'useMarkAsRead', 
+              attempt: batchFetchAttempts 
+            });
 
             try {
               // Use currentAccessToken obtained above
@@ -399,11 +435,14 @@ export function useMarkAsRead() {
               nextPageToken = newPageToken;
 
               if (messageIds.length === 0) {
-                console.log(`[MarkAsRead] No more unread messages found.`);
+                logger.debug('No more unread messages found', { component: 'useMarkAsRead' });
                 break;
               }
 
-              console.log(`[MarkAsRead] Found ${messageIds.length} unread messages. Marking as read...`);
+              logger.debug('Found unread messages, marking as read', { 
+                component: 'useMarkAsRead', 
+                messageCount: messageIds.length 
+              });
 
               // Process in chunks of MODIFY_BATCH_SIZE
               for (let i = 0; i < messageIds.length; i += MODIFY_BATCH_SIZE) {
@@ -416,7 +455,10 @@ export function useMarkAsRead() {
                   ? Math.min(100, Math.round((totalMarkedAsRead / totalToProcess) * 100))
                   : (nextPageToken ? 50 : 100);
 
-                console.log(`[MarkAsRead] Batch successful. Total marked: ${totalMarkedAsRead}`);
+                logger.debug('Batch successful', { 
+                  component: 'useMarkAsRead', 
+                  totalMarked: totalMarkedAsRead 
+                });
                 updateProgress({
                   markedSoFar: totalMarkedAsRead,
                   progressPercent: overallProgress,
@@ -433,7 +475,7 @@ export function useMarkAsRead() {
               }
 
             } catch (error: any) {
-              console.error(`[MarkAsRead] Error during batch:`, error);
+              logger.error('Error during batch', { component: 'useMarkAsRead', error });
               errorMessage = `Failed during batch operation: ${error.message || 'Unknown error'}`;
               endType = 'runtime_error';
               toast.error('Error marking as read', { description: errorMessage });
@@ -441,7 +483,7 @@ export function useMarkAsRead() {
             }
 
             if (batchFetchAttempts > MAX_FETCH_ATTEMPTS) {
-              console.warn(`[MarkAsRead] Reached max fetch attempts`);
+              logger.warn('Reached max fetch attempts', { component: 'useMarkAsRead' });
               errorMessage = `Reached maximum processing attempts.`;
               endType = 'runtime_error';
               break;
@@ -453,8 +495,11 @@ export function useMarkAsRead() {
         }
 
         // --- Finalization ---
-        console.log(`\n[MarkAsRead] Process finished. End type: ${endType}`);
-        console.log(`[MarkAsRead] Total emails marked as read: ${totalMarkedAsRead}`);
+        logger.debug('Process finished', { 
+          component: 'useMarkAsRead', 
+          endType, 
+          totalMarked: totalMarkedAsRead 
+        });
 
         // Update Supabase log
         await completeActionLog(
@@ -488,7 +533,7 @@ export function useMarkAsRead() {
         return { success: endType === 'success' };
 
       } catch (error: any) {
-        console.error('[MarkAsRead] Critical error:', error);
+        logger.error('Critical error', { component: 'useMarkAsRead', error });
         errorMessage = `An unexpected error occurred: ${error.message || 'Unknown error'}`;
         endType = 'runtime_error';
 
@@ -497,7 +542,10 @@ export function useMarkAsRead() {
             await completeActionLog(supabaseLogId, endType, totalMarkedAsRead, errorMessage);
             completeLocalActionLog(endType, errorMessage);
           } catch (logError) {
-            console.error("[MarkAsRead] Failed to log critical error:", logError);
+            logger.error('Failed to log critical error', { 
+              component: 'useMarkAsRead', 
+              error: logError 
+            });
           }
         }
 
@@ -545,11 +593,14 @@ export function useMarkAsRead() {
     onProgress: ProgressCallback,
     abortSignal: AbortSignal
   ): Promise<ExecutorResult> => {
-    console.log('[MarkAsRead] Queue executor called with payload:', payload);
+    logger.debug('Queue executor called with payload', { 
+      component: 'useMarkAsRead', 
+      senderCount: payload.senders.length 
+    });
     
     // Set up cancellation handling
     const handleAbort = () => {
-      console.log('[MarkAsRead] Queue cancellation requested');
+      logger.debug('Queue cancellation requested', { component: 'useMarkAsRead' });
       cancelMarkAsRead();
     };
     
@@ -616,7 +667,7 @@ export function useMarkAsRead() {
   // Register with queue system
   useEffect(() => {
     if (typeof window !== 'undefined' && (window as any).__queueRegisterExecutor) {
-      console.log('[MarkAsRead] Registering executor with queue system');
+      logger.debug('Registering executor with queue system', { component: 'useMarkAsRead' });
       (window as any).__queueRegisterExecutor('markRead', queueExecutor);
     }
   }, [queueExecutor]);

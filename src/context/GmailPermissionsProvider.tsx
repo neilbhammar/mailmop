@@ -19,6 +19,7 @@ import {
   expireAccessTokenInStorage,
   getRefreshTokenState
 } from '@/lib/gmail/token';
+import { logger } from '@/lib/utils/logger';
 
 
 // Use both scopes - broad scope for general operations and settings.basic for filters
@@ -121,13 +122,13 @@ export function GmailPermissionsProvider({
       // We need both before proceeding to initialize the Gmail client.
       if (!scriptsLoaded.gsi || !scriptsLoaded.api) return; 
 
-      console.log('[Gmail] Both GSI and API client scripts loaded. Initializing gapi.client...');
+      logger.debug('[Gmail] Both GSI and API client scripts loaded. Initializing gapi.client...');
       
       // Now that gapi is available (from api.js), load the gmail client
       gapi.load('client', () => {
-        console.log('[Gmail] gapi.client loaded. Initializing Gmail API client...');
+        logger.debug('[Gmail] gapi.client loaded. Initializing Gmail API client...');
         gapi.client.load('gmail', 'v1', () => {
-          console.log('[Gmail] Gmail API client initialized successfully.');
+          logger.debug('[Gmail] Gmail API client initialized successfully.');
           setIsGmailClientInitialized(true); // Final step: Gmail client ready
         });
       });
@@ -135,45 +136,45 @@ export function GmailPermissionsProvider({
 
     // Load GSI Script (for auth)
     if (!document.querySelector(`script[src="${GOOGLE_GSI_SCRIPT_URL}"]`)) {
-      console.log('[Gmail] Loading GSI client script...');
+      logger.debug('[Gmail] Loading GSI client script...');
       gsiScript = document.createElement('script');
       gsiScript.src = GOOGLE_GSI_SCRIPT_URL;
       gsiScript.async = true;
       gsiScript.defer = true;
       gsiScript.onload = () => {
-        console.log('[Gmail] GSI client script loaded.');
+        logger.debug('[Gmail] GSI client script loaded.');
         setIsGsiLoaded(true);
         scriptsLoaded.gsi = true;
         handleScriptsLoaded(); // Check if both are loaded
       };
       document.head.appendChild(gsiScript);
     } else {
-      console.log('[Gmail] GSI client script already present.');
+      logger.debug('[Gmail] GSI client script already present.');
       setIsGsiLoaded(true);
       scriptsLoaded.gsi = true;
     }
 
     // Load API Client Script (for gapi.client)
     if (!document.querySelector(`script[src="${GOOGLE_API_SCRIPT_URL}"]`)) {
-      console.log('[Gmail] Loading API client script...');
+      logger.debug('[Gmail] Loading API client script...');
       apiScript = document.createElement('script');
       apiScript.src = GOOGLE_API_SCRIPT_URL;
       apiScript.async = true;
       apiScript.defer = true;
       apiScript.onload = () => {
-        console.log('[Gmail] API client script loaded.');
+        logger.debug('[Gmail] API client script loaded.');
         setIsApiClientLoaded(true);
         scriptsLoaded.api = true;
         handleScriptsLoaded(); // Check if both are loaded
       };
       // Handle potential script loading errors
       apiScript.onerror = () => {
-         console.error('[Gmail] Failed to load API client script.');
+         logger.error('[Gmail] Failed to load API client script.');
          // Optionally set an error state
       }
       document.head.appendChild(apiScript);
     } else {
-      console.log('[Gmail] API client script already present.');
+      logger.debug('[Gmail] API client script already present.');
       setIsApiClientLoaded(true);
       scriptsLoaded.api = true;
     }
@@ -193,7 +194,7 @@ export function GmailPermissionsProvider({
 
   // Initialize token state on mount
   useEffect(() => {
-    console.log('[Gmail] Initializing token state from Provider');
+    logger.debug('[Gmail] Initializing token state from Provider');
     initializeTokenState().then(() => {
       // After token.ts finishes initializing, updateTokenStatus will correctly set all states.
       updateTokenStatus();
@@ -210,7 +211,7 @@ export function GmailPermissionsProvider({
       hasEmailData: hasData,
     };
 
-    console.log('[Gmail] Permission state check:', {
+    logger.debug('[Gmail] Permission state check:', {
       hasData,
     });
 
@@ -220,7 +221,7 @@ export function GmailPermissionsProvider({
 
   // Initial check on mount
   useEffect(() => {
-    console.log('[Gmail] Running initial permission state check');
+    logger.debug('[Gmail] Running initial permission state check');
     checkPermissionState();
   }, [checkPermissionState]);
 
@@ -231,7 +232,7 @@ export function GmailPermissionsProvider({
       if (e instanceof CustomEvent) {
         const { key } = e.detail as { key: string };
         if (key === 'token' || key === 'email_data') {
-          console.log('[Gmail] Token/data changed, rechecking state');
+          logger.debug('[Gmail] Token/data changed, rechecking state');
           checkPermissionState();
         }
       }
@@ -239,7 +240,7 @@ export function GmailPermissionsProvider({
 
     // Function to handle analysis changes
     const handleAnalysisChange = () => {
-      console.log('[Gmail] Analysis changed, rechecking state');
+      logger.debug('[Gmail] Analysis changed, rechecking state');
       checkPermissionState();
     };
 
@@ -266,7 +267,7 @@ export function GmailPermissionsProvider({
       
       const emailsMatch = profile.emailAddress.toLowerCase() === user?.email?.toLowerCase();
       if (!emailsMatch) {
-        console.log('[Gmail] Email mismatch detected:', {
+        logger.debug('[Gmail] Email mismatch detected:', {
           gmail: profile.emailAddress,
           supabase: user?.email
         });
@@ -278,7 +279,10 @@ export function GmailPermissionsProvider({
       setShouldShowMismatchModal(false);
       return true;
     } catch (error) {
-      console.error('[Gmail] Failed to verify email match:', error);
+      logger.error('Failed to verify email match', { 
+        component: 'GmailPermissionsProvider', 
+        error: error instanceof Error ? error.message : String(error)
+      });
       await revokeAndClearToken();
       return false;
     }
@@ -286,7 +290,7 @@ export function GmailPermissionsProvider({
 
   // Function to update token status
   const updateTokenStatus = useCallback(() => {
-    console.log('[Gmail] Updating token status');
+    logger.debug('Updating token status', { component: 'GmailPermissionsProvider' });
     const currentRefreshTokenState = getRefreshTokenState();
 
     if (currentRefreshTokenState === 'unknown') {
@@ -348,7 +352,9 @@ export function GmailPermissionsProvider({
       if (e instanceof CustomEvent) {
         const { key } = e.detail as { key: string };
         if (key === 'token') {
-          console.log('[Gmail] Token storage changed, updating status');
+          logger.debug('Token storage changed, updating status', { 
+            component: 'GmailPermissionsProvider' 
+          });
           updateTokenStatus();
         }
       }
@@ -357,14 +363,18 @@ export function GmailPermissionsProvider({
     // Handle visibility changes
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('[Gmail] Page became visible, updating token status');
+        logger.debug('Page became visible, updating token status', { 
+          component: 'GmailPermissionsProvider' 
+        });
         updateTokenStatus();
       }
     };
 
     // Handle focus
     const handleFocus = () => {
-      console.log('[Gmail] Window focused, updating token status');
+      logger.debug('Window focused, updating token status', { 
+        component: 'GmailPermissionsProvider' 
+      });
       updateTokenStatus();
     };
 
@@ -394,7 +404,7 @@ export function GmailPermissionsProvider({
         ux_mode: 'popup',
         callback: async ({ code, error }) => {
           if (error || !code) {
-            console.error('[Gmail] OAuth error:', error);
+            logger.error('OAuth error', { component: 'GmailPermissionsProvider', error });
             return reject(error);
           }
 
@@ -412,7 +422,7 @@ export function GmailPermissionsProvider({
 
           if (!resp.ok) {
             const msg = await resp.text();
-            console.error('[Gmail] Exchange failed:', msg);
+            logger.error('Exchange failed', { component: 'GmailPermissionsProvider', error: msg });
             return reject(msg);
           }
 
@@ -427,7 +437,12 @@ export function GmailPermissionsProvider({
 
           // Kick off stats fetch, update UI, etc.
           updateTokenStatus();
-          fetchGmailStats(access_token).catch(console.error);
+          fetchGmailStats(access_token).catch((error: unknown) => {
+            logger.error('Failed to fetch Gmail stats', { 
+              component: 'GmailPermissionsProvider', 
+              error: error instanceof Error ? error.message : String(error)
+            });
+          });
 
           resolve(true);
         },
@@ -440,7 +455,8 @@ export function GmailPermissionsProvider({
 
   // Log any changes to the modal visibility
   useEffect(() => {
-    console.log('[Gmail] Modal visibility changed:', { 
+    logger.debug('Modal visibility changed', { 
+      component: 'GmailPermissionsProvider',
       shouldShow: shouldShowMismatchModal,
       state: permissionState 
     });
@@ -456,7 +472,7 @@ export function GmailPermissionsProvider({
   const clearAccessTokenOnly = useCallback(async () => {
     // This function is intended for testing/debugging ONLY.
     // It clears the access token but leaves the refresh token.
-    console.warn('[GmailPermissionsProvider] TEST: Clearing access token only.');
+    logger.warn('[GmailPermissionsProvider] TEST: Clearing access token only.');
     await clearAccessTokenOnlyInStorage();
     updateTokenStatus(); // Refresh UI state
     window.dispatchEvent(new CustomEvent(TOKEN_CHANGE_EVENT, { detail: { key: 'token' } }));
@@ -465,7 +481,7 @@ export function GmailPermissionsProvider({
   const expireAccessToken = useCallback(async () => {
     // This function is intended for testing/debugging ONLY.
     // It sets the current access token to expire in 1 minute.
-    console.warn('[GmailPermissionsProvider] TEST: Expiring access token in 1 minute.');
+    logger.warn('[GmailPermissionsProvider] TEST: Expiring access token in 1 minute.');
     await expireAccessTokenInStorage(); // Assumes this function modifies the stored token's expiry
     updateTokenStatus(); // Refresh UI state
     window.dispatchEvent(new CustomEvent(TOKEN_CHANGE_EVENT, { detail: { key: 'token' } }));

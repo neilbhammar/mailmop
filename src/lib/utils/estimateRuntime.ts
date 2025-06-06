@@ -1,4 +1,5 @@
 import { AnalysisType } from '@/types/actions';
+import { logger } from '@/lib/utils/logger';
 
 export type OperationType = 'analysis' | 'delete' | 'block' | 'unsubscribe' | 'mark';
 export type OperationMode = 'full' | 'quick' | 'single'; // Added 'single' for non-analysis ops
@@ -81,13 +82,21 @@ export function estimateRuntimeMs({
       break;
     // Add cases for 'block', 'unsubscribe' when implemented, likely similar to delete
     default:
-      console.warn(`Unknown operation type for estimation: ${operationType}. Defaulting to delete rate.`);
+      logger.warn('Unknown operation type for estimation, defaulting to delete rate', {
+        component: 'estimateRuntime',
+        operationType
+      });
       emailsPerMinute = EMAILS_PER_MINUTE_DELETE;
       calculationBasis = 'default (delete) rate';
   }
 
   if (effectiveEmails === 0 || emailsPerMinute === 0) {
-    console.log(`[Estimate] Zero effective emails or rate for ${operationType}, returning 0ms`);
+    logger.debug('Zero effective emails or rate, returning 0ms', {
+      component: 'estimateRuntime',
+      operationType,
+      effectiveEmails,
+      emailsPerMinute
+    });
     return 0;
   }
 
@@ -110,19 +119,27 @@ export function estimateRuntimeMs({
 
   const totalEstimatedMs = baseTimeMs + apiOverheadMs;
 
-  console.log(`[Estimate] Operation: ${operationType} (${mode})`);
-  console.log(`[Estimate] Effective Emails: ${effectiveEmails.toLocaleString()}`);
-  console.log(`[Estimate] Basis: ${emailsPerMinute}/min (${calculationBasis})`);
-  console.log(`[Estimate] Base Time: ${formatDuration(baseTimeMs)}`);
-  console.log(`[Estimate] API Overhead: ${formatDuration(apiOverheadMs)}`);
-  console.log(`[Estimate] Total Estimated: ${formatDuration(totalEstimatedMs)}`);
+  logger.debug('Runtime estimation calculated', {
+    component: 'estimateRuntime',
+    operationType,
+    mode,
+    effectiveEmails,
+    emailsPerMinute,
+    calculationBasis,
+    baseTimeMs,
+    apiOverheadMs,
+    totalEstimatedMs: formatDuration(totalEstimatedMs)
+  });
 
   // Return at least 30 seconds for any operation to avoid "0 minutes" display
   // For very small email counts, add a base minimum time for API calls and processing
   const minimumTimeMs = 30000; // 30 seconds minimum
   const finalEstimate = Math.max(minimumTimeMs, Math.round(totalEstimatedMs));
   
-  console.log(`[Estimate] Final Estimate (with 30s minimum): ${formatDuration(finalEstimate)}`);
+  logger.debug('Final estimate with minimum time applied', {
+    component: 'estimateRuntime',
+    finalEstimate: formatDuration(finalEstimate)
+  });
   
   return finalEstimate;
 }

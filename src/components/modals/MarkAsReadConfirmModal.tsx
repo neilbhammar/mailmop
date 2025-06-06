@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { MailOpen } from "lucide-react"
 import { useQueue } from "@/hooks/useQueue"
+import { logger } from "@/lib/utils/logger"
 
 interface MarkAsReadConfirmModalProps {
   /**
@@ -91,11 +92,11 @@ export function MarkAsReadConfirmModal({
       
       // If there's a legacy onConfirm callback, use it (for backward compatibility)
       if (onConfirm) {
-        console.log('[MarkAsReadModal] Using legacy onConfirm callback')
+        logger.debug('Using legacy onConfirm callback', { component: 'MarkAsReadModal' })
         await onConfirm()
       } else {
         // 🚀 NEW QUEUE INTEGRATION
-        console.log('[MarkAsReadModal] Using queue system for Mark as Read')
+        logger.debug('Using queue system for Mark as Read', { component: 'MarkAsReadModal' })
         
         // Convert senders list to the format expected by the queue
         const sendersPayload = senders.map(senderEmail => ({
@@ -108,7 +109,11 @@ export function MarkAsReadConfirmModal({
           senders: sendersPayload
         })
         
-        console.log(`[MarkAsReadModal] Mark as Read job enqueued with ID: ${jobId}`)
+        logger.debug('Mark as Read job enqueued', { 
+          component: 'MarkAsReadModal',
+          jobId,
+          senderCount: sendersPayload.length
+        })
         
         // Show success message
         // Note: The actual completion toast will be shown by useMarkAsRead when the job finishes
@@ -117,7 +122,7 @@ export function MarkAsReadConfirmModal({
       // Close the modal
       onOpenChange(false)
     } catch (error) {
-      console.error("Error marking as read:", error)
+      logger.error('Error marking as read', { component: 'MarkAsReadModal', error })
     } finally {
       setIsProcessing(false)
     }

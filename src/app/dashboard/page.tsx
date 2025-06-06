@@ -10,6 +10,7 @@ import Confetti from 'react-confetti'
 import { useWindowSize } from '@react-hook/window-size'
 import { ManageSubscriptionModal } from '@/components/modals/ManageSubscriptionModal'
 import { RenewalModal } from '@/components/modals/RenewalModal'
+import { logger } from '@/lib/utils/logger'
 
 export default function Dashboard() {
   const { user, session, plan } = useAuth()
@@ -24,7 +25,9 @@ export default function Dashboard() {
   useEffect(() => {
     const checkoutStatus = searchParams.get('checkout');
     if (checkoutStatus === 'success') {
-      console.log('[Dashboard] Checkout success detected (direct access), showing modal and confetti');
+      logger.debug('Checkout success detected (direct access), showing modal and confetti', {
+        component: 'Dashboard'
+      });
       
       // This handles direct access to dashboard?checkout=success (fallback case)
       setShowConfetti(true);
@@ -32,7 +35,7 @@ export default function Dashboard() {
       
       // Stop confetti after 5 seconds
       setTimeout(() => {
-        console.log('[Dashboard] Stopping confetti');
+        logger.debug('Stopping confetti', { component: 'Dashboard' });
         setShowConfetti(false);
       }, 5000);
       
@@ -48,32 +51,42 @@ export default function Dashboard() {
   // Effect for handling renewal parameter
   useEffect(() => {
     const renewParam = searchParams.get('renew');
-    console.log('[Dashboard] Checking renewal parameter:', renewParam);
-    console.log('[Dashboard] All search params:', Object.fromEntries(searchParams.entries()));
-    console.log('[Dashboard] Current showRenewalModal state:', showRenewalModal);
+    const allParams = Object.fromEntries(searchParams.entries());
+    
+    logger.debug('Checking renewal parameter', {
+      component: 'Dashboard',
+      renewParam,
+      allParams,
+      currentShowRenewalModal: showRenewalModal
+    });
     
     if (renewParam === 'true') {
-      console.log('[Dashboard] Renewal parameter detected, showing renewal modal');
+      logger.debug('Renewal parameter detected, showing renewal modal', {
+        component: 'Dashboard'
+      });
       setShowRenewalModal(true);
-      console.log('[Dashboard] setShowRenewalModal(true) called');
+      logger.debug('setShowRenewalModal(true) called', { component: 'Dashboard' });
       
       // Clean up the URL after a delay to ensure state updates first
       setTimeout(() => {
         const url = new URL(window.location.href);
         url.searchParams.delete('renew');
         window.history.replaceState({}, '', url);
-        console.log('[Dashboard] URL cleaned up');
+        logger.debug('URL cleaned up', { component: 'Dashboard' });
       }, 100);
     }
-  }, [searchParams]);
+  }, [searchParams, showRenewalModal]);
 
   // Add a separate effect to track state changes
   useEffect(() => {
-    console.log('[Dashboard] showRenewalModal state changed to:', showRenewalModal);
+    logger.debug('showRenewalModal state changed', {
+      component: 'Dashboard',
+      showRenewalModal
+    });
   }, [showRenewalModal]);
 
   const handleRenewalModalClose = () => {
-    console.log('[Dashboard] Closing renewal modal');
+    logger.debug('Closing renewal modal', { component: 'Dashboard' });
     setShowRenewalModal(false);
   };
 
