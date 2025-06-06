@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ExternalLinkIcon, SmartphoneIcon, MonitorIcon, ArrowRightIcon, RefreshCwIcon } from 'lucide-react'
+import { ExternalLinkIcon, SmartphoneIcon, MonitorIcon, ArrowRightIcon, RefreshCwIcon, CopyIcon } from 'lucide-react'
 import { getEmbeddedBrowserName, getSystemBrowserName, isEmbeddedBrowser } from '@/lib/utils/embeddedBrowser'
 import { useMounted } from '@/hooks/useMounted'
 
@@ -12,6 +12,7 @@ export default function OpenInBrowserPage() {
   const [detectedApp, setDetectedApp] = useState('')
   const [systemBrowser, setSystemBrowser] = useState('')
   const [isCurrentlyEmbedded, setIsCurrentlyEmbedded] = useState(false)
+  const [copiedUrl, setCopiedUrl] = useState(false)
 
   useEffect(() => {
     if (mounted) {
@@ -28,6 +29,43 @@ export default function OpenInBrowserPage() {
       }
     }
   }, [mounted])
+
+  const handleOpenInBrowser = () => {
+    const url = 'https://mailmop.com'
+    
+    try {
+      // Try multiple methods to open in external browser
+      
+      // Method 1: window.open with specific parameters
+      const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
+      
+      // Method 2: If window.open doesn't work, try location.href
+      if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+        window.location.href = url
+      }
+    } catch (error) {
+      // Method 3: Fallback to location.href
+      window.location.href = url
+    }
+  }
+
+  const handleCopyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText('https://mailmop.com')
+      setCopiedUrl(true)
+      setTimeout(() => setCopiedUrl(false), 2000)
+    } catch (error) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea')
+      textArea.value = 'https://mailmop.com'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      setCopiedUrl(true)
+      setTimeout(() => setCopiedUrl(false), 2000)
+    }
+  }
 
   if (!mounted) {
     return (
@@ -142,21 +180,28 @@ export default function OpenInBrowserPage() {
             </div>
           </div>
 
-          {/* Action Button */}
+          {/* Action Buttons */}
           <div className="text-center space-y-4">
-            <a
-              href="https://mailmop.com"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={handleOpenInBrowser}
               className="inline-flex items-center justify-center w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl group"
             >
               <ExternalLinkIcon className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
               <span>Open MailMop in {systemBrowser}</span>
               <ArrowRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-            </a>
+            </button>
+            
+            {/* Alternative: Copy URL button */}
+            <button
+              onClick={handleCopyUrl}
+              className="inline-flex items-center justify-center w-full px-6 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-all duration-300 group"
+            >
+              <CopyIcon className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+              <span>{copiedUrl ? 'URL Copied!' : 'Copy URL to Paste in Browser'}</span>
+            </button>
             
             <p className="text-xs text-gray-500 dark:text-slate-500">
-              This will open in a new tab/window
+              If the first button doesn't work, use the copy button and paste "mailmop.com" in {systemBrowser}
             </p>
           </div>
 
@@ -175,7 +220,7 @@ export default function OpenInBrowserPage() {
                     <SmartphoneIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium">On iPhone/iPad:</p>
-                      <p>Look for the "Open in Safari" option in the share menu or toolbar</p>
+                      <p>Look for the "Open in Safari" option in the share menu or toolbar, or copy the URL and paste it in Safari</p>
                     </div>
                   </div>
                 )}
@@ -184,14 +229,14 @@ export default function OpenInBrowserPage() {
                     <SmartphoneIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium">On Android:</p>
-                      <p>Look for "Open in Chrome" or "Open in browser" in the menu</p>
+                      <p>Look for "Open in Chrome" or "Open in browser" in the menu, or copy the URL and paste it in Chrome</p>
                     </div>
                   </div>
                 )}
                 <div className="flex items-start space-x-2">
                   <MonitorIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium">Alternative:</p>
+                    <p className="font-medium">Alternative method:</p>
                     <p>Copy this URL: <code className="bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded text-xs">mailmop.com</code> and paste it into your browser</p>
                   </div>
                 </div>

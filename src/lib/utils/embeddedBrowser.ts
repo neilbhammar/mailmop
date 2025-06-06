@@ -28,7 +28,6 @@ export function isEmbeddedBrowser(): boolean {
     // General webview patterns
     /WebView/i,             // Android WebView
     /wv\)/i,                // Android WebView (alternative pattern)
-    /Version\/.*Mobile.*Safari/i, // iOS WebView (when not standalone Safari)
     
     // Email client embedded browsers
     /Outlook/i,             // Outlook
@@ -54,7 +53,28 @@ export function isEmbeddedBrowser(): boolean {
   ];
 
   // Check if any pattern matches
-  return embeddedBrowserPatterns.some(pattern => pattern.test(userAgent));
+  const isDetectedEmbedded = embeddedBrowserPatterns.some(pattern => pattern.test(userAgent));
+  
+  // Special handling for iOS: exclude real Safari mobile browsers
+  // Real Safari mobile has "Version/" and "Safari/" but NOT the embedded app patterns above
+  if (/iPhone|iPad|iPod/i.test(userAgent)) {
+    // If it has Version/ and Safari/ and none of the embedded patterns, it's real Safari
+    const hasVersionAndSafari = /Version\/[\d.]+.*Safari\/[\d.]+/i.test(userAgent);
+    if (hasVersionAndSafari && !isDetectedEmbedded) {
+      return false; // This is real Safari mobile, not embedded
+    }
+    
+    // Additional check: if it's missing "Version/" but has "Mobile/" it's likely embedded
+    // But we need to be careful not to catch real Safari
+    const isMobileWithoutVersion = /Mobile\/[\w\d]+/i.test(userAgent) && !/Version\//i.test(userAgent);
+    if (isMobileWithoutVersion && !isDetectedEmbedded) {
+      // This could be an embedded browser, but let's be conservative
+      // Only flag as embedded if we have other indicators
+      return false;
+    }
+  }
+
+  return isDetectedEmbedded;
 }
 
 /**
