@@ -1,6 +1,6 @@
 /**
  * useModifyLabel.ts
- * 
+ *
  * Hook for modifying labels on emails, either for a single sender or in bulk.
  * Supports both adding and removing labels.
  * Includes queue integration for centralized task management.
@@ -35,6 +35,9 @@ import {
 // --- Types ---
 import { ActionEndType } from '@/types/actions';
 import { ModifyLabelJobPayload, ExecutorResult, ProgressCallback } from '@/types/queue';
+
+// --- Dev Tooling ---
+import { logger } from '@/lib/utils/logger';
 
 // --- Constants ---
 const TWO_MINUTES_MS = 2 * 60 * 1000;
@@ -114,7 +117,7 @@ export function useModifyLabel() {
   const actionLogIdRef = useRef<string | null>(null);
   // Ref to signal cancellation
   const isCancelledRef = useRef<boolean>(false);
-  
+
   // --- Queue Integration (Critical Pattern) ---
   // Refs to avoid React closure issues in long-running async functions
   const cancellationRef = useRef<boolean>(false);
@@ -144,7 +147,7 @@ export function useModifyLabel() {
    * Cancels an ongoing label modification process
    */
   const cancelModifyLabel = useCallback(async () => {
-    console.log('[ModifyLabel] Cancellation requested');
+    logger.debug('[ModifyLabel] Cancellation requested');
     isCancelledRef.current = true;
     cancellationRef.current = true;
     updateProgress({ status: 'cancelled', progressPercent: 0 });
@@ -160,9 +163,9 @@ export function useModifyLabel() {
           progress.processedSoFar
         );
         completeLocalActionLog('user_stopped');
-        console.log('[ModifyLabel] Logged cancellation');
+        logger.debug('[ModifyLabel] Logged cancellation');
       } catch (error) {
-        console.error('[ModifyLabel] Failed to log cancellation:', error);
+        logger.error('[ModifyLabel] Failed to log cancellation:', error);
       } finally {
         actionLogIdRef.current = null;
       }
@@ -173,7 +176,7 @@ export function useModifyLabel() {
    * Closes the re-authentication modal
    */
   const closeReauthModal = useCallback(() => {
-    console.log('[ModifyLabel] Closing reauth modal');
+    logger.debug('[ModifyLabel] Closing reauth modal');
     setReauthModal((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
@@ -182,11 +185,11 @@ export function useModifyLabel() {
    */
   const startModifyLabel = useCallback(
     async (
-      options: ModifyLabelOptions, 
+      options: ModifyLabelOptions,
       queueProgressCallback?: ProgressCallback,
       abortSignal?: AbortSignal
     ): Promise<{ success: boolean }> => {
-      console.log('[ModifyLabel] Starting label modification:', options);
+      logger.debug('[ModifyLabel] Starting label modification:', options);
       isCancelledRef.current = false;
       cancellationRef.current = false;
 
@@ -202,16 +205,16 @@ export function useModifyLabel() {
 
       // --- Preparation Phase ---
       updateProgress({ status: 'preparing', progressPercent: 0, processedSoFar: 0 });
-      
+
       if (!isClientLoaded) {
-        console.error('[ModifyLabel] Gmail API client is not loaded yet.');
+        logger.error('[ModifyLabel] Gmail API client is not loaded yet.');
         toast.error('Gmail client not ready', {
           description: 'Please wait a moment and try again.'
         });
         updateProgress({ status: 'error', error: 'Gmail client not loaded.' });
         return { success: false };
       }
-      
+
       const totalToProcess = options.senders.reduce((sum, s) => sum + s.emailCount, 0);
       updateProgress({ totalToProcess });
 
@@ -230,7 +233,7 @@ export function useModifyLabel() {
 
       // --- Token & Permission Checks (New Strategy) ---
       if (!isGmailConnected) {
-        console.log('[ModifyLabel] No Gmail connection (no refresh token), showing reauth modal.');
+        logger.debug('[ModifyLabel] No Gmail connection (no refresh token), showing reauth modal.');
         setReauthModal({ isOpen: true, type: 'expired', eta: formattedEta });
         updateProgress({ status: 'error', error: 'Gmail not connected. Please reconnect.' });
         return { success: false };
@@ -238,9 +241,9 @@ export function useModifyLabel() {
 
       try {
         await getAccessToken(); // Verify refresh token validity and get initial access token
-        console.log('[ModifyLabel] Initial access token validated/acquired.');
+        logger.debug('[ModifyLabel] Initial access token validated/acquired.');
       } catch (error) {
-        console.error('[ModifyLabel] Failed to validate/acquire initial token:', error);
+        logger.error('[ModifyLabel] Failed to validate/acquire initial token:', error);
         setReauthModal({ isOpen: true, type: 'expired', eta: formattedEta });
         updateProgress({ status: 'error', error: 'Gmail authentication failed. Please reconnect.' });
         return { success: false };
@@ -276,7 +279,7 @@ export function useModifyLabel() {
         actionLogIdRef.current = supabaseLogId ?? null;
         updateSupabaseLogId(supabaseLogId!);
       } catch (error) {
-        console.error('[ModifyLabel] Failed to create action log:', error);
+        logger.error('[ModifyLabel] Failed to create action log:', error);
         toast.error('Failed to start label modification.');
         updateProgress({ status: 'error', error: 'Failed to log action start.' });
         clearCurrentActionLog();
@@ -297,22 +300,22 @@ export function useModifyLabel() {
         for (const sender of options.senders) {
           // Check both cancellation sources (critical pattern from analysis)
           if (isCancelledRef.current || cancellationRef.current || abortSignal?.aborted) {
-            console.log(`[ModifyLabel] Cancellation detected before processing ${sender.email}`);
+            logger.debug(`[ModifyLabel] Cancellation detected before processing ${sender.email}`);
             endType = 'user_stopped';
             break;
           }
 
-          console.log(`\n[ModifyLabel] Processing sender: ${sender.email}`);
+          logger.debug(`\n[ModifyLabel] Processing sender: ${sender.email}`);
           updateProgress({ currentSender: sender.email });
 
           // Build query to get messages from this sender
-          const query = buildQuery({ 
+          const query = buildQuery({
             type: 'mark',
             mode: 'read',
             senderEmail: sender.email,
             additionalTerms: []
           });
-          console.log(`[ModifyLabel] Using query: ${query}`);
+          logger.debug(`[ModifyLabel] Using query: ${query}`);
 
           let nextPageToken: string | undefined = undefined;
           let batchFetchAttempts = 0;
@@ -321,7 +324,7 @@ export function useModifyLabel() {
           do {
             // Check both cancellation sources (critical pattern from analysis)
             if (isCancelledRef.current || cancellationRef.current || abortSignal?.aborted) {
-              console.log(`[ModifyLabel] Cancellation detected during batch processing`);
+              logger.debug(`[ModifyLabel] Cancellation detected during batch processing`);
               endType = 'user_stopped';
               break;
             }
@@ -336,26 +339,26 @@ export function useModifyLabel() {
               } else {
                 currentAccessToken = await getAccessToken(); // Gets from memory or refreshes if expired
               }
-              console.log(`[ModifyLabel] Token acquired for batch processing sender: ${sender.email}`);
+              logger.debug(`[ModifyLabel] Token acquired for batch processing sender: ${sender.email}`);
             } catch (tokenError: any) {
-              console.error(`[ModifyLabel] Token acquisition failed for batch processing ${sender.email}:`, tokenError);
+              logger.error(`[ModifyLabel] Token acquisition failed for batch processing ${sender.email}:`, tokenError);
               const remainingEmailsForEta = totalToProcess - totalProcessed;
-              const remainingTimeMsForEta = estimateRuntimeMs({ 
+              const remainingTimeMsForEta = estimateRuntimeMs({
                 operationType: 'mark', // Assuming 'mark' is generic enough for ETA here
-                emailCount: remainingEmailsForEta, 
-                mode: 'single' 
+                emailCount: remainingEmailsForEta,
+                mode: 'single'
               });
-              setReauthModal({ 
-                isOpen: true, 
+              setReauthModal({
+                isOpen: true,
                 type: 'expired', // Simplified type
-                eta: formatDuration(remainingTimeMsForEta) 
+                eta: formatDuration(remainingTimeMsForEta)
               });
-              throw new Error("Gmail authentication failed during operation. Please re-authenticate."); 
+              throw new Error("Gmail authentication failed during operation. Please re-authenticate.");
             }
             // ---------------------------------------------
 
             batchFetchAttempts++;
-            console.log(`[ModifyLabel] Fetching message IDs batch (Attempt ${batchFetchAttempts})`);
+            logger.debug(`[ModifyLabel] Fetching message IDs batch (Attempt ${batchFetchAttempts})`);
 
             try {
               // Use currentAccessToken obtained above
@@ -369,11 +372,11 @@ export function useModifyLabel() {
               nextPageToken = newPageToken;
 
               if (messageIds.length === 0) {
-                console.log(`[ModifyLabel] No more messages found.`);
+                logger.debug(`[ModifyLabel] No more messages found.`);
                 break;
               }
 
-              console.log(`[ModifyLabel] Found ${messageIds.length} messages. Modifying labels...`);
+              logger.debug(`[ModifyLabel] Found ${messageIds.length} messages. Modifying labels...`);
 
               // Use currentAccessToken obtained above
               const failedBatches = await processBatchModifyLabels(
@@ -388,13 +391,13 @@ export function useModifyLabel() {
               if (failedBatches.length > 0) {
                 console.warn(`[ModifyLabel] Some batches failed:`, failedBatches);
               }
-              
+
               totalProcessed += messageIds.length;
               const overallProgress = totalToProcess > 0
                 ? Math.min(100, Math.round((totalProcessed / totalToProcess) * 100))
                 : (nextPageToken ? 50 : 100);
 
-              console.log(`[ModifyLabel] Batch successful. Total processed: ${totalProcessed}`);
+              logger.debug(`[ModifyLabel] Batch successful. Total processed: ${totalProcessed}`);
               updateProgress({
                 processedSoFar: totalProcessed,
                 progressPercent: overallProgress,
@@ -410,7 +413,7 @@ export function useModifyLabel() {
               }
 
             } catch (error: any) {
-              console.error(`[ModifyLabel] Error during batch:`, error);
+              logger.error(`[ModifyLabel] Error during batch:`, error);
               errorMessage = `Failed during batch operation: ${error.message || 'Unknown error'}`;
               toast.error('Error modifying labels', { description: errorMessage });
               endType = 'runtime_error';
@@ -425,13 +428,13 @@ export function useModifyLabel() {
             }
 
           } while (nextPageToken && endType === 'success');
-          
+
           if (endType !== 'success') break;
         }
 
         // --- Finalization ---
-        console.log(`\n[ModifyLabel] Process finished. End type: ${endType}`);
-        console.log(`[ModifyLabel] Total emails processed: ${totalProcessed}`);
+        logger.debug(`\n[ModifyLabel] Process finished. End type: ${endType}`);
+        logger.debug(`[ModifyLabel] Total emails processed: ${totalProcessed}`);
 
         // Update Supabase log
         await completeActionLog(
@@ -466,7 +469,7 @@ export function useModifyLabel() {
         return { success: endType === 'success' };
 
       } catch (error: any) {
-        console.error('[ModifyLabel] Critical error:', error);
+        logger.error('[ModifyLabel] Critical error:', error);
         errorMessage = `An unexpected error occurred: ${error.message || 'Unknown error'}`;
         endType = 'runtime_error';
 
@@ -475,7 +478,7 @@ export function useModifyLabel() {
             await completeActionLog(supabaseLogId, endType, totalProcessed, errorMessage);
             completeLocalActionLog(endType, errorMessage);
           } catch (logError) {
-            console.error("[ModifyLabel] Failed to log critical error:", logError);
+            logger.error("[ModifyLabel] Failed to log critical error:", logError);
           }
         }
 
@@ -485,7 +488,7 @@ export function useModifyLabel() {
           currentSender: undefined,
         });
         toast.error('Operation Failed', { description: errorMessage });
-        
+
         return { success: false };
       } finally {
         actionLogIdRef.current = null;
@@ -509,36 +512,36 @@ export function useModifyLabel() {
     onProgress: ProgressCallback,
     abortSignal: AbortSignal
   ): Promise<ExecutorResult> => {
-    console.log('[ModifyLabel] Queue executor called with payload:', payload);
-    
+    logger.debug('[ModifyLabel] Queue executor called with payload:', payload);
+
     // Convert queue payload to hook format
     const options: ModifyLabelOptions = {
       senders: payload.senders.map(s => ({ email: s.email, emailCount: s.emailCount })),
       labelIds: payload.labelIds,
       actionType: payload.actionType
     };
-    
+
     // Set up cancellation handling
     const handleAbort = () => {
-      console.log('[ModifyLabel] Queue abort signal received');
+      logger.debug('[ModifyLabel] Queue abort signal received');
       cancelModifyLabel();
     };
     abortSignal.addEventListener('abort', handleAbort);
-    
+
     try {
       // Call existing function with queue progress callback
       const result = await startModifyLabel(options, onProgress, abortSignal);
-      
+
       // Determine processedCount and error from final progress state
       let processedCount = progressRef.current.processedSoFar;
       let errorMessage: string | undefined;
-      
+
       if (progressRef.current.status === 'cancelled') {
         errorMessage = 'Operation cancelled by user';
       } else if (progressRef.current.error) {
         errorMessage = progressRef.current.error;
       }
-      
+
       return {
         success: result.success && !errorMessage,
         processedCount,
@@ -548,7 +551,7 @@ export function useModifyLabel() {
       abortSignal.removeEventListener('abort', handleAbort);
     }
   }, [startModifyLabel, cancelModifyLabel]);
-  
+
   // Register queue executor
   useEffect(() => {
     if (typeof window !== 'undefined') {
