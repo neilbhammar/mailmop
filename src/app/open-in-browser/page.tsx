@@ -158,33 +158,58 @@ export default function OpenInBrowserPage() {
                   <p className="text-gray-900 dark:text-slate-100 font-semibold mb-2">
                     Open {systemBrowser}
                   </p>
-                  {systemBrowser.includes('Safari') && (
-                    <div className="text-sm text-gray-700 dark:text-slate-300 space-y-1">
-                      <p className="flex items-center">
-                        <ShareIcon className="w-4 h-4 mr-2 text-blue-600" />
-                        Look for a share/open icon in {detectedApp}
-                      </p>
-                      <p className="flex items-center">
-                        <SmartphoneIcon className="w-4 h-4 mr-2 text-blue-600" />
-                        Tap "Open in Safari" or "Open in Browser"
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-slate-400">
-                        Or manually open Safari and paste the URL
+                  
+                  {/* Specific instructions for Facebook and LinkedIn */}
+                  {(detectedApp === 'Facebook' || detectedApp === 'LinkedIn') && (
+                    <div className="text-sm text-gray-700 dark:text-slate-300 space-y-2">
+                      <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-gray-200 dark:border-slate-600">
+                        <p className="font-medium text-gray-900 dark:text-slate-100 mb-2">In {detectedApp}:</p>
+                        <div className="space-y-1">
+                          <p className="flex items-center">
+                            <span className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2">1</span>
+                            Hit the <strong>three dots (⋯)</strong> in the top right corner
+                          </p>
+                          <p className="flex items-center">
+                            <span className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2">2</span>
+                            Click <strong>"Open in Browser"</strong> or <strong>"Open in {systemBrowser}"</strong>
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600 dark:text-slate-400 italic">
+                        If you don't see this option, use the manual method below ↓
                       </p>
                     </div>
                   )}
-                  {systemBrowser.includes('Chrome') && (
+                  
+                  {/* Generic instructions for other browsers */}
+                  {detectedApp !== 'Facebook' && detectedApp !== 'LinkedIn' && (
                     <div className="text-sm text-gray-700 dark:text-slate-300 space-y-1">
-                      <p className="flex items-center">
-                        <ShareIcon className="w-4 h-4 mr-2 text-blue-600" />
-                        Look for a menu (⋮) in {detectedApp}
-                      </p>
-                      <p className="flex items-center">
-                        <SmartphoneIcon className="w-4 h-4 mr-2 text-blue-600" />
-                        Tap "Open in Chrome" or "Open in Browser"
-                      </p>
+                      {systemBrowser.includes('Safari') && (
+                        <>
+                          <p className="flex items-center">
+                            <ShareIcon className="w-4 h-4 mr-2 text-blue-600" />
+                            Look for a share/open icon in {detectedApp}
+                          </p>
+                          <p className="flex items-center">
+                            <SmartphoneIcon className="w-4 h-4 mr-2 text-blue-600" />
+                            Tap "Open in Safari" or "Open in Browser"
+                          </p>
+                        </>
+                      )}
+                      {systemBrowser.includes('Chrome') && (
+                        <>
+                          <p className="flex items-center">
+                            <ShareIcon className="w-4 h-4 mr-2 text-blue-600" />
+                            Look for a menu (⋮) in {detectedApp}
+                          </p>
+                          <p className="flex items-center">
+                            <SmartphoneIcon className="w-4 h-4 mr-2 text-blue-600" />
+                            Tap "Open in Chrome" or "Open in Browser"
+                          </p>
+                        </>
+                      )}
                       <p className="text-xs text-gray-600 dark:text-slate-400">
-                        Or manually open Chrome and paste the URL
+                        Or manually open {systemBrowser} and paste the URL
                       </p>
                     </div>
                   )}
@@ -225,10 +250,11 @@ export default function OpenInBrowserPage() {
                 <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3">
                   <p className="font-medium text-gray-900 dark:text-slate-100 mb-2">Manual method:</p>
                   <ol className="space-y-1 text-sm">
-                    <li>1. Close or minimize {detectedApp}</li>
-                    <li>2. Open {systemBrowser} directly from your home screen</li>
-                    <li>3. Type or paste: <code className="bg-white dark:bg-slate-800 px-1 py-0.5 rounded border">mailmop.com</code></li>
-                    <li>4. Press Enter and sign in with Google</li>
+                    <li>1. Copy <strong>mailmop.com</strong> using the button above ☝️</li>
+                    <li>2. Close or minimize {detectedApp}</li>
+                    <li>3. Open {systemBrowser} directly from your home screen</li>
+                    <li>4. Paste <strong>mailmop.com</strong> in the address bar and press Enter</li>
+                    <li>5. Sign in with Google and start cleaning! 🧹</li>
                   </ol>
                 </div>
               </div>
