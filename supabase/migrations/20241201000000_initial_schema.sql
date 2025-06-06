@@ -27,7 +27,7 @@ CREATE OR REPLACE FUNCTION "public"."calculate_daily_stats"() RETURNS "void"
     AS $$
 BEGIN
     INSERT INTO public."daily_stats" (datetime, analysis_count, deletion_count, modified_count)
-    SELECT 
+    SELECT
         NOW() AT TIME ZONE 'UTC',
         COALESCE(SUM(CASE WHEN type = 'analysis' THEN count ELSE 0 END), 0) AS analysis_count,
         COALESCE(SUM(CASE WHEN type IN ('delete', 'delete_with_exceptions') THEN count ELSE 0 END), 0) AS deletion_count,
@@ -49,11 +49,11 @@ DECLARE
   reminder_body JSONB;
 BEGIN
   -- Find users whose pro plans expire in 7 days or less
-  FOR user_record IN 
+  FOR user_record IN
     SELECT p.user_id, p.email, p.plan_expires_at, p.cancel_at_period_end, u.raw_user_meta_data
     FROM profiles p
     LEFT JOIN auth.users u ON p.user_id = u.id
-    WHERE p.plan = 'pro' 
+    WHERE p.plan = 'pro'
       AND p.plan_expires_at IS NOT NULL
       AND p.plan_expires_at > NOW()
       AND p.plan_expires_at <= NOW() + INTERVAL '7 days'
@@ -61,7 +61,7 @@ BEGIN
   LOOP
     -- Calculate days until expiry
     days_until_expiry := EXTRACT(DAY FROM (user_record.plan_expires_at - NOW()));
-    
+
     -- Prepare email body
     reminder_body := jsonb_build_object(
       'user', jsonb_build_object(
@@ -72,7 +72,7 @@ BEGIN
       'days_until_expiry', days_until_expiry,
       'cancel_at_period_end', COALESCE(user_record.cancel_at_period_end, true)
     );
-    
+
     -- Send reminder email
     PERFORM net.http_post(
       url := 'https://ucoacqalcpqrjrrqkizf.supabase.co/functions/v1/send-expiration-reminder-email',
@@ -82,12 +82,12 @@ BEGIN
       ),
       body := reminder_body
     );
-    
+
     -- Update last reminder sent timestamp
-    UPDATE profiles 
+    UPDATE profiles
     SET last_upsell_nudge_sent = NOW()
     WHERE user_id = user_record.user_id;
-    
+
   END LOOP;
 END;
 $$;
@@ -106,7 +106,7 @@ DECLARE
     days_until_expiration INTEGER;
 BEGIN
     -- Get all pro users with active subscriptions
-    FOR profile_record IN 
+    FOR profile_record IN
         SELECT p.user_id, p.email, p.full_name, p.stripe_customer_id, p.plan
         FROM profiles p
         WHERE p.plan = 'pro'
@@ -116,9 +116,9 @@ BEGIN
         -- Check if we've already sent a reminder for this subscription period
         -- We'll use a simple check: if we sent a reminder in the last 30 days, skip
         IF EXISTS (
-            SELECT 1 
-            FROM user_actions ua 
-            WHERE ua.user_id = profile_record.user_id 
+            SELECT 1
+            FROM user_actions ua
+            WHERE ua.user_id = profile_record.user_id
             AND ua.action_type IN ('expiration_reminder_sent', 'renewal_reminder_sent')
             AND ua.created_at > NOW() - INTERVAL '30 days'
         ) THEN
@@ -129,20 +129,20 @@ BEGIN
         -- Make HTTP request to get subscription details from Stripe via our edge function
         -- For now, we'll simulate the subscription data - in production you'd call Stripe API
         -- This is a simplified approach - you could also store subscription data in your DB
-        
+
         -- For this demo, let's simulate checking if user's subscription expires in 7 days
         -- In real implementation, you'd query Stripe API or store subscription data locally
-        
+
         -- Example: simulate subscription ending 7 days from now for testing
         -- In production, you'd get this from Stripe API
         RAISE LOG 'Checking subscription for user: %', profile_record.email;
-        
+
         -- For now, let's skip the actual Stripe API call and log that we would check
         -- You would implement the actual Stripe subscription check here
         RAISE LOG 'Would check Stripe subscription for customer: %', profile_record.stripe_customer_id;
-        
+
     END LOOP;
-    
+
     RAISE LOG 'Completed checking for expiring subscriptions';
 END;
 $$;
@@ -192,15 +192,15 @@ DECLARE
 BEGIN
     -- Only process premium attempts for free users
     IF NEW.type = 'premium_attempt' THEN
-        
+
         -- Get user profile to check plan and get user info
-        SELECT * INTO user_profile 
-        FROM profiles 
+        SELECT * INTO user_profile
+        FROM profiles
         WHERE user_id = NEW.user_id;
-        
+
         -- Only send if user is on free plan
         IF user_profile.plan = 'free' THEN
-            
+
             -- Check if we need to send an upsell email based on last_upsell_nudge_sent
             IF user_profile.last_upsell_nudge_sent IS NULL THEN
                 -- Never sent a reminder, send one now
@@ -209,10 +209,10 @@ BEGIN
                 -- Calculate days since last reminder
                 days_since_last_reminder := EXTRACT(EPOCH FROM (NOW() - user_profile.last_upsell_nudge_sent)) / (24 * 60 * 60);
             END IF;
-            
+
             -- Send email if no previous reminder OR it's been more than 30 days
             IF user_profile.last_upsell_nudge_sent IS NULL OR days_since_last_reminder > 30 THEN
-                
+
                 -- Call the premium upsell email function
                 SELECT net.http_post(
                     url := 'https://ucoacqalcpqrjrrqkizf.supabase.co/functions/v1/send-premium-upsell-email',
@@ -228,14 +228,14 @@ BEGIN
                 ) INTO response_id;
 
                 -- Update last_upsell_nudge_sent timestamp
-                UPDATE profiles 
-                SET last_upsell_nudge_sent = NOW() 
+                UPDATE profiles
+                SET last_upsell_nudge_sent = NOW()
                 WHERE user_id = NEW.user_id;
 
-                RAISE LOG 'Premium upsell email HTTP request sent for user % (days since last: %), response ID: %', 
+                RAISE LOG 'Premium upsell email HTTP request sent for user % (days since last: %), response ID: %',
                     NEW.user_id, COALESCE(days_since_last_reminder, 0), response_id;
             ELSE
-                RAISE LOG 'Skipping premium upsell email for user % - last upsell nudge sent % days ago (less than 30)', 
+                RAISE LOG 'Skipping premium upsell email for user % - last upsell nudge sent % days ago (less than 30)',
                     NEW.user_id, days_since_last_reminder;
             END IF;
         END IF;
@@ -261,7 +261,7 @@ DECLARE
 BEGIN
     -- Only send email when plan changes to 'pro'
     IF NEW.plan != OLD.plan AND NEW.plan = 'pro' THEN
-        
+
         -- Call the edge function using the correct syntax
         SELECT net.http_post(
             url := 'https://ucoacqalcpqrjrrqkizf.supabase.co/functions/v1/send-upgrade-thanks-email',
@@ -298,7 +298,7 @@ DECLARE
     full_name text;
     response_id bigint;
 BEGIN
-    -- Extract name from raw_user_meta_data 
+    -- Extract name from raw_user_meta_data
     full_name := COALESCE(
         NEW.raw_user_meta_data->>'full_name',
         NEW.raw_user_meta_data->>'name',
@@ -344,7 +344,7 @@ BEGIN
     -- Only send welcome email for new profile insertions
     -- This assumes profiles are created when users sign up
     IF TG_OP = 'INSERT' THEN
-        
+
         -- Call the welcome email function
         SELECT net.http_post(
             url := 'https://ucoacqalcpqrjrrqkizf.supabase.co/functions/v1/send-welcome-email',
@@ -392,14 +392,14 @@ BEGIN
   -- Try to get the anon key from vault, fallback to working key
   -- In production, this should be stored in vault.secrets
   BEGIN
-    SELECT decrypted_secret INTO auth_key 
-    FROM vault.decrypted_secrets 
+    SELECT decrypted_secret INTO auth_key
+    FROM vault.decrypted_secrets
     WHERE name = 'anon_key'
     LIMIT 1;
   EXCEPTION WHEN OTHERS THEN
     auth_key := NULL;
   END;
-  
+
   -- Fallback to the working anon key
   IF auth_key IS NULL OR auth_key = '' THEN
     auth_key := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjb2FjcWFsY3BxcmpycnFraXpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3MDMzNDQsImV4cCI6MjA1NzI3OTM0NH0.IowS3bJYI5x-uWyKpSZQVED06XcG0c9D-DYat-tdaf4';
@@ -425,7 +425,7 @@ BEGIN
       )
     )
   ) INTO request_id;
-  
+
   RETURN NEW;
 END;
 $$;

@@ -141,43 +141,50 @@ npm install
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select an existing one
-3. Enable the Gmail API
+3. Search Gmail API in the searchbar at the top, and enable it
 4. Create OAuth 2.0 credentials:
+   - You will be using User Data, not Application Data
+   - TODO: What scopes should you pick?
    - Application type: Web application
    - Authorized redirect URIs: `http://localhost:3000/auth/callback`
    - Note your Client ID and Client Secret
 
-### 3. Set Up Supabase
+### 3. Set Up Supabase & Connect Supabase with Google OAuth
 
-1. Create a new Supabase project
-2. Run the database migrations:
+1. [Create a new Supabase project](https://supabase.com/dashboard/projects)
+2. Get YOUR_PROJECT_REF, which is the first part of the Project URL, e.g.: `https://{YOUR_PROJECT_REF}.supabase.co`
+3. Run the database migrations:
    ```bash
    npx supabase login
    npx supabase link --project-ref YOUR_PROJECT_REF
    npx supabase db push
    ```
-3. Set up authentication:
+4. Set up authentication in Supabase:
    - Go to Authentication → Providers → Google
    - Add your Google OAuth credentials
+   - Copy the Callback URL (for OAuth)
+5. Now, back in your Google project, search Auth. In the Google Auth Platform, select your Web client, and scroll down to Authorized Redirect URIs. Add the Callback URL (for OAuth) from Supabase and Save.
 
 ### 4. Environment Variables
 
-Create a `.env.local` file in the project root:
+Copy `env.example` to a `.env.local` file in the project root, and drop in these values:
 
 ```bash
 # Supabase
-NEXT_PUBLIC_SUPABASE_URL="your_supabase_url"
+NEXT_PUBLIC_SUPABASE_URL="your_supabase_project_url"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="your_supabase_anon_key"
 SUPABASE_SERVICE_ROLE_KEY="your_service_role_key"
 
-# Google OAuth (for l ocal development)
+# Google OAuth (for local development)
 GOOGLE_CLIENT_ID="your_google_client_id"
 GOOGLE_CLIENT_SECRET="your_google_client_secret"
 
 # Local URLs
 NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
 
+The rest are optional. You can get NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY from your Project Settings under API Keys. The Google values are the same you saved in step 2.4.
 
 ### 5. Run the Development Server
 
