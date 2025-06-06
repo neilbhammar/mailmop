@@ -676,7 +676,7 @@ export function ApplyLabelModal({
                                       key={label.id}
                                       value={label.name}
                                       onSelect={() => handleAddLabel(label)}
-                                      className="py-2 bg-white dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:bg-slate-700"
+                                      className="py-2 bg-white dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:bg-slate-700"
                                     >
                                       <div className="flex items-center">
                                         <div 
@@ -714,7 +714,7 @@ export function ApplyLabelModal({
                                       key={label.id}
                                       value={label.name}
                                       onSelect={() => handleAddLabel(label)}
-                                      className="py-2 bg-white dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:bg-slate-700"
+                                      className="py-2 bg-white dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:bg-slate-700"
                                     >
                                       <div className="flex items-center">
                                         <div 
@@ -735,7 +735,7 @@ export function ApplyLabelModal({
                             <CommandItem
                               value={`create-${searchValue}`}
                               onSelect={handleCreateLabel}
-                              className="py-2 mt-1 text-purple-600 dark:text-blue-400 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 dark:hover:bg-slate-700"
+                              className="py-2 mt-1 text-purple-600 dark:text-blue-400 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 dark:hover:bg-slate-700 dark:focus:bg-slate-700"
                             >
                               <PlusCircle className="h-4 w-4 mr-2" />
                               <span>Create new label: <strong className="dark:text-blue-300">{searchValue}</strong></span>
