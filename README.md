@@ -148,6 +148,46 @@ npm install
    - Authorized redirect URIs: `http://localhost:3000/auth/callback`
    - Note your Client ID and Client Secret
 
+### 2.5. Configure Gmail API Scopes
+
+MailMop requires specific Gmail API scopes to function properly. You need to configure these scopes in your Google Cloud Console:
+
+1. **Navigate to OAuth Consent Screen** in your Google Cloud Console
+2. **Add the following scopes** to your OAuth consent configuration:
+
+#### Required Scopes:
+
+**Non-sensitive scopes:**
+- `../auth/userinfo.profile`
+  - **Purpose**: See your personal info, including any personal info you've made publicly available
+  - **Why needed**: To display your name and profile picture in the app interface
+
+- `../auth/gmail.labels`
+  - **Purpose**: See and edit your email labels
+  - **Why needed**: To view create labels
+
+**Restricted scopes (Gmail scopes):**
+- `../auth/gmail.settings.basic`
+  - **Purpose**: See, edit, create or change your email settings and filters in Gmail
+  - **Why needed** To block senders, auto apply labels in the future
+
+- `https://mail.google.com/`
+  - **Purpose**: Read, compose, send and permanently delete all your email from Gmail
+  - **Why needed**: To analyze email metadata (sender, subject, date) with query parameters and perform bulk actions like deleting emails.
+
+#### Important: Test Users for Restricted Scopes
+
+Since MailMop uses **restricted scopes** (which request access to sensitive Gmail data), your OAuth app will be in "testing" mode unless it goes through Google's verification process. Instead you can:
+
+1. **Add yourself as a test user**:
+   - In Google Cloud Console, go to **OAuth consent screen**
+   - Scroll down to **Test users**
+   - Click **Add Users** and add your Gmail address
+   - Save the changes
+
+2. **Test users can use the app immediately** without waiting for Google's app verification
+3. **Non-test users will see a warning screen** will not be able to use the app/connect their Gmail.
+
 ### 3. Set Up Supabase & Connect Supabase with Google OAuth
 
 1. [Create a new Supabase project](https://supabase.com/dashboard/projects)
