@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ExternalLinkIcon, SmartphoneIcon, MonitorIcon, ArrowRightIcon, RefreshCwIcon, CopyIcon, ShareIcon } from 'lucide-react'
+import { ExternalLinkIcon, CopyIcon, ChevronDownIcon } from 'lucide-react'
 import { getEmbeddedBrowserName, getSystemBrowserName, isEmbeddedBrowser } from '@/lib/utils/embeddedBrowser'
 import { useMounted } from '@/hooks/useMounted'
 
@@ -13,6 +13,7 @@ export default function OpenInBrowserPage() {
   const [systemBrowser, setSystemBrowser] = useState('')
   const [isCurrentlyEmbedded, setIsCurrentlyEmbedded] = useState(false)
   const [copiedUrl, setCopiedUrl] = useState(false)
+  const [showFallback, setShowFallback] = useState(false)
 
   useEffect(() => {
     if (mounted) {
@@ -50,202 +51,151 @@ export default function OpenInBrowserPage() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCwIcon className="h-8 w-8 animate-spin mx-auto text-blue-600" />
-          <p className="mt-2 text-gray-600 dark:text-slate-400">Loading...</p>
-        </div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
   if (!isCurrentlyEmbedded) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">Perfect!</h1>
-          <p className="text-gray-600 dark:text-slate-400 mb-4">You're already in a compatible browser.</p>
-          <p className="text-sm text-gray-500 dark:text-slate-500">Redirecting you to MailMop...</p>
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">Perfect!</h1>
+          <p className="text-gray-600 mb-4">You're in a compatible browser.</p>
+          <p className="text-sm text-gray-500">Redirecting to MailMop...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="pt-6 pb-4">
-        <div className="container mx-auto px-4">
-          <Link href="/" className="inline-flex items-center">
-            <Image
-              src="/logo10.png"
-              alt="MailMop"
-              width={120}
-              height={30}
-              className="h-7 w-auto"
-              priority
-            />
-          </Link>
-        </div>
+      <header className="px-4 py-6 border-b border-gray-100">
+        <Link href="/" className="inline-flex items-center">
+          <Image
+            src="/logo10.png"
+            alt="MailMop"
+            width={120}
+            height={30}
+            className="h-7 w-auto"
+            priority
+          />
+        </Link>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-white/20">
-          {/* Icon */}
-          <div className="text-center mb-6">
-            <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ExternalLinkIcon className="w-10 h-10 text-orange-600 dark:text-orange-400" />
+      <main className="px-4 py-8">
+        <div className="max-w-sm mx-auto text-center space-y-8">
+          
+          {/* Icon & Title */}
+          <div className="space-y-4">
+            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto">
+              <ExternalLinkIcon className="w-8 h-8 text-blue-600" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">
-              Please open in {systemBrowser}
-            </h1>
-            <p className="text-gray-600 dark:text-slate-400">
-              Google sign-in doesn't work inside {detectedApp} for security reasons
-            </p>
-          </div>
-
-          {/* Explanation */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6 border border-blue-200 dark:border-blue-800">
-            <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2 flex items-center">
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Why this happens
-            </h3>
-            <p className="text-blue-800 dark:text-blue-200 text-sm leading-relaxed">
-              Google requires OAuth flows to run in full system browsers (like {systemBrowser}) rather than embedded app browsers to prevent phishing and security attacks. This protects your Google account.
-            </p>
-          </div>
-
-          {/* Step-by-step instructions */}
-          <div className="space-y-6 mb-8">
-            <h3 className="font-semibold text-gray-900 dark:text-slate-100">How to open in {systemBrowser}:</h3>
-            
-            {/* Main instruction: Open Browser */}
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
-                  !
-                </div>
-                <div className="flex-1">
-                  {/* Specific instructions for Facebook and LinkedIn */}
-                  {(detectedApp === 'Facebook' || detectedApp === 'LinkedIn') && (
-                    <div className="text-sm text-gray-700 dark:text-slate-300 space-y-2">
-                      <p className="text-gray-900 dark:text-slate-100 font-semibold mb-2">
-                        In {detectedApp}:
-                      </p>
-                      <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-gray-200 dark:border-slate-600">
-                        <div className="space-y-2">
-                          <p className="flex items-center">
-                            <span className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2">1</span>
-                            Hit the <strong>three dots (⋯)</strong> in the top right corner
-                          </p>
-                          <p className="flex items-center">
-                            <span className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2">2</span>
-                            Click <strong>"Open in Browser"</strong> or <strong>"Open in {systemBrowser}"</strong>
-                          </p>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-600 dark:text-slate-400 italic">
-                        If you don't see this option, use the manual method below ↓
-                      </p>
-                    </div>
-                  )}
-                  
-                  {/* Generic instructions for other browsers */}
-                  {detectedApp !== 'Facebook' && detectedApp !== 'LinkedIn' && (
-                    <div className="text-sm text-gray-700 dark:text-slate-300 space-y-2">
-                      <p className="text-gray-900 dark:text-slate-100 font-semibold mb-2">
-                        In {detectedApp}:
-                      </p>
-                      <div className="space-y-1">
-                        {systemBrowser.includes('Safari') && (
-                          <>
-                            <p className="flex items-center">
-                              <ShareIcon className="w-4 h-4 mr-2 text-blue-600" />
-                              Look for a share/open icon in {detectedApp}
-                            </p>
-                            <p className="flex items-center">
-                              <SmartphoneIcon className="w-4 h-4 mr-2 text-blue-600" />
-                              Tap "Open in Safari" or "Open in Browser"
-                            </p>
-                          </>
-                        )}
-                        {systemBrowser.includes('Chrome') && (
-                          <>
-                            <p className="flex items-center">
-                              <ShareIcon className="w-4 h-4 mr-2 text-blue-600" />
-                              Look for a menu (⋮) in {detectedApp}
-                            </p>
-                            <p className="flex items-center">
-                              <SmartphoneIcon className="w-4 h-4 mr-2 text-blue-600" />
-                              Tap "Open in Chrome" or "Open in Browser"
-                            </p>
-                          </>
-                        )}
-                        <p className="text-xs text-gray-600 dark:text-slate-400 italic">
-                          If you don't see this option, use the manual method below ↓
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold text-gray-900">
+                Open in {systemBrowser}
+              </h1>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Google sign-in doesn't work inside {detectedApp} for security reasons
+              </p>
             </div>
           </div>
 
-          {/* Alternative help */}
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700">
-            <details className="group">
-              <summary className="cursor-pointer text-sm font-medium text-gray-700 dark:text-slate-300 hover:text-gray-900 dark:hover:text-slate-100 transition-colors flex items-center">
-                <span>Don't see an "Open in Browser" option?</span>
-                <svg className="w-4 h-4 ml-2 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </summary>
-              <div className="mt-3 space-y-3 text-sm text-gray-600 dark:text-slate-400">
-                <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3">
-                  <p className="font-medium text-gray-900 dark:text-slate-100 mb-3">Manual method:</p>
-                  
-                  {/* Copy URL section */}
-                  <div className="mb-4">
-                    <p className="text-sm font-medium text-gray-800 dark:text-slate-200 mb-2">Step 1: Copy MailMop's URL</p>
-                    <button
-                      onClick={handleCopyUrl}
-                      className="inline-flex items-center justify-center w-full px-3 py-2 bg-white dark:bg-slate-600 text-gray-700 dark:text-slate-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-slate-500 transition-all duration-300 group border border-gray-200 dark:border-slate-500 text-sm"
-                    >
-                      <CopyIcon className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                      <span className="font-mono text-sm">{copiedUrl ? '✓ Copied: mailmop.com' : 'Copy: mailmop.com'}</span>
-                    </button>
-                  </div>
+          {/* Main Instructions */}
+          <div className="bg-gray-50 rounded-2xl p-6 text-left space-y-4">
+            <div className="text-center">
+              <div className="text-sm font-medium text-gray-700 mb-3">
+                In {detectedApp}:
+              </div>
+            </div>
 
-                  {/* Manual steps */}
-                  <div>
-                    <p className="text-sm font-medium text-gray-800 dark:text-slate-200 mb-2">Step 2: Open manually</p>
-                    <ol className="space-y-1 text-sm">
-                      <li>1. Close or minimize {detectedApp}</li>
-                      <li>2. Open {systemBrowser} directly from your home screen</li>
-                      <li>3. Paste <strong>mailmop.com</strong> in the address bar and press Enter</li>
-                      <li>4. Sign in with Google and start cleaning! 🧹</li>
-                    </ol>
+            {(detectedApp === 'Facebook' || detectedApp === 'LinkedIn') ? (
+              // Specific instructions for Facebook/LinkedIn
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    1
+                  </div>
+                  <span className="text-gray-700">Tap the <strong>three dots (⋯)</strong> in the top right</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    2
+                  </div>
+                  <span className="text-gray-700">Select <strong>"Open in {systemBrowser}"</strong></span>
+                </div>
+              </div>
+            ) : (
+              // Generic instructions for other apps
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    1
+                  </div>
+                  <span className="text-gray-700">Look for a share or menu button</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    2
+                  </div>
+                  <span className="text-gray-700">Select <strong>"Open in {systemBrowser}"</strong></span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Fallback Toggle */}
+          <div className="border-t border-gray-100 pt-6">
+            <button
+              onClick={() => setShowFallback(!showFallback)}
+              className="flex items-center justify-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors mx-auto"
+            >
+              <span className="text-sm">Don't see that option?</span>
+              <ChevronDownIcon className={`w-4 h-4 transition-transform ${showFallback ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showFallback && (
+              <div className="mt-6 space-y-6 text-left">
+                {/* Copy URL */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-gray-900">1. Copy this URL</h3>
+                  <button
+                    onClick={handleCopyUrl}
+                    className="w-full flex items-center justify-center space-x-2 bg-gray-100 hover:bg-gray-200 transition-colors rounded-lg py-3 px-4"
+                  >
+                    <CopyIcon className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm font-mono text-gray-700">
+                      {copiedUrl ? '✓ Copied!' : 'mailmop.com'}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Manual steps */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-gray-900">2. Open manually</h3>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <div>• Close {detectedApp}</div>
+                    <div>• Open {systemBrowser} from your home screen</div>
+                    <div>• Paste the URL and press Enter</div>
+                    <div>• Sign in with Google</div>
                   </div>
                 </div>
               </div>
-            </details>
+            )}
           </div>
-        </div>
 
-        {/* Security note */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500 dark:text-slate-500">
-            🔒 This security measure protects your Google account and is enforced by Google, not MailMop
-          </p>
+          {/* Security note */}
+          <div className="text-xs text-gray-500 leading-relaxed">
+            🔒 This security measure is enforced by Google to protect your account
+          </div>
         </div>
       </main>
     </div>
