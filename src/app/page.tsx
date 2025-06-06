@@ -21,6 +21,7 @@ import LandingPricing from '@/components/landing/LandingPricing'
 import LandingPrivacy from '@/components/landing/LandingPrivacy'
 import { useTheme } from 'next-themes'
 import { useMounted } from '@/hooks/useMounted'
+import { isEmbeddedBrowser } from '@/lib/utils/embeddedBrowser'
 
 export default function Home() {
   const router = useRouter()
@@ -134,6 +135,14 @@ export default function Home() {
   }, [])
 
   const signIn = async () => {
+    // Check if user is in an embedded browser first
+    if (isEmbeddedBrowser()) {
+      // Redirect to the "open in browser" page instead of attempting OAuth
+      router.push('/open-in-browser')
+      return
+    }
+
+    // Proceed with normal OAuth flow if not in embedded browser
     const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || location.origin;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
