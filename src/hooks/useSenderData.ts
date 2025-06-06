@@ -117,7 +117,8 @@ export function useSenderData() {
       if (senders.length > 0) {
         logger.debug('Found senders in storage', { 
           component: 'useSenderData',
-          sendersCount: senders.length 
+          sendersCount: senders.length,
+          sampleEmails: senders.slice(0, 5).map(s => s.senderEmail)
         });
         setSenderMap(new Map(senders.map(s => [s.senderEmail, convertToTableFormat(s)])));
       } else {
