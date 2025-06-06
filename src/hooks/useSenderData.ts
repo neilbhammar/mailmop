@@ -85,6 +85,7 @@ export function useSenderData() {
         // Only update if the sender is new or has changes
         if (!existing || 
             existing.count !== converted.count || 
+            existing.unread_count !== converted.unread_count ||
             existing.lastEmail !== converted.lastEmail ||
             existing.actionsTaken.length !== converted.actionsTaken.length) {
           newMap.set(sender.senderEmail, converted);

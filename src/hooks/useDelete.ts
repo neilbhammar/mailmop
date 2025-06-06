@@ -10,6 +10,7 @@
  * 4. Handle Google authentication checks and prompt for re-authentication if needed.
  * 5. Log deletion actions to local storage and Supabase.
  * 6. Support queue integration for centralized task management.
+ * 7. Update sender counts to 0 after successful deletion (similar to GitHub issue #41 for Mark as Read).
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,7 +28,7 @@ import { estimateRuntimeMs, formatDuration, OperationType, OperationMode } from 
 import { buildQuery, RuleGroup } from '@/lib/gmail/buildQuery';
 import { fetchMessageIds } from '@/lib/gmail/fetchMessageIds';
 import { batchDeleteMessages } from '@/lib/gmail/batchDeleteMessages'; // Our new helper
-import { markSenderActionTaken } from '@/lib/storage/senderAnalysis'; // Import the new function
+import { markSenderActionTaken, updateSenderAfterDeletion } from '@/lib/storage/senderAnalysis'; // Import the new function
 
 // --- Storage & Logging ---
 import { createActionLog, updateActionLog, completeActionLog } from '@/supabase/actions/logAction';
@@ -472,12 +473,18 @@ export function useDelete() {
             if (senderProcessedSuccessfully && !isCancelledRef.current && !cancellationRef.current && !(abortSignal?.aborted)) {
               try {
                 await markSenderActionTaken(sender.email, 'delete');
+                await updateSenderAfterDeletion(sender.email);
+                logger.debug('Updated sender counts to 0 after deletion', { 
+                  component: 'useDelete', 
+                  senderEmail: sender.email 
+                });
               } catch (markError) {
-                logger.error('Failed to mark action taken for sender', { 
+                logger.error('Failed to mark action taken or update counts for sender', { 
                   component: 'useDelete', 
                   senderEmail: sender.email, 
                   error: markError 
                 });
+                // Don't fail the entire operation for this, just log it
               }
             }
 

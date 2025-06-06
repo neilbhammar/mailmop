@@ -151,4 +151,142 @@ export async function markSenderActionTaken(
   } else {
     console.log(`[markSenderActionTaken] Action '${action}' already marked for sender: ${senderEmail}`);
   }
+}
+
+/**
+ * Updates the unread count for a specific sender to 0.
+ * Used after marking emails as read to reflect the change in the UI.
+ * 
+ * @param senderEmail The email address of the sender.
+ */
+export async function updateSenderUnreadCount(
+  senderEmail: string,
+  newUnreadCount: number = 0
+): Promise<void> {
+  const db = await getDB();
+  const sender = await db.get('senders', senderEmail);
+
+  if (!sender) {
+    console.warn(`[updateSenderUnreadCount] Sender not found: ${senderEmail}`);
+    return;
+  }
+
+  // Update the sender's unread count
+  const updatedSender: SenderResult = {
+    ...sender,
+    unread_count: newUnreadCount,
+  };
+
+  // Update the sender in the database
+  await db.put('senders', updatedSender);
+  console.log(`[updateSenderUnreadCount] Updated unread count to ${newUnreadCount} for sender: ${senderEmail}`);
+  
+  // Notify components that sender data has changed
+  notifyAnalysisChange(); 
+}
+
+/**
+ * Updates the unread count for multiple senders to 0.
+ * Used for batch operations like marking multiple senders as read.
+ * 
+ * @param senderEmails Array of sender email addresses to update.
+ */
+export async function updateMultipleSendersUnreadCount(
+  senderEmails: string[],
+  newUnreadCount: number = 0
+): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction('senders', 'readwrite');
+  
+  // Update each sender's unread count
+  await Promise.all(
+    senderEmails.map(async (senderEmail) => {
+      const sender = await tx.store.get(senderEmail);
+      
+      if (sender) {
+        const updatedSender: SenderResult = {
+          ...sender,
+          unread_count: newUnreadCount,
+        };
+        await tx.store.put(updatedSender);
+        console.log(`[updateMultipleSendersUnreadCount] Updated unread count to ${newUnreadCount} for sender: ${senderEmail}`);
+      } else {
+        console.warn(`[updateMultipleSendersUnreadCount] Sender not found: ${senderEmail}`);
+      }
+    })
+  );
+  
+  await tx.done;
+  
+  // Notify components that sender data has changed
+  notifyAnalysisChange(); 
+}
+
+/**
+ * Updates both the count and unread count for a specific sender to 0.
+ * Used after deleting all emails from a sender to reflect the change in the UI.
+ * 
+ * @param senderEmail The email address of the sender.
+ */
+export async function updateSenderAfterDeletion(
+  senderEmail: string
+): Promise<void> {
+  const db = await getDB();
+  const sender = await db.get('senders', senderEmail);
+
+  if (!sender) {
+    console.warn(`[updateSenderAfterDeletion] Sender not found: ${senderEmail}`);
+    return;
+  }
+
+  // Update the sender's count and unread count to 0
+  const updatedSender: SenderResult = {
+    ...sender,
+    count: 0,
+    unread_count: 0,
+  };
+
+  // Update the sender in the database
+  await db.put('senders', updatedSender);
+  console.log(`[updateSenderAfterDeletion] Updated count and unread_count to 0 for sender: ${senderEmail}`);
+  
+  // Notify components that sender data has changed
+  notifyAnalysisChange(); 
+}
+
+/**
+ * Updates both count and unread count for multiple senders to 0.
+ * Used for batch delete operations.
+ * 
+ * @param senderEmails Array of sender email addresses to update.
+ */
+export async function updateMultipleSendersAfterDeletion(
+  senderEmails: string[]
+): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction('senders', 'readwrite');
+  
+  // Update each sender's count and unread count
+  await Promise.all(
+    senderEmails.map(async (senderEmail) => {
+      const sender = await tx.store.get(senderEmail);
+      
+      if (sender) {
+        const updatedSender: SenderResult = {
+          ...sender,
+          count: 0,
+          unread_count: 0,
+        };
+        await tx.store.put(updatedSender);
+        console.log(`[updateMultipleSendersAfterDeletion] Updated count and unread_count to 0 for sender: ${senderEmail}`);
+      } else {
+        console.warn(`[updateMultipleSendersAfterDeletion] Sender not found: ${senderEmail}`);
+      }
+    })
+  );
+  
+  await tx.done;
+  
+  // Notify components that sender data has changed
+  notifyAnalysisChange(); 
 } 

@@ -206,10 +206,12 @@ const useFilteredSenders = (senders: Sender[], searchTerm: string, showUnreadOnl
  */
 const TruncatedCell = memo(({ 
   content,
-  className
+  className,
+  strikethrough = false
 }: { 
   content: string
   className?: string
+  strikethrough?: boolean
 }) => {
   const textRef = useRef<HTMLDivElement>(null)
   const [isTextTruncated, setIsTextTruncated] = useState(false)
@@ -246,7 +248,11 @@ const TruncatedCell = memo(({
   const innerContent = (
     <div 
       ref={textRef}
-      className={cn("truncate", className)}
+      className={cn(
+        "truncate", 
+        className,
+        strikethrough && "line-through opacity-60"
+      )}
     >
       {content}
     </div>
@@ -286,7 +292,13 @@ function formatDate(dateString: string) {
   });
 }
 
-const LastEmailCell = memo(({ date }: { date: string }) => {
+const LastEmailCell = memo(({ 
+  date, 
+  strikethrough = false 
+}: { 
+  date: string
+  strikethrough?: boolean
+}) => {
   const [relativeTime, setRelativeTime] = useState(() => formatRelativeTime(date));
 
   useEffect(() => {
@@ -303,7 +315,12 @@ const LastEmailCell = memo(({ date }: { date: string }) => {
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="text-slate-600 dark:text-slate-400 cursor-default">{relativeTime}</span>
+            <span className={cn(
+              "text-slate-600 dark:text-slate-400 cursor-default",
+              strikethrough && "line-through opacity-60"
+            )}>
+              {relativeTime}
+            </span>
           </TooltipTrigger>
           <Portal container={document.getElementById('tooltip-root')}>
             <TooltipContent side="top" sideOffset={4} className="z-[100] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
@@ -321,7 +338,7 @@ const LastEmailCell = memo(({ date }: { date: string }) => {
       </TooltipProvider>
     </div>
   );
-}, (prev, next) => prev.date === next.date);
+}, (prev, next) => prev.date === next.date && prev.strikethrough === next.strikethrough);
 
 /**
  * Wrapper for RowActions to ensure consistent layout and spacing
@@ -565,7 +582,11 @@ export function SenderTable({
         </button>
       ),
       cell: ({ row }) => (
-        <TruncatedCell content={row.getValue("name")} className="dark:text-slate-200" />
+        <TruncatedCell 
+          content={row.getValue("name")} 
+          className="dark:text-slate-200" 
+          strikethrough={row.original.count === 0}
+        />
       )
     },
     {
@@ -584,6 +605,7 @@ export function SenderTable({
         <TruncatedCell 
           content={row.getValue("email")} 
           className="text-slate-800 opacity-80 dark:text-slate-300 dark:opacity-70"
+          strikethrough={row.original.count === 0}
         />
       )
     },
@@ -600,7 +622,7 @@ export function SenderTable({
         </button>
       ),
       cell: ({ row }) => (
-        <LastEmailCell date={row.getValue("lastEmail")} />
+        <LastEmailCell date={row.getValue("lastEmail")} strikethrough={row.original.count === 0} />
       ),
       sortingFn: (rowA, rowB) => {
         // Convert date strings to Date objects for proper comparison
