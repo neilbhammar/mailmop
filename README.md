@@ -144,7 +144,6 @@ npm install
 3. Search Gmail API in the searchbar at the top, and enable it
 4. Create OAuth 2.0 credentials:
    - You will be using User Data, not Application Data
-   - TODO: What scopes should you pick?
    - Application type: Web application
    - Authorized redirect URIs: `http://localhost:3000/auth/callback`
    - Note your Client ID and Client Secret
