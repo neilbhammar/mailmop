@@ -246,8 +246,8 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
       />
       
       <div className="h-full w-full flex items-center">
-        {/* Left side - Visualization */}
-        <div className="hidden xl:flex xl:w-2/5 2xl:w-1/2 h-full bg-slate-50 dark:bg-slate-800/70 items-center justify-center p-4 xl:p-6">
+        {/* Left side - Animation/visualization */}
+        <div className="hidden xl:flex xl:w-2/5 2xl:w-1/2 h-full bg-slate-50 dark:bg-slate-800/70 items-center justify-center p-4 xl:p-6 relative">
           <div className="w-full max-w-lg flex flex-col">
             {/* Keep tab open notice - Made more prominent */}
             <motion.div 

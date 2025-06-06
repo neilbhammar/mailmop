@@ -403,26 +403,26 @@ export default function Home() {
                   backgroundSize: '20px 20px'
                 }}></div>
               </div>
-              {mounted && (
+              
+              {/* Light mode hero image */}
               <Image 
-                  src={resolvedTheme === 'dark' ? '/darkpreview.png' : '/app-preview.png'}
+                src="/app-preview.png"
                 alt="MailMop App Interface" 
                 width={1200} 
                 height={675} 
-                className="w-full h-auto relative z-10"
+                className="w-full h-auto relative z-10 block dark:hidden"
                 priority
               />
-              )}
-              {!mounted && (
-                <Image 
-                  src={'/app-preview.png'}
-                  alt="MailMop App Interface" 
-                  width={1200} 
-                  height={675} 
-                  className="w-full h-auto relative z-10"
-                  priority
-                />
-              )}
+              
+              {/* Dark mode hero image */}
+              <Image 
+                src="/darkpreview.png"
+                alt="MailMop App Interface" 
+                width={1200} 
+                height={675} 
+                className="w-full h-auto relative z-10 hidden dark:block"
+                priority
+              />
               
               {/* Shine effect */}
               <div className="absolute inset-0 bg-gradient-to-tr from-blue-400/5 via-transparent to-blue-400/5 pointer-events-none animate-shine-slow dark:from-blue-600/10 dark:to-blue-600/10"></div>
