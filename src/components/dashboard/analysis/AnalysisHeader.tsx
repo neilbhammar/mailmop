@@ -6,9 +6,9 @@ import { AnalysisTooltip } from "./AnalysisTooltip"
 import { BulkActionsBar } from "./BulkActionsBar"
 import { useSenderData } from '@/hooks/useSenderData'
 import { useExport } from '@/hooks/useExport'
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-import { Filter, Download, Mail } from 'lucide-react'
+import { Filter, Download, Mail, Link, Loader2 } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
@@ -28,6 +28,7 @@ interface AnalysisHeaderProps {
   onBlockSenders?: () => void
   onSearchChange?: (search: string) => void
   onToggleUnreadOnly?: (enabled: boolean) => void
+  onToggleHasUnsubscribe?: (enabled: boolean) => void
 }
 
 export function AnalysisHeader({
@@ -40,20 +41,33 @@ export function AnalysisHeader({
   onApplyLabel = () => console.log('Apply label bulk action'),
   onBlockSenders = () => console.log('Block senders bulk action'),
   onSearchChange = () => console.log('Search changed'),
-  onToggleUnreadOnly = () => console.log('Toggle unread only')
+  onToggleUnreadOnly = () => console.log('Toggle unread only'),
+  onToggleHasUnsubscribe = () => console.log('Toggle has unsubscribe')
 }: AnalysisHeaderProps) {
   const hasSelection = selectedCount > 0;
   const { senders, isLoading, isAnalyzing } = useSenderData();
   const { exportToCSV, isExporting, error } = useExport();
   const [searchTerm, setSearchTerm] = useState('');
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [showHasUnsubscribe, setShowHasUnsubscribe] = useState(false);
+  
+  // Loading states for filters
+  const [isUnreadFilterLoading, setIsUnreadFilterLoading] = useState(false);
+  const [isUnsubscribeFilterLoading, setIsUnsubscribeFilterLoading] = useState(false);
 
   // Calculate total emails from all senders
   const getTotals = useMemo(() => {
-    // First filter by unread if enabled
+    // Start with all senders
     let filteredSenders = senders;
+    
+    // First filter by unread if enabled
     if (showUnreadOnly) {
-      filteredSenders = senders.filter(sender => sender.unread_count > 0);
+      filteredSenders = filteredSenders.filter(sender => sender.unread_count > 0);
+    }
+
+    // Then filter by unsubscribe if enabled (AND operation)
+    if (showHasUnsubscribe) {
+      filteredSenders = filteredSenders.filter(sender => sender.hasUnsubscribe);
     }
 
     // Then apply search filter if present
@@ -81,7 +95,22 @@ export function AnalysisHeader({
       totalEmails: senders.reduce((sum, sender) => sum + sender.count, 0),
       totalSenders: senders.length
     };
-  }, [senders, searchTerm, showUnreadOnly]);
+  }, [senders, searchTerm, showUnreadOnly, showHasUnsubscribe]);
+
+  // Clear loading states when filtering is complete
+  useEffect(() => {
+    if (isUnreadFilterLoading) {
+      const timer = setTimeout(() => setIsUnreadFilterLoading(false), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [showUnreadOnly, isUnreadFilterLoading]);
+
+  useEffect(() => {
+    if (isUnsubscribeFilterLoading) {
+      const timer = setTimeout(() => setIsUnsubscribeFilterLoading(false), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [showHasUnsubscribe, isUnsubscribeFilterLoading]);
 
   // Get the status message
   const getStatusMessage = () => {
@@ -106,9 +135,34 @@ export function AnalysisHeader({
 
   // Handle unread only toggle
   const handleUnreadOnlyToggle = () => {
-    const newValue = !showUnreadOnly;
-    setShowUnreadOnly(newValue);
-    onToggleUnreadOnly(newValue);
+    // Set loading state immediately
+    setIsUnreadFilterLoading(true);
+    
+    // Use requestAnimationFrame to ensure spinner gets at least one frame to animate
+    // before the heavy filtering blocks the main thread
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const newValue = !showUnreadOnly;
+        setShowUnreadOnly(newValue);
+        onToggleUnreadOnly(newValue);
+      }, 0);
+    });
+  };
+
+  // Handle has unsubscribe toggle
+  const handleHasUnsubscribeToggle = () => {
+    // Set loading state immediately
+    setIsUnsubscribeFilterLoading(true);
+    
+    // Use requestAnimationFrame to ensure spinner gets at least one frame to animate
+    // before the heavy filtering blocks the main thread
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const newValue = !showHasUnsubscribe;
+        setShowHasUnsubscribe(newValue);
+        onToggleHasUnsubscribe(newValue);
+      }, 0);
+    });
   };
 
   return (
@@ -167,7 +221,7 @@ export function AnalysisHeader({
                   <Filter className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              {showUnreadOnly && (
+              {(showUnreadOnly || showHasUnsubscribe) && (
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white dark:border-slate-900"></div>
               )}
               <DropdownMenuContent align="end" className="w-[260px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg dark:shadow-slate-900/50 py-2">
@@ -183,12 +237,40 @@ export function AnalysisHeader({
                     <span className="text-sm text-slate-700 dark:text-slate-200">Unread Senders Only</span>
                   </div>
                   <span className={cn(
-                    "px-2 py-0.5 text-xs font-medium rounded-md",
+                    "px-2 py-0.5 text-xs font-medium rounded-md flex items-center justify-center min-w-[32px]",
                     showUnreadOnly 
                       ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300" 
                       : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
                   )}>
-                    {showUnreadOnly ? 'On' : 'Off'}
+                    {isUnreadFilterLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      showUnreadOnly ? 'On' : 'Off'
+                    )}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="flex items-center justify-between cursor-pointer px-3 py-2 text-sm text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70"
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    handleHasUnsubscribeToggle();
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Link className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-2" />
+                    <span className="text-sm text-slate-700 dark:text-slate-200">Has Unsubscribe</span>
+                  </div>
+                  <span className={cn(
+                    "px-2 py-0.5 text-xs font-medium rounded-md flex items-center justify-center min-w-[32px]",
+                    showHasUnsubscribe 
+                      ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300" 
+                      : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                  )}>
+                    {isUnsubscribeFilterLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      showHasUnsubscribe ? 'On' : 'Off'
+                    )}
                   </span>
                 </DropdownMenuItem>
                 <DropdownMenuItem 

@@ -6,18 +6,24 @@ import { useMemo } from 'react'
 interface AnalysisFooterProps {
   searchTerm?: string
   showUnreadOnly?: boolean
+  showHasUnsubscribe?: boolean
 }
 
-export function AnalysisFooter({ searchTerm = '', showUnreadOnly = false }: AnalysisFooterProps) {
+export function AnalysisFooter({ searchTerm = '', showUnreadOnly = false, showHasUnsubscribe = false }: AnalysisFooterProps) {
   const { senders, isLoading, isAnalyzing } = useSenderData()
 
-  // Filter senders based on search term and unread status
+  // Filter senders based on search term, unread status, and unsubscribe availability
   const filteredCount = useMemo(() => {
     let filtered = senders;
     
     // First apply unread filter if enabled
     if (showUnreadOnly) {
       filtered = filtered.filter(sender => sender.unread_count > 0);
+    }
+    
+    // Then apply unsubscribe filter if enabled (AND operation)
+    if (showHasUnsubscribe) {
+      filtered = filtered.filter(sender => sender.hasUnsubscribe);
     }
     
     // Then apply search term filter
@@ -38,13 +44,22 @@ export function AnalysisFooter({ searchTerm = '', showUnreadOnly = false }: Anal
     }
     
     return filtered.length;
-  }, [senders, searchTerm, showUnreadOnly]);
+  }, [senders, searchTerm, showUnreadOnly, showHasUnsubscribe]);
 
   // Handle different states with appropriate messages
   const getMessage = () => {
     if (isLoading) return "Loading senders..."
-    if (searchTerm || showUnreadOnly) {
-      const filterType = showUnreadOnly ? (searchTerm ? 'filtered' : 'unread') : 'matching';
+    if (searchTerm || showUnreadOnly || showHasUnsubscribe) {
+      let filterType = 'filtered';
+      if (!searchTerm) {
+        if (showUnreadOnly && showHasUnsubscribe) {
+          filterType = 'unread with unsubscribe';
+        } else if (showUnreadOnly) {
+          filterType = 'unread';
+        } else if (showHasUnsubscribe) {
+          filterType = 'with unsubscribe';
+        }
+      }
       return `Showing ${filteredCount.toLocaleString()} ${filterType} of ${senders.length.toLocaleString()} senders`;
     }
     return `Showing ${senders.length.toLocaleString()} senders`

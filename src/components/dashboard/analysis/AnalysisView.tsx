@@ -41,6 +41,7 @@ export default function AnalysisView() {
   const [selectedCount, setSelectedCount] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
   const [showUnreadOnly, setShowUnreadOnly] = useState(false)
+  const [showHasUnsubscribe, setShowHasUnsubscribe] = useState(false)
   const { progress } = useAnalysisOperations()
   const { viewMultipleSendersInGmail, viewSenderInGmail } = useViewInGmail()
   const { 
@@ -521,6 +522,7 @@ export default function AnalysisView() {
         onBlockSenders={handleBlockSenders}
         onSearchChange={setSearchTerm}
         onToggleUnreadOnly={setShowUnreadOnly}
+        onToggleHasUnsubscribe={setShowHasUnsubscribe}
       />
 
       {/* TABLE CONTAINER */}
@@ -530,6 +532,7 @@ export default function AnalysisView() {
             onSelectedCountChange={handleSelectedCountChange} 
             searchTerm={searchTerm}
             showUnreadOnly={showUnreadOnly}
+            showHasUnsubscribe={showHasUnsubscribe}
             onDeleteSingleSender={handleDeleteSingleSender}
             onDeleteWithExceptions={handleDeleteSingleSenderWithExceptions}
             onMarkSingleSenderRead={handleMarkSingleSenderRead}
@@ -543,6 +546,7 @@ export default function AnalysisView() {
       <AnalysisFooter 
         searchTerm={searchTerm} 
         showUnreadOnly={showUnreadOnly}
+        showHasUnsubscribe={showHasUnsubscribe}
       />
       
       {/* Delete Confirmation Modal (Local State) */}
