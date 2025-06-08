@@ -49,6 +49,10 @@ interface DeleteConfirmModalProps {
    * Optional function to handle delete with exceptions
    */
   onDeleteWithExceptions?: () => void
+  /**
+   * Optional callback when action is successfully confirmed (not cancelled)
+   */
+  onSuccess?: () => void
 }
 
 /**
@@ -67,7 +71,8 @@ export function DeleteConfirmModal({
   onConfirm, // Optional - for backward compatibility
   senders = [],
   emailCountMap = {},
-  onDeleteWithExceptions
+  onDeleteWithExceptions,
+  onSuccess
 }: DeleteConfirmModalProps) {
   // Track loading state during deletion process
   const [isDeleting, setIsDeleting] = useState(false)
@@ -85,6 +90,8 @@ export function DeleteConfirmModal({
       try {
         setIsDeleting(true)
         await onConfirm()
+        // Call success callback before closing modal
+        if (onSuccess) onSuccess();
         // Close modal after successful deletion
         onOpenChange(false)
       } catch (error) {
@@ -117,6 +124,8 @@ export function DeleteConfirmModal({
           initialEtaMs
         })
         
+        // Call success callback before closing modal
+        if (onSuccess) onSuccess();
         // Close modal immediately - user can track progress in ProcessQueue
         onOpenChange(false)
       } catch (error) {

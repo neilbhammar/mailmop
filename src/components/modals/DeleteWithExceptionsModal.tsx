@@ -104,6 +104,7 @@ interface DeleteWithExceptionsModalProps {
   onConfirm?: (ruleGroups: RuleGroup[]) => Promise<void>;
   senders?: string[];
   emailCountMap?: Record<string, number>;
+  onSuccess?: () => void;
 }
 
 // Helper to generate a new condition
@@ -202,7 +203,8 @@ export function DeleteWithExceptionsModal({
   senderCount,
   onConfirm,
   senders = [],
-  emailCountMap = {}
+  emailCountMap = {},
+  onSuccess
 }: DeleteWithExceptionsModalProps) {
   const { viewFilteredEmailsInGmail } = useViewInGmail();
   const { enqueue } = useQueue();
@@ -616,6 +618,8 @@ export function DeleteWithExceptionsModal({
           await onConfirm(validGroups);
         }
         
+        // Call success callback before closing modal
+        if (onSuccess) onSuccess();
         onOpenChange(false);
       } catch (error) {
         console.error("Error during deletion with exceptions:", error);
@@ -668,6 +672,8 @@ export function DeleteWithExceptionsModal({
           initialEtaMs
         });
         
+        // Call success callback before closing modal
+        if (onSuccess) onSuccess();
         // Close modal immediately - user can track progress in ProcessQueue
         onOpenChange(false);
       } catch (error) {

@@ -144,6 +144,8 @@ interface SenderTableProps {
     viewInGmail?: () => void;
     getSelectedEmails?: (emails: string[], emailCounts?: Record<string, number>) => void;
     applyLabelBulk?: () => void;
+    clearSelections?: () => void;
+    removeFromSelection?: (emails: string[]) => void;
   }
   /** Current search term for filtering senders */
   searchTerm?: string
@@ -527,6 +529,17 @@ export function SenderTable({
     setSelectedEmails(new Set())
     lastSelectedRef.current = null
   }, [])
+
+  /**
+   * Remove specific emails from selection
+   */
+  const removeFromSelection = useCallback((emailsToRemove: string[]) => {
+    setSelectedEmails(prev => {
+      const newSet = new Set(prev)
+      emailsToRemove.forEach(email => newSet.delete(email))
+      return newSet
+    })
+  }, [])
   
   /**
    * Handle checkbox click events
@@ -873,15 +886,17 @@ export function SenderTable({
   // Make handleBulkViewInGmail available to parent components
   useEffect(() => {
     if (onSelectedCountChange) {
-      // @ts-ignore - Adding a method to the component instance
+      // ✅ Fix: Proper type safety - interface already supports these methods
       onSelectedCountChange.viewInGmail = handleBulkViewInGmail;
+      onSelectedCountChange.clearSelections = clearSelections;
+      onSelectedCountChange.removeFromSelection = removeFromSelection;
       
       // Also provide the selected emails to the parent component
       if (typeof onSelectedCountChange.getSelectedEmails === 'function') {
         onSelectedCountChange.getSelectedEmails(Array.from(selectedEmails));
       }
     }
-  }, [onSelectedCountChange, handleBulkViewInGmail, selectedEmails]);
+  }, [onSelectedCountChange, handleBulkViewInGmail, clearSelections, removeFromSelection, selectedEmails]);
 
   // This effect will update the selected emails whenever they change
   useEffect(() => {
@@ -933,7 +948,7 @@ export function SenderTable({
         
       const totalEmailCount = selectedSendersData.reduce((sum, sender) => sum + sender.count, 0);
       
-      // @ts-ignore - Adding dynamic method
+      // ✅ Fix: Proper type safety - interface already supports this method
       onSelectedCountChange.applyLabelBulk = () => {
         if (selectedEmailsArray.length > 0) {
           handleOpenApplyLabelModal(selectedEmailsArray, totalEmailCount);
