@@ -35,12 +35,15 @@ interface SelectionCountHandler {
   applyLabelBulk?: () => void;
   applyLabelSingle?: (email: string) => void;
   unsubscribeSingleSender?: (email: string) => void;
+  clearSelections?: () => void;
+  removeFromSelection?: (emails: string[]) => void;
 }
 
 export default function AnalysisView() {
   const [selectedCount, setSelectedCount] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
   const [showUnreadOnly, setShowUnreadOnly] = useState(false)
+  const [showHasUnsubscribe, setShowHasUnsubscribe] = useState(false)
   const { progress } = useAnalysisOperations()
   const { viewMultipleSendersInGmail, viewSenderInGmail } = useViewInGmail()
   const { 
@@ -127,9 +130,13 @@ export default function AnalysisView() {
     methodDetails: UnsubscribeMethodDetails;
   } | null>(null);
 
-  // Add state for ApplyLabelModal
+    // Add state for ApplyLabelModal
   const [isApplyLabelModalOpen, setIsApplyLabelModalOpen] = useState(false);
   const [emailsToApplyLabelTo, setEmailsToApplyLabelTo] = useState<string[]>([]);
+
+  // Auto-clear timeout management - tracks pending clears for specific sender groups
+  const clearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSendersToRemoveRef = useRef<string[]>([]);
 
   // Calculate emailCount for ApplyLabelModal
   const emailCountForApplyLabel = useMemo(() => {
@@ -146,6 +153,79 @@ export default function AnalysisView() {
       tableActionsRef.current.viewInGmail = handleSelectedCountChange.viewInGmail;
     }
   }, []);
+
+
+
+  // Schedule simple auto-clear - clears current selection after 2s
+  const scheduleSmartAutoClear = useCallback(() => {
+    const currentSendersActedUpon = Array.from(selectedEmails).sort();
+    
+    // Store the current senders we're going to remove after 2s
+    pendingSendersToRemoveRef.current = currentSendersActedUpon;
+    
+    // Schedule the partial clear for the new action
+    clearTimeoutRef.current = setTimeout(() => {
+      // Use SenderTable's removeFromSelection to properly sync the UI
+      if (handleSelectedCountChange.removeFromSelection) {
+        handleSelectedCountChange.removeFromSelection(currentSendersActedUpon);
+      } else {
+        // Fallback to direct state update (shouldn't happen)
+        setSelectedEmails(currentSelection => {
+          const newSelection = new Set(currentSelection);
+          currentSendersActedUpon.forEach(sender => newSelection.delete(sender));
+          return newSelection;
+        });
+      }
+      
+      // Reset refs
+      clearTimeoutRef.current = null;
+      pendingSendersToRemoveRef.current = [];
+    }, 2000); // 2 seconds
+  }, [selectedEmails, handleSelectedCountChange]); // ✅ Fix: Added handleSelectedCountChange to dependencies
+
+  // ✅ Fix: Cleanup timeouts when component unmounts to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      // Clear any pending timeout when component unmounts
+      if (clearTimeoutRef.current) {
+        clearTimeout(clearTimeoutRef.current);
+        clearTimeoutRef.current = null;
+        pendingSendersToRemoveRef.current = [];
+      }
+    };
+  }, []); // Empty dependency array means this only runs on mount/unmount
+
+  // 🧠 Handle overlapping actions - clears senders that were pending but not in current selection
+  const handleOverlappingActions = useCallback(() => {
+    const currentSendersActedUpon = Array.from(selectedEmails).sort();
+    
+    // If there's a pending timeout, immediately clear senders that were pending but are NOT part of this new action
+    if (clearTimeoutRef.current && pendingSendersToRemoveRef.current.length > 0) {
+      const previouslyPendingSenders = pendingSendersToRemoveRef.current;
+      const sendersToRemoveNow = previouslyPendingSenders.filter(
+        sender => !currentSendersActedUpon.includes(sender)
+      );
+      
+      // Clear the old timeout
+      clearTimeout(clearTimeoutRef.current);
+      clearTimeoutRef.current = null;
+      pendingSendersToRemoveRef.current = [];
+      
+      // Immediately remove senders that were pending but not in new action
+      if (sendersToRemoveNow.length > 0) {
+        if (handleSelectedCountChange.removeFromSelection) {
+          handleSelectedCountChange.removeFromSelection(sendersToRemoveNow);
+        } else {
+          // Fallback to direct state update (shouldn't happen)
+          setSelectedEmails(currentSelection => {
+            const newSelection = new Set(currentSelection);
+            sendersToRemoveNow.forEach(sender => newSelection.delete(sender));
+            return newSelection;
+          });
+        }
+      }
+    }
+  }, [selectedEmails, handleSelectedCountChange]);
 
   // Update the effect that gets sender data
   useEffect(() => {
@@ -171,7 +251,7 @@ export default function AnalysisView() {
 
   // Set up a side effect to receive selected emails from the table
   useEffect(() => {
-    // @ts-ignore - Adding a method to the component instance
+    // ✅ Fix: Proper type safety - interface already supports this method
     handleSelectedCountChange.getSelectedEmails = (emails: string[], emailCounts?: Record<string, number>) => {
       setSelectedEmails(new Set(emails));
       
@@ -207,20 +287,31 @@ export default function AnalysisView() {
     viewMultipleSendersInGmail(Array.from(selectedEmails));
   }, [selectedEmails, viewMultipleSendersInGmail, activeSingleSender, viewSenderInGmail]);
 
+  // --- SMART AUTO-DESELECT STRATEGY (GitHub Issue #64) ---
+  // 🎯 CLEAR SELECTION 1.5 seconds after actions are CONFIRMED, BUT cancel if another action on same senders:
+  //    Delete, Delete with Exceptions, Mark as Read, Apply Label, Block Sender
+  // ❌ KEEP SELECTION for non-destructive actions: View in Gmail, Unsubscribe
+  // The smart logic prevents clearing if the user is still working with the same sender group,
+  // while still providing auto-clear to prevent accidental repeated actions
+
   // Handler to initiate the delete flow - uses checkFeatureAccess
   const handleDelete = useCallback(() => {
     if (selectedEmails.size === 0) {
       toast.warning('No senders selected');
       return;
     }
+    
+    // 🧠 SMART AUTO-CLEAR: Handle overlapping actions when opening modal
+    handleOverlappingActions();
+    
     // checkFeatureAccess will open the premium modal if needed and set internal state
     if (checkFeatureAccess('delete', selectedEmails.size)) {
-      // If access granted, proceed to open delete confirm modal
+      // Store emails for confirmation modal
       setEmailsToDelete(Array.from(selectedEmails));
       setIsDeleteModalOpen(true);
     }
     // No else needed, hook handles opening the premium modal
-  }, [selectedEmails, checkFeatureAccess]);
+  }, [selectedEmails, checkFeatureAccess, handleOverlappingActions]);
 
   // Handler for row-level delete action
   const handleDeleteSingleSender = useCallback((email: string, emailCount?: number) => {
@@ -248,15 +339,17 @@ export default function AnalysisView() {
       return;
     }
     
+    // 🧠 SMART AUTO-CLEAR: Handle overlapping actions when opening modal
+    handleOverlappingActions();
+    
     // Check if user has premium access first
     if (checkFeatureAccess('delete_with_exceptions', emailsToUse.length)) {
       // Set the emails to delete - similar to regular delete flow
       setEmailsToDelete(emailsToUse);
-      // Open the delete with exceptions modal
       setIsDeleteWithExceptionsModalOpen(true);
     }
     // If access check fails, the premium modal will be shown by the hook
-  }, [selectedEmails, emailsToDelete, checkFeatureAccess]);
+  }, [selectedEmails, emailsToDelete, checkFeatureAccess, handleOverlappingActions]);
 
   // Handler for mark as read functionality
   const handleMarkAllRead = useCallback(() => {
@@ -265,12 +358,15 @@ export default function AnalysisView() {
       return;
     }
 
+    // 🧠 SMART AUTO-CLEAR: Handle overlapping actions when opening modal
+    handleOverlappingActions();
+
     // Check premium access
     if (checkFeatureAccess('mark_read', selectedEmails.size)) {
       setEmailsToMark(Array.from(selectedEmails));
       setIsMarkAsReadModalOpen(true);
     }
-  }, [selectedEmails, checkFeatureAccess]);
+  }, [selectedEmails, checkFeatureAccess, handleOverlappingActions]);
 
   // Handler for single sender mark as read
   const handleMarkSingleSenderRead = useCallback((email: string, unreadCount?: number) => {
@@ -304,12 +400,16 @@ export default function AnalysisView() {
       toast.warning('No senders selected');
       return;
     }
+    
+    // 🧠 SMART AUTO-CLEAR: Handle overlapping actions when opening modal
+    handleOverlappingActions();
+    
     if (checkFeatureAccess('apply_label', selectedEmails.size)) {
       setEmailsToApplyLabelTo(Array.from(selectedEmails));
       setIsApplyLabelModalOpen(true);
     }
     // If not premium, hook handles PremiumFeatureModal. No activeSingleSender for bulk.
-  }, [selectedEmails, checkFeatureAccess, setIsApplyLabelModalOpen, setEmailsToApplyLabelTo]);
+  }, [selectedEmails, checkFeatureAccess, setIsApplyLabelModalOpen, setEmailsToApplyLabelTo, handleOverlappingActions]);
 
   // Handler for SINGLE Apply Label action (to be passed to SenderTable -> RowActions)
   const handleApplyLabelSingle = useCallback((email: string) => {
@@ -419,6 +519,10 @@ export default function AnalysisView() {
       toast.warning('No senders selected');
       return;
     }
+    
+    // 🧠 SMART AUTO-CLEAR: Handle overlapping actions when opening modal
+    handleOverlappingActions();
+    
     // Check for premium access before proceeding
     if (checkFeatureAccess('block_sender', selectedEmails.size)) {
       // Premium access granted, proceed to open block confirm modal
@@ -427,7 +531,7 @@ export default function AnalysisView() {
     }
     // If not premium, usePremiumFeature hook handles opening the PremiumFeatureModal
     // For bulk actions, we don't need to set activeSingleSender as viewInGmail will use selectedEmails
-  }, [selectedEmails, checkFeatureAccess, setEmailsToBlock, setIsBlockModalOpen]);
+  }, [selectedEmails, checkFeatureAccess, setEmailsToBlock, setIsBlockModalOpen, handleOverlappingActions]);
 
   const handleBlockConfirm = async () => {
     // The actual blocking is handled inside the modal
@@ -521,6 +625,7 @@ export default function AnalysisView() {
         onBlockSenders={handleBlockSenders}
         onSearchChange={setSearchTerm}
         onToggleUnreadOnly={setShowUnreadOnly}
+        onToggleHasUnsubscribe={setShowHasUnsubscribe}
       />
 
       {/* TABLE CONTAINER */}
@@ -530,6 +635,7 @@ export default function AnalysisView() {
             onSelectedCountChange={handleSelectedCountChange} 
             searchTerm={searchTerm}
             showUnreadOnly={showUnreadOnly}
+            showHasUnsubscribe={showHasUnsubscribe}
             onDeleteSingleSender={handleDeleteSingleSender}
             onDeleteWithExceptions={handleDeleteSingleSenderWithExceptions}
             onMarkSingleSenderRead={handleMarkSingleSenderRead}
@@ -543,6 +649,7 @@ export default function AnalysisView() {
       <AnalysisFooter 
         searchTerm={searchTerm} 
         showUnreadOnly={showUnreadOnly}
+        showHasUnsubscribe={showHasUnsubscribe}
       />
       
       {/* Delete Confirmation Modal (Local State) */}
@@ -554,6 +661,10 @@ export default function AnalysisView() {
         senders={emailsToDelete}
         emailCountMap={emailCountMap}
         onDeleteWithExceptions={handleDeleteWithExceptions}
+        onSuccess={() => {
+          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 1.5s
+          scheduleSmartAutoClear();
+        }}
       />
 
       {/* Delete With Exceptions Modal (Local State) */}
@@ -564,6 +675,10 @@ export default function AnalysisView() {
         senderCount={emailsToDelete.length}
         senders={emailsToDelete}
         emailCountMap={emailCountMap}
+        onSuccess={() => {
+          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 1.5s
+          scheduleSmartAutoClear();
+        }}
       />
 
       {/* Premium Feature Modal (State from Hook) */}
@@ -596,6 +711,10 @@ export default function AnalysisView() {
         senderCount={emailsToMark.length}
         senders={emailsToMark}
         unreadCountMap={unreadCountMap}
+        onSuccess={() => {
+          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 1.5s
+          scheduleSmartAutoClear();
+        }}
       />
 
       {/* Add Mark As Read Reauth Dialog */}
@@ -637,6 +756,10 @@ export default function AnalysisView() {
         onConfirm={handleBlockConfirm}
         senders={emailsToBlock}
         emailCountMap={emailCountMap}
+        onSuccess={() => {
+          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 1.5s
+          scheduleSmartAutoClear();
+        }}
       />
 
       {/* Apply Label Modal (State managed in AnalysisView) */}
@@ -647,6 +770,10 @@ export default function AnalysisView() {
         senderCount={emailsToApplyLabelTo.length}
         emailCount={emailCountForApplyLabel}
         emailCountMap={emailCountMap}
+        onSuccess={() => {
+          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 1.5s
+          scheduleSmartAutoClear();
+        }}
       />
     </div>
   )

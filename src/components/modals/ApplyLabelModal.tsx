@@ -105,7 +105,8 @@ export function ApplyLabelModal({
   senders = [],
   emailCountMap = {},
   onConfirm,
-}: ApplyLabelModalProps) {
+  onSuccess
+}: ApplyLabelModalProps & { onSuccess?: () => void }) {
   // Add hooks
   const { startModifyLabel, progress: modifyProgress } = useModifyLabel()
   const { enqueue } = useQueue()
@@ -286,6 +287,8 @@ export function ApplyLabelModal({
         }
       }
 
+      // Call success callback before closing modal
+      if (onSuccess) onSuccess();
       onOpenChange(false)
     } catch (error) {
       console.error("Error applying labels:", error)

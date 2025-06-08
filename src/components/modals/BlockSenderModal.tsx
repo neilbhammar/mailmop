@@ -60,8 +60,9 @@ export function BlockSenderModal({
   senderCount,
   senders = [],
   emailCountMap = {},
-  onConfirm
-}: BlockSenderModalProps) {
+  onConfirm,
+  onSuccess
+}: BlockSenderModalProps & { onSuccess?: () => void }) {
   // Track loading state during the blocking process
   const [isProcessing, setIsProcessing] = useState(false)
   
@@ -129,6 +130,8 @@ export function BlockSenderModal({
       // Call the onConfirm callback
       await onConfirm()
       
+      // Call success callback before closing modal
+      if (onSuccess) onSuccess();
       // Close modal after successful blocking
       onOpenChange(false)
     } catch (error) {

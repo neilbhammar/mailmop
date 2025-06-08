@@ -45,6 +45,10 @@ interface MarkAsReadConfirmModalProps {
    * Optional mapping of unread email counts per sender
    */
   unreadCountMap?: Record<string, number>
+  /**
+   * Optional callback when action is successfully confirmed (not cancelled)
+   */
+  onSuccess?: () => void
 }
 
 /**
@@ -63,6 +67,7 @@ export function MarkAsReadConfirmModal({
   onConfirm, // Optional - for backward compatibility
   senders = [],
   unreadCountMap = {},
+  onSuccess
 }: MarkAsReadConfirmModalProps) {
   // Track loading state during the operation
   const [isProcessing, setIsProcessing] = useState(false)
@@ -119,6 +124,8 @@ export function MarkAsReadConfirmModal({
         // Note: The actual completion toast will be shown by useMarkAsRead when the job finishes
       }
       
+      // Call success callback before closing modal
+      if (onSuccess) onSuccess();
       // Close the modal
       onOpenChange(false)
     } catch (error) {

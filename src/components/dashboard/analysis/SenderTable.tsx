@@ -144,11 +144,15 @@ interface SenderTableProps {
     viewInGmail?: () => void;
     getSelectedEmails?: (emails: string[], emailCounts?: Record<string, number>) => void;
     applyLabelBulk?: () => void;
+    clearSelections?: () => void;
+    removeFromSelection?: (emails: string[]) => void;
   }
   /** Current search term for filtering senders */
   searchTerm?: string
   /** Whether to show only unread senders */
   showUnreadOnly?: boolean
+  /** Whether to show only senders with unsubscribe options */
+  showHasUnsubscribe?: boolean
   /** Callback for single sender delete action */
   onDeleteSingleSender?: (email: string, count?: number) => void
   /** Callback for delete with exceptions action */
@@ -166,17 +170,23 @@ interface SenderTableProps {
 }
 
 /**
- * Filter senders based on search term and unread status
+ * Filter senders based on search term, unread status, and unsubscribe availability
  * Matches against name and email, case-insensitive
+ * Applies AND logic when multiple filters are enabled
  * Memoized for performance
  */
-const useFilteredSenders = (senders: Sender[], searchTerm: string, showUnreadOnly: boolean) => {
+const useFilteredSenders = (senders: Sender[], searchTerm: string, showUnreadOnly: boolean, showHasUnsubscribe: boolean) => {
   return useMemo(() => {
     let filtered = senders;
     
     // First apply unread filter if enabled
     if (showUnreadOnly) {
       filtered = filtered.filter(sender => sender.unread_count > 0);
+    }
+    
+    // Then apply unsubscribe filter if enabled (AND operation)
+    if (showHasUnsubscribe) {
+      filtered = filtered.filter(sender => sender.hasUnsubscribe);
     }
     
     // Then apply search term filter
@@ -197,7 +207,7 @@ const useFilteredSenders = (senders: Sender[], searchTerm: string, showUnreadOnl
     }
     
     return filtered;
-  }, [senders, searchTerm, showUnreadOnly]);
+  }, [senders, searchTerm, showUnreadOnly, showHasUnsubscribe]);
 };
 
 /**
@@ -399,6 +409,7 @@ export function SenderTable({
   onSelectedCountChange,
   searchTerm = '',
   showUnreadOnly = false,
+  showHasUnsubscribe = false,
   onDeleteSingleSender,
   onDeleteWithExceptions,
   onMarkSingleSenderRead,
@@ -408,7 +419,7 @@ export function SenderTable({
 }: SenderTableProps) {
   const { senders: allSenders, isLoading, isAnalyzing } = useSenderData();
   const { viewSenderInGmail, viewMultipleSendersInGmail } = useViewInGmail();
-  const senders = useFilteredSenders(allSenders, searchTerm, showUnreadOnly);
+  const senders = useFilteredSenders(allSenders, searchTerm, showUnreadOnly, showHasUnsubscribe);
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'count', desc: true }
   ]);
@@ -517,6 +528,17 @@ export function SenderTable({
   const clearSelections = useCallback(() => {
     setSelectedEmails(new Set())
     lastSelectedRef.current = null
+  }, [])
+
+  /**
+   * Remove specific emails from selection
+   */
+  const removeFromSelection = useCallback((emailsToRemove: string[]) => {
+    setSelectedEmails(prev => {
+      const newSet = new Set(prev)
+      emailsToRemove.forEach(email => newSet.delete(email))
+      return newSet
+    })
   }, [])
   
   /**
@@ -864,15 +886,17 @@ export function SenderTable({
   // Make handleBulkViewInGmail available to parent components
   useEffect(() => {
     if (onSelectedCountChange) {
-      // @ts-ignore - Adding a method to the component instance
+      // ✅ Fix: Proper type safety - interface already supports these methods
       onSelectedCountChange.viewInGmail = handleBulkViewInGmail;
+      onSelectedCountChange.clearSelections = clearSelections;
+      onSelectedCountChange.removeFromSelection = removeFromSelection;
       
       // Also provide the selected emails to the parent component
       if (typeof onSelectedCountChange.getSelectedEmails === 'function') {
         onSelectedCountChange.getSelectedEmails(Array.from(selectedEmails));
       }
     }
-  }, [onSelectedCountChange, handleBulkViewInGmail, selectedEmails]);
+  }, [onSelectedCountChange, handleBulkViewInGmail, clearSelections, removeFromSelection, selectedEmails]);
 
   // This effect will update the selected emails whenever they change
   useEffect(() => {
@@ -924,7 +948,7 @@ export function SenderTable({
         
       const totalEmailCount = selectedSendersData.reduce((sum, sender) => sum + sender.count, 0);
       
-      // @ts-ignore - Adding dynamic method
+      // ✅ Fix: Proper type safety - interface already supports this method
       onSelectedCountChange.applyLabelBulk = () => {
         if (selectedEmailsArray.length > 0) {
           handleOpenApplyLabelModal(selectedEmailsArray, totalEmailCount);
