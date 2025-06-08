@@ -8,7 +8,7 @@ import { useSenderData } from '@/hooks/useSenderData'
 import { useExport } from '@/hooks/useExport'
 import { useState, useCallback, useMemo } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-import { MoreHorizontal, Download, Mail } from 'lucide-react'
+import { Filter, Download, Mail } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
@@ -164,7 +164,7 @@ export function AnalysisHeader({
                   size="icon"
                   className="h-9 w-9 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
                 >
-                  <MoreHorizontal className="h-4 w-4" />
+                  <Filter className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               {showUnreadOnly && (
