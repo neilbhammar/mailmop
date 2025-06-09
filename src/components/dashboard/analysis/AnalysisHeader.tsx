@@ -29,6 +29,9 @@ interface AnalysisHeaderProps {
   onSearchChange?: (search: string) => void
   onToggleUnreadOnly?: (enabled: boolean) => void
   onToggleHasUnsubscribe?: (enabled: boolean) => void
+  // Add current state props for proper display
+  showUnreadOnly?: boolean
+  showHasUnsubscribe?: boolean
 }
 
 export function AnalysisHeader({
@@ -42,14 +45,15 @@ export function AnalysisHeader({
   onBlockSenders = () => console.log('Block senders bulk action'),
   onSearchChange = () => console.log('Search changed'),
   onToggleUnreadOnly = () => console.log('Toggle unread only'),
-  onToggleHasUnsubscribe = () => console.log('Toggle has unsubscribe')
+  onToggleHasUnsubscribe = () => console.log('Toggle has unsubscribe'),
+  // Use props for current state instead of local state
+  showUnreadOnly = false,
+  showHasUnsubscribe = false
 }: AnalysisHeaderProps) {
   const hasSelection = selectedCount > 0;
   const { senders, isLoading, isAnalyzing } = useSenderData();
   const { exportToCSV, isExporting, error } = useExport();
   const [searchTerm, setSearchTerm] = useState('');
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
-  const [showHasUnsubscribe, setShowHasUnsubscribe] = useState(false);
   
   // Loading states for filters
   const [isUnreadFilterLoading, setIsUnreadFilterLoading] = useState(false);
@@ -143,7 +147,6 @@ export function AnalysisHeader({
     requestAnimationFrame(() => {
       setTimeout(() => {
         const newValue = !showUnreadOnly;
-        setShowUnreadOnly(newValue);
         onToggleUnreadOnly(newValue);
       }, 0);
     });
@@ -159,7 +162,6 @@ export function AnalysisHeader({
     requestAnimationFrame(() => {
       setTimeout(() => {
         const newValue = !showHasUnsubscribe;
-        setShowHasUnsubscribe(newValue);
         onToggleHasUnsubscribe(newValue);
       }, 0);
     });

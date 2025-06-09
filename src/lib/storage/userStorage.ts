@@ -1,4 +1,5 @@
 import { clearSenderAnalysis } from "./senderAnalysis";
+import { clearStoredViewState } from "@/hooks/useViewState";
 import { logger } from '@/lib/utils/logger';
 
 // Constants for localStorage keys
@@ -18,6 +19,9 @@ export async function clearAllUserData() {
   
   // Clear IndexedDB data
   await clearSenderAnalysis();
+  
+  // Clear view state (redundant after localStorage.clear(), but explicit for clarity)
+  clearStoredViewState();
 
   // Attempt to clear the HttpOnly session cookie by calling the revoke endpoint
   try {

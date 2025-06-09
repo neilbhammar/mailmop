@@ -25,6 +25,7 @@ import { ConfirmUnsubscribeModal } from '@/components/modals/ConfirmUnsubscribeM
 import { ApplyLabelModal } from "@/components/modals/ApplyLabelModal"
 import { useCreateFilter } from '@/hooks/useCreateFilter'
 import { getSenderByEmail } from '@/lib/storage/senderAnalysis'
+import { useViewState } from '@/hooks/useViewState'
 
 // Create a custom type for the selection count change handler
 // that includes our viewInGmail extension
@@ -42,8 +43,15 @@ interface SelectionCountHandler {
 export default function AnalysisView() {
   const [selectedCount, setSelectedCount] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false)
-  const [showHasUnsubscribe, setShowHasUnsubscribe] = useState(false)
+  
+  // Use persistent view state hook instead of local state
+  const { 
+    showUnreadOnly, 
+    showHasUnsubscribe, 
+    setShowUnreadOnly, 
+    setShowHasUnsubscribe,
+    isLoaded: viewStateLoaded 
+  } = useViewState()
   const { progress } = useAnalysisOperations()
   const { viewMultipleSendersInGmail, viewSenderInGmail } = useViewInGmail()
   const { 
@@ -600,13 +608,15 @@ export default function AnalysisView() {
     }
   }, [checkFeatureAccess, emailCountMap]);
 
-  // Show loading state if we're still preparing
-  if (progress.status === 'preparing') {
+  // Show loading state if we're still preparing or loading view state
+  if (progress.status === 'preparing' || !viewStateLoaded) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="text-sm text-gray-600">Preparing analysis...</p>
+          <p className="text-sm text-gray-600">
+            {progress.status === 'preparing' ? 'Preparing analysis...' : 'Loading preferences...'}
+          </p>
         </div>
       </div>
     );
@@ -626,6 +636,8 @@ export default function AnalysisView() {
         onSearchChange={setSearchTerm}
         onToggleUnreadOnly={setShowUnreadOnly}
         onToggleHasUnsubscribe={setShowHasUnsubscribe}
+        showUnreadOnly={showUnreadOnly}
+        showHasUnsubscribe={showHasUnsubscribe}
       />
 
       {/* TABLE CONTAINER */}
