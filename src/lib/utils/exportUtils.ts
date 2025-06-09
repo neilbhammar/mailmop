@@ -43,14 +43,22 @@ export function generateCSV(senders: TableSender[]): string {
   ];
 
   // Create CSV rows
-  const rows = senders.map(sender => [
-    escapeCSVField(sender.name),
-    escapeCSVField(sender.email),
-    escapeCSVField(formatDate(sender.lastEmail)),
-    escapeCSVField(sender.count),
-    escapeCSVField(sender.hasUnsubscribe ? 'Yes' : 'No'),
-    escapeCSVField(sender.unsubscribe?.url || '')
-  ]);
+  const rows = senders.map(sender => {
+    // Use enriched URL if available, otherwise fall back to header URL
+    const unsubscribeUrl = sender.unsubscribe?.enrichedUrl || 
+                          sender.unsubscribe?.url || 
+                          sender.unsubscribe?.mailto || 
+                          '';
+    
+    return [
+      escapeCSVField(sender.name),
+      escapeCSVField(sender.email),
+      escapeCSVField(formatDate(sender.lastEmail)),
+      escapeCSVField(sender.count),
+      escapeCSVField(sender.hasUnsubscribe ? 'Yes' : 'No'),
+      escapeCSVField(unsubscribeUrl)
+    ];
+  });
 
   // Combine headers and rows
   return [

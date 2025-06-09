@@ -4,7 +4,7 @@ import { ActionType } from '@/types/actions';
 
 // Database name and version
 const DB_NAME = 'mailmop';
-const DB_VERSION = 2;
+const DB_VERSION = 3; // Incremented for enrichment fields support
 
 // Custom event for state changes
 export const ANALYSIS_CHANGE_EVENT = 'mailmop:analysis-change';
