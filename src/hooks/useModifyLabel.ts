@@ -32,6 +32,7 @@ import {
   clearCurrentActionLog,
 } from '@/lib/storage/actionLog';
 import { logger } from '@/lib/utils/logger';
+import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
 
 // --- Types ---
 import { ActionEndType } from '@/types/actions';
@@ -500,6 +501,8 @@ export function useModifyLabel() {
           toast.success('Label Modification Complete', {
             description: `Successfully ${action} ${totalProcessed.toLocaleString()} emails from ${options.senders.length} sender(s).`
           });
+          // Refresh all stats after successful label modification
+          await refreshStatsAfterAction('modify_label');
         } else if (endType === 'user_stopped') {
           toast.info('Operation Cancelled', {
             description: `Stopped after processing ${totalProcessed.toLocaleString()} emails.`

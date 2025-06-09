@@ -4,15 +4,13 @@ import { getAllSenders, ANALYSIS_CHANGE_EVENT } from '@/lib/storage/senderAnalys
 import { useAnalysis } from '@/context/AnalysisProvider';
 import { logger } from '@/lib/utils/logger';
 
-// Valid action types
-type ActionType = "delete" | "unsubscribe" | "markUnread" | "block";
+// Valid action types - using the full ActionType from actions module
+import { ActionType } from '@/types/actions';
 
 // Convert SenderResult to table-friendly format
 function convertToTableFormat(sender: SenderResult) {
-  // Filter actionsTaken to only include valid action types
-  const validActions = (sender.actionsTaken || []).filter((action): action is ActionType => {
-    return ['delete', 'unsubscribe', 'markUnread', 'block'].includes(action);
-  });
+  // Keep all actions without filtering - the actions types handle this
+  const validActions = sender.actionsTaken || [];
 
   return {
     email: sender.senderEmail,

@@ -23,6 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { AlertTriangle } from "lucide-react"
 import styles from './SenderTable.module.css'
 import { formatRelativeTime } from '@/lib/utils/formatRelativeTime'
 import { Portal } from "@radix-ui/react-portal"
@@ -666,13 +667,33 @@ export function SenderTable({
           </span>
         </button>
       ),
-      cell: ({ row }) => (
-        <div className="truncate text-right pr-2">
-          <span className="text-blue-700 dark:text-blue-400">
-            {showUnreadOnly ? row.original.unread_count : row.getValue("count")}
-          </span>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const sender = row.original;
+        const hasDeleteWithExceptions = sender.actionsTaken?.includes('delete_with_exceptions') || false;
+        const countValue = showUnreadOnly ? sender.unread_count : (row.getValue("count") as number);
+        
+        return (
+          <div className="truncate text-right pr-2">
+            <span className="text-blue-700 dark:text-blue-400 inline-flex items-center gap-1">
+              {hasDeleteWithExceptions && showUnreadOnly && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                    </TooltipTrigger>
+                    <Portal container={document.getElementById('tooltip-root')}>
+                      <TooltipContent side="top" sideOffset={4} className="z-[100] max-w-xs">
+                        <p>Estimate after partial deletion. May be inaccurate.</p>
+                      </TooltipContent>
+                    </Portal>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {countValue}
+            </span>
+          </div>
+        );
+      },
       sortingFn: (rowA, rowB) => {
         const a = showUnreadOnly ? 
           Number(rowA.original.unread_count) : 

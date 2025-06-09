@@ -41,6 +41,7 @@ import {
 } from '@/lib/storage/actionLog';
 import { updateSenderUnreadCount } from '@/lib/storage/senderAnalysis';
 import { logger } from '@/lib/utils/logger';
+import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
 
 // --- Types ---
 import { ActionEndType } from '@/types/actions';
@@ -556,6 +557,8 @@ export function useMarkAsRead() {
           toast.success('Mark as Read Complete', {
             description: `Successfully marked ${totalMarkedAsRead.toLocaleString()} emails as read from ${senders.length} sender(s).`
           });
+          // Refresh all stats after successful mark as read
+          await refreshStatsAfterAction('mark_as_read');
         } else if (endType === 'user_stopped') {
           toast.info('Operation Cancelled', {
             description: `Stopped after marking ${totalMarkedAsRead.toLocaleString()} emails as read.`

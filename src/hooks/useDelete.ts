@@ -29,6 +29,7 @@ import { buildQuery, RuleGroup } from '@/lib/gmail/buildQuery';
 import { fetchMessageIds } from '@/lib/gmail/fetchMessageIds';
 import { batchDeleteMessages } from '@/lib/gmail/batchDeleteMessages'; // Our new helper
 import { markSenderActionTaken, updateSenderAfterDeletion } from '@/lib/storage/senderAnalysis'; // Import the new function
+import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
 
 // --- Storage & Logging ---
 import { createActionLog, updateActionLog, completeActionLog } from '@/supabase/actions/logAction';
@@ -516,6 +517,8 @@ export function useDelete() {
 
           if (endType === 'success') {
             toast.success('Deletion Complete', { description: `Successfully deleted ${totalSuccessfullyDeleted.toLocaleString()} emails from ${senders.length} sender(s).` });
+            // Refresh all stats after successful deletion
+            await refreshStatsAfterAction('delete');
           } else if (endType === 'user_stopped') {
             toast.info('Deletion Cancelled', { description: `Deletion stopped after ${totalSuccessfullyDeleted.toLocaleString()} emails.` });
           } // Errors already toasted
