@@ -192,28 +192,19 @@ export function useUnsubscribe() {
           windowOpened: newWindow !== null
         });
         
+        // Show a single informative toast about which type of link is being opened
+        if (wasEnriched) {
+          toast.info(`Opening enriched unsubscribe link for ${params.senderEmail}`);
+        } else {
+          toast.info(`Opening header unsubscribe link for ${params.senderEmail}`);
+        }
+        
         if (newWindow === null) {
-            logger.debug('Pop-up blocked, showing warning', { component: 'useUnsubscribe' });
-            
-            // Show appropriate message even when popup is blocked
-            if (wasEnriched) {
-              toast.warning(`Pop-up blocked! Attempted to open enriched unsubscribe link for ${params.senderEmail}`);
-            } else {
-              toast.warning(`Pop-up blocked! Attempted to open header unsubscribe link for ${params.senderEmail}`);
-            }
-            
+            logger.debug('Pop-up blocked, popup blocked but operation succeeded', { component: 'useUnsubscribe' });
             actionEndType = 'success';
             success = true; 
         } else {
             logger.debug('URL opened successfully', { component: 'useUnsubscribe' });
-            
-            // Show appropriate success message based on method used
-            if (wasEnriched) {
-              toast.success(`✅ Opened enriched unsubscribe link for ${params.senderEmail}`);
-            } else {
-              toast.success(`⚠️ Opened header unsubscribe link for ${params.senderEmail}`);
-            }
-            
             actionEndType = 'success';
             success = true;
         }
@@ -242,7 +233,6 @@ export function useUnsubscribe() {
         }
 
         if (finalMethodDetails.requiresPost) {
-          toast.info(`One-click unsubscribe for ${params.senderEmail} (mailto with POST) is not yet implemented. Opening mailto link as a fallback.`);
           window.location.href = finalMethodDetails.value; 
           actionEndType = 'success'; 
           success = true; 
@@ -278,7 +268,6 @@ export function useUnsubscribe() {
             return { success: false, error: 'Operation cancelled by user' };
           }
           
-          toast.success(`📧 Attempting to unsubscribe from ${params.senderEmail} using email method`);
           actionEndType = 'success';
           success = true;
         }

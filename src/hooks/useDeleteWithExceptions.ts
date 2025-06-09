@@ -441,7 +441,13 @@ export function useDeleteWithExceptions() {
           });
 
           if (endType === 'success') {
-            toast.success('Filtered Deletion Complete', { description: `Successfully deleted ${totalSuccessfullyDeleted.toLocaleString()} matching emails from ${senders.length} sender(s).` });
+            if (totalSuccessfullyDeleted === 0) {
+              toast.info('No Emails Deleted', { 
+                description: `No emails found that match your criteria. All emails from ${senders.length} sender(s) remain in your inbox.` 
+              });
+            } else {
+              toast.success('Filtered Deletion Complete', { description: `Successfully deleted ${totalSuccessfullyDeleted.toLocaleString()} matching emails from ${senders.length} sender(s).` });
+            }
             // Refresh all stats after successful deletion with exceptions
             await refreshStatsAfterAction('delete_with_exceptions');
           } else if (endType === 'user_stopped') {

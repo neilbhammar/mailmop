@@ -26,7 +26,7 @@ export function useActionStats(userId?: string) {
       const actionStats = await getActionStats(userId);
       setStats({
         analyzed: actionStats.analysis || 0,
-        deleted: actionStats.delete || 0,
+        deleted: (actionStats.delete || 0) + (actionStats.delete_with_exceptions || 0),
         modified: (actionStats.mark_as_read || 0) + 
                  (actionStats.unsubscribe || 0) + 
                  (actionStats.modify_label || 0) + 

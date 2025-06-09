@@ -94,6 +94,8 @@ export interface SenderSummary {
 export interface SenderResult {
   senderEmail: string;
   senderName: string;
+  // Optional array to store all names used by this sender (for Option 1 tooltip)
+  senderNames?: string[];
   count: number;
   unread_count: number;
   lastDate: string;
