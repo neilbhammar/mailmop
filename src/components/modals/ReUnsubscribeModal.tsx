@@ -71,6 +71,7 @@ export function ReUnsubscribeModal({
     try {
       // Try enrichment first if we have messageId
       let urlToOpen = null;
+      let wasEnriched = false;
       
       if (messageId) {
         try {
@@ -79,7 +80,7 @@ export function ReUnsubscribeModal({
           
           if (enrichmentResult.enrichedUrl) {
             urlToOpen = enrichmentResult.enrichedUrl;
-            toast.info(`Opening enriched unsubscribe link for ${senderEmail}`);
+            wasEnriched = true;
           }
         } catch (enrichmentError) {
           logger.debug('Enrichment failed, using fallback', { error: enrichmentError });
@@ -91,15 +92,19 @@ export function ReUnsubscribeModal({
         const method = getUnsubscribeMethod(senderData.unsubscribe);
         if (method?.type === 'url') {
           urlToOpen = method.value;
-          toast.info(`Opening unsubscribe link for ${senderEmail}`);
+          wasEnriched = false;
         }
       }
 
       if (urlToOpen) {
-        const newWindow = window.open(urlToOpen, "_blank", "noopener,noreferrer");
-        if (!newWindow) {
-          toast.warning(`Pop-up blocked! Attempted to open unsubscribe link for ${senderEmail}`);
+        // Show informative toast about which type of link is being opened
+        if (wasEnriched) {
+          toast.info(`Opening enriched unsubscribe link for ${senderEmail}`);
+        } else {
+          toast.info(`Opening header unsubscribe link for ${senderEmail}`);
         }
+        
+        const newWindow = window.open(urlToOpen, "_blank", "noopener,noreferrer");
         onOpenChange(false);
       } else {
         toast.error("No URL unsubscribe method available");

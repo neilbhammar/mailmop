@@ -15,6 +15,9 @@ function convertToTableFormat(sender: SenderResult) {
   return {
     email: sender.senderEmail,
     name: sender.senderName,
+    // Include multiple names for tooltip (Option 1 implementation)
+    allNames: sender.senderNames,
+    hasMultipleNames: !!(sender.senderNames && sender.senderNames.length > 0),
     count: sender.count,
     unread_count: sender.unread_count,
     lastEmail: sender.lastDate,
@@ -30,6 +33,9 @@ function convertToTableFormat(sender: SenderResult) {
 export interface Sender {
   email: string;
   name: string;
+  // Multiple names support for Option 1
+  allNames?: string[];
+  hasMultipleNames: boolean;
   count: number;
   unread_count: number;
   lastEmail: string;
@@ -91,7 +97,9 @@ export function useSenderData() {
             existing.count !== converted.count || 
             existing.unread_count !== converted.unread_count ||
             existing.lastEmail !== converted.lastEmail ||
-            existing.actionsTaken.length !== converted.actionsTaken.length) {
+            existing.actionsTaken.length !== converted.actionsTaken.length ||
+            existing.name !== converted.name ||
+            existing.hasMultipleNames !== converted.hasMultipleNames) {
           newMap.set(sender.senderEmail, converted);
           hasChanges = true;
         }

@@ -12,7 +12,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
-import { MinusSquare, ArrowUpDown } from "lucide-react"
+import { MinusSquare, ArrowUpDown, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSenderData, TableSender } from '@/hooks/useSenderData'
 import { RowActions } from "./RowActions"
@@ -210,6 +210,79 @@ const useFilteredSenders = (senders: Sender[], searchTerm: string, showUnreadOnl
     return filtered;
   }, [senders, searchTerm, showUnreadOnly, showHasUnsubscribe]);
 };
+
+/**
+ * SenderNameCell - Component for displaying sender names with multiple names support
+ * Shows a small up arrow icon for senders with multiple names and displays all names in tooltip
+ * When multiple names exist, hovering anywhere over the name area shows the "all names" tooltip
+ */
+const SenderNameCell = memo(({ 
+  name,
+  allNames,
+  hasMultipleNames,
+  className,
+  strikethrough = false
+}: { 
+  name: string
+  allNames?: string[]
+  hasMultipleNames: boolean
+  className?: string
+  strikethrough?: boolean
+}) => {
+  if (!hasMultipleNames || !allNames || allNames.length === 0) {
+    // No multiple names - use the standard truncated cell
+    return (
+      <TruncatedCell 
+        content={name} 
+        className={className} 
+        strikethrough={strikethrough}
+      />
+    );
+  }
+
+  // Has multiple names - wrap entire name area with "all names" tooltip
+  return (
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1 w-full">
+            {/* Use a simple div instead of TruncatedCell to avoid nested tooltips */}
+            <div 
+              className={cn(
+                "truncate flex-1", 
+                className,
+                strikethrough && "line-through opacity-60"
+              )}
+            >
+              {name}
+            </div>
+            <ChevronsUpDown className="h-3 w-3 text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100 flex-shrink-0" />
+          </div>
+        </TooltipTrigger>
+        <Portal container={document.getElementById('tooltip-root')}>
+          <TooltipContent 
+            side="top" 
+            className="max-w-[300px] z-[100] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700"
+          >
+            <div className="space-y-1">
+              <div className="font-medium text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                All names used by this sender:
+              </div>
+              {/* Show current display name first */}
+              <div className="text-sm font-medium">{name}</div>
+              {/* Show other names */}
+              {allNames.filter(n => n !== name).map((senderName, index) => (
+                <div key={index} className="text-sm text-slate-600 dark:text-slate-300">
+                  {senderName}
+                </div>
+              ))}
+            </div>
+          </TooltipContent>
+        </Portal>
+      </Tooltip>
+    </TooltipProvider>
+  );
+});
 
 /**
  * TruncatedCell - A reusable component for handling text truncation with tooltips
@@ -610,8 +683,10 @@ export function SenderTable({
         </button>
       ),
       cell: ({ row }) => (
-        <TruncatedCell 
-          content={row.getValue("name")} 
+        <SenderNameCell 
+          name={row.getValue("name")} 
+          allNames={row.original.allNames}
+          hasMultipleNames={row.original.hasMultipleNames}
           className="dark:text-slate-200" 
           strikethrough={row.original.count === 0}
         />

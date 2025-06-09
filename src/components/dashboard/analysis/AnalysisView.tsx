@@ -451,6 +451,9 @@ export default function AnalysisView() {
             sender = {
               email: senderFromDB.senderEmail,
               name: senderFromDB.senderName,
+              // Include multiple names support for Option 1
+              allNames: senderFromDB.senderNames,
+              hasMultipleNames: !!(senderFromDB.senderNames && senderFromDB.senderNames.length > 0),
               count: senderFromDB.count,
               unread_count: senderFromDB.unread_count,
               lastEmail: senderFromDB.lastDate,

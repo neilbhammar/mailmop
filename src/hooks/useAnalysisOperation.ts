@@ -431,6 +431,27 @@ export function useAnalysisOperations() {
               if (sender.isUnread) existing.unread_count++;
               if (!sender.isDateFromFallback && new Date(sender.date) > new Date(existing.lastDate)) {
                 existing.lastDate = sender.date;
+                // Update to most recent name when date is newer (Option 1: Most Recent Name)
+                if (sender.name && sender.name !== existing.senderName) {
+                  // Initialize senderNames array if not exists, preserving previous display name
+                  if (!existing.senderNames) {
+                    existing.senderNames = [existing.senderName];
+                  }
+                  // Add new name if not already in the list (efficient check)
+                  if (!existing.senderNames.includes(sender.name)) {
+                    existing.senderNames.push(sender.name);
+                  }
+                  // Update display name to most recent
+                  existing.senderName = sender.name;
+                }
+              } else if (sender.name && sender.name !== existing.senderName) {
+                // Even if date is not newer, track the name variation
+                if (!existing.senderNames) {
+                  existing.senderNames = [existing.senderName];
+                }
+                if (!existing.senderNames.includes(sender.name)) {
+                  existing.senderNames.push(sender.name);
+                }
               }
               existing.hasUnsubscribe = existing.hasUnsubscribe || sender.hasUnsubscribe;
               if (sender.unsubscribe) {
@@ -452,6 +473,7 @@ export function useAnalysisOperations() {
               senderMap.set(sender.email, {
                 senderEmail: sender.email,
                 senderName: sender.name,
+                // No need to initialize senderNames for new senders - only when variations are found
                 count: 1,
                 unread_count: sender.isUnread ? 1 : 0,
                 lastDate: sender.isDateFromFallback ? '' : sender.date,
