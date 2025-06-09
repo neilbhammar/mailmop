@@ -167,7 +167,7 @@ interface SenderTableProps {
   /** Callback for blocking a single sender */
   onBlockSingleSender: (email: string) => void
   /** Callback for unsubscribing from a single sender */
-  onUnsubscribeSingleSender?: (email: string) => void
+  onUnsubscribeSingleSender?: (email: string, isReUnsubscribe?: boolean) => void
 }
 
 /**
@@ -371,7 +371,7 @@ const ActionWrapper = memo(({
   onMarkSingleSenderRead?: (email: string, unreadCount?: number) => void,
   onApplyLabelSingle?: (email: string) => void,
   onBlockSingleSender: (email: string) => void,
-  onUnsubscribeSingleSender?: (email: string) => void
+  onUnsubscribeSingleSender?: (email: string, isReUnsubscribe?: boolean) => void
 }) => {
   const { viewSenderInGmail } = useViewInGmail();
   
@@ -383,6 +383,11 @@ const ActionWrapper = memo(({
         onUnsubscribe={(email) => 
           onUnsubscribeSingleSender 
             ? onUnsubscribeSingleSender(email) 
+            : console.warn('onUnsubscribeSingleSender not provided to ActionWrapper')
+        }
+        onReUnsubscribe={(email) => 
+          onUnsubscribeSingleSender 
+            ? onUnsubscribeSingleSender(email, true) // Pass true to indicate re-unsubscribe
             : console.warn('onUnsubscribeSingleSender not provided to ActionWrapper')
         }
         onViewInGmail={(email) => viewSenderInGmail(email)}
@@ -714,6 +719,7 @@ export function SenderTable({
           onDelete={onDeleteSingleSender || (() => console.warn('onDeleteSingleSender not provided'))}
           onDeleteWithExceptions={onDeleteWithExceptions || (() => console.warn('onDeleteWithExceptions not provided'))}
           onUnsubscribe={onUnsubscribeSingleSender || (() => console.warn('onUnsubscribeSingleSender not provided'))}
+          onReUnsubscribe={onUnsubscribeSingleSender ? (email) => onUnsubscribeSingleSender(email, true) : undefined}
           onMarkUnread={
             onMarkSingleSenderRead 
               ? (email) => onMarkSingleSenderRead(email) 

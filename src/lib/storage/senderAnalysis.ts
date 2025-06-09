@@ -368,4 +368,53 @@ export async function updateMultipleSendersAfterPartialDeletion(
   
   // Notify components that sender data has changed
   notifyAnalysisChange(); 
+}
+
+/**
+ * Updates a sender's enriched unsubscribe data in IndexedDB
+ * Uses append-only strategy - never overwrites existing enriched data
+ */
+export async function updateSenderEnrichment(
+  senderEmail: string, 
+  enrichedUrl: string, 
+  enrichedAt: number
+): Promise<void> {
+  const db = await getDB();
+  const transaction = db.transaction(['senders'], 'readwrite');
+  const store = transaction.objectStore('senders');
+  
+  try {
+    const existingSender = await store.get(senderEmail);
+    
+    if (!existingSender) {
+      console.warn(`Sender ${senderEmail} not found for enrichment update`);
+      return;
+    }
+
+    // Only update if no enriched data exists (append-only strategy)
+    if (!existingSender.unsubscribe?.enrichedUrl) {
+      const updatedSender = {
+        ...existingSender,
+        unsubscribe: {
+          ...existingSender.unsubscribe,
+          enrichedUrl,
+          enrichedAt
+        }
+      };
+
+      await store.put(updatedSender);
+      
+      console.log(`Updated enriched unsubscribe for ${senderEmail}:`, {
+        enrichedUrl,
+        enrichedAt: new Date(enrichedAt).toISOString()
+      });
+    } else {
+      console.log(`Sender ${senderEmail} already has enriched data, skipping update`);
+    }
+
+    await transaction.done;
+  } catch (error) {
+    console.error('Failed to update sender enrichment:', error);
+    throw error;
+  }
 } 

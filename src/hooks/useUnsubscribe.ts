@@ -5,9 +5,10 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthProvider';
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
 import { createActionLog } from '@/supabase/actions/logAction';
-import { markSenderActionTaken } from '@/lib/storage/senderAnalysis'; 
+import { markSenderActionTaken, updateSenderEnrichment } from '@/lib/storage/senderAnalysis'; 
 import { parseMailto } from '@/lib/gmail/parseMailto';
 import { sendUnsubEmail } from '@/lib/gmail/sendUnsubEmail';
+import { enrichSender } from '@/lib/gmail/enrichSender';
 import { ActionType, ActionStatus, ActionEndType } from '@/types/actions';
 import { logger } from '@/lib/utils/logger';
 import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
@@ -24,6 +25,7 @@ export interface UnsubscribeMethodDetails {
 
 export interface UnsubscribeHookParams {
   senderEmail: string;
+  firstMessageId?: string; // For enrichment
 }
 
 // Add ReauthModalState, similar to other hooks
@@ -61,11 +63,66 @@ export function useUnsubscribe() {
     setIsLoading(true);
     setError(null);
     let operationErrorMessage: string | null = null;
+    let finalMethodDetails = methodDetails;
+    let wasEnriched = false;
+
     logger.debug('Starting unsubscribe operation', { 
       component: 'useUnsubscribe',
       senderEmail: params.senderEmail,
-      methodType: methodDetails.type
+      methodType: methodDetails.type,
+      hasFirstMessageId: !!params.firstMessageId
     });
+
+    // STEP 1: Try enrichment if we have firstMessageId and no enriched URL yet
+    if (params.firstMessageId && !methodDetails.value.includes('enriched')) {
+      try {
+        logger.debug('Attempting enrichment before unsubscribe', { 
+          component: 'useUnsubscribe',
+          senderEmail: params.senderEmail,
+          messageId: params.firstMessageId
+        });
+
+        const accessToken = await getAccessToken();
+        const enrichmentResult = await enrichSender(accessToken, params.firstMessageId);
+
+        if (enrichmentResult.enrichedUrl) {
+          logger.debug('Enrichment successful, using enriched URL', {
+            component: 'useUnsubscribe',
+            senderEmail: params.senderEmail,
+            enrichedUrl: enrichmentResult.enrichedUrl,
+            confidence: enrichmentResult.confidence
+          });
+
+          // Update method to use enriched URL
+          finalMethodDetails = {
+            type: "url",
+            value: enrichmentResult.enrichedUrl,
+            requiresPost: false
+          };
+
+          // Store in IndexedDB for future use
+          await updateSenderEnrichment(
+            params.senderEmail,
+            enrichmentResult.enrichedUrl,
+            enrichmentResult.enrichedAt
+          );
+
+          wasEnriched = true;
+        } else {
+          logger.debug('Enrichment failed, using original method', {
+            component: 'useUnsubscribe',
+            senderEmail: params.senderEmail,
+            error: enrichmentResult.error
+          });
+        }
+      } catch (enrichmentError) {
+        logger.warn('Enrichment error, continuing with original method', {
+          component: 'useUnsubscribe',
+          senderEmail: params.senderEmail,
+          error: enrichmentError instanceof Error ? enrichmentError.message : 'Unknown error'
+        });
+      }
+    }
 
     // Check for cancellation at the start
     if (abortSignal?.aborted) {
@@ -75,7 +132,7 @@ export function useUnsubscribe() {
     }
 
     // Report initial progress to queue (only for EMAIL-based operations)
-    if (queueProgressCallback && methodDetails.type === "mailto" && !methodDetails.requiresPost) {
+    if (queueProgressCallback && finalMethodDetails.type === "mailto" && !finalMethodDetails.requiresPost) {
       queueProgressCallback(0, 1); // Unsubscribe is a single operation
     }
 
@@ -89,7 +146,7 @@ export function useUnsubscribe() {
 
     let acquiredAccessToken: string | null = null;
 
-    if (methodDetails.type === "mailto" && !methodDetails.requiresPost) {
+    if (finalMethodDetails.type === "mailto" && !finalMethodDetails.requiresPost) {
       if (!isGmailConnected) {
         operationErrorMessage = "Gmail not connected. Please reconnect to send unsubscribe email.";
         toast.error(operationErrorMessage);
@@ -118,14 +175,18 @@ export function useUnsubscribe() {
     let actionEndType: ActionEndType = 'runtime_error';
 
     try {
-      if (methodDetails.type === "url") {
-        if (!methodDetails.value || !methodDetails.value.toLowerCase().startsWith('http')) {
+      if (finalMethodDetails.type === "url") {
+        if (!finalMethodDetails.value || !finalMethodDetails.value.toLowerCase().startsWith('http')) {
           operationErrorMessage = "Invalid or missing unsubscribe URL.";
           throw new Error(operationErrorMessage);
         }
         
-        logger.debug('Attempting to open unsubscribe URL', { component: 'useUnsubscribe' });
-        const newWindow = window.open(methodDetails.value, "_blank", "noopener,noreferrer");
+        logger.debug('Attempting to open unsubscribe URL', { 
+          component: 'useUnsubscribe',
+          wasEnriched,
+          url: finalMethodDetails.value.substring(0, 50) + '...'
+        });
+        const newWindow = window.open(finalMethodDetails.value, "_blank", "noopener,noreferrer");
         logger.debug('Window.open result', { 
           component: 'useUnsubscribe',
           windowOpened: newWindow !== null
@@ -133,16 +194,30 @@ export function useUnsubscribe() {
         
         if (newWindow === null) {
             logger.debug('Pop-up blocked, showing warning', { component: 'useUnsubscribe' });
-            toast.warning(`Attempted to open unsubscribe link for ${params.senderEmail}`);
+            
+            // Show appropriate message even when popup is blocked
+            if (wasEnriched) {
+              toast.warning(`Pop-up blocked! Attempted to open enriched unsubscribe link for ${params.senderEmail}`);
+            } else {
+              toast.warning(`Pop-up blocked! Attempted to open header unsubscribe link for ${params.senderEmail}`);
+            }
+            
             actionEndType = 'success';
             success = true; 
         } else {
             logger.debug('URL opened successfully', { component: 'useUnsubscribe' });
-            toast.success(`Opened unsubscribe link for ${params.senderEmail}. Please complete the process if the tab opened correctly.`);
+            
+            // Show appropriate success message based on method used
+            if (wasEnriched) {
+              toast.success(`✅ Opened enriched unsubscribe link for ${params.senderEmail}`);
+            } else {
+              toast.success(`⚠️ Opened header unsubscribe link for ${params.senderEmail}`);
+            }
+            
             actionEndType = 'success';
             success = true;
         }
-      } else if (methodDetails.type === "mailto") {
+      } else if (finalMethodDetails.type === "mailto") {
         const gapiInstance = (window as any).gapi;
         if (gapiInstance && gapiInstance.client && acquiredAccessToken) {
           try {
@@ -166,9 +241,9 @@ export function useUnsubscribe() {
             throw new Error(operationErrorMessage);
         }
 
-        if (methodDetails.requiresPost) {
+        if (finalMethodDetails.requiresPost) {
           toast.info(`One-click unsubscribe for ${params.senderEmail} (mailto with POST) is not yet implemented. Opening mailto link as a fallback.`);
-          window.location.href = methodDetails.value; 
+          window.location.href = finalMethodDetails.value; 
           actionEndType = 'success'; 
           success = true; 
         } else {
@@ -184,9 +259,9 @@ export function useUnsubscribe() {
             return { success: false, error: 'Operation cancelled by user' };
           }
           
-          const mailtoParts = parseMailto(methodDetails.value);
+          const mailtoParts = parseMailto(finalMethodDetails.value);
           if (!mailtoParts || !mailtoParts.to) {
-            operationErrorMessage = `Invalid mailto link or missing recipient: ${methodDetails.value}`;
+            operationErrorMessage = `Invalid mailto link or missing recipient: ${finalMethodDetails.value}`;
             throw new Error(operationErrorMessage);
           }
           await sendUnsubEmail({
@@ -203,7 +278,7 @@ export function useUnsubscribe() {
             return { success: false, error: 'Operation cancelled by user' };
           }
           
-          toast.success(`Unsubscribe email sent for ${params.senderEmail}.`);
+          toast.success(`📧 Attempting to unsubscribe from ${params.senderEmail} using email method`);
           actionEndType = 'success';
           success = true;
         }
@@ -221,8 +296,11 @@ export function useUnsubscribe() {
           type: 'unsubscribe' as ActionType,
           status: 'completed' as ActionStatus, 
           count: 1,
-          filters: { method: methodDetails.type },
-          notes: methodDetails.requiresPost ? "Mailto one-click (opened link as fallback)" : undefined
+          filters: { 
+            method: finalMethodDetails.type,
+            enriched: wasEnriched
+          },
+          notes: finalMethodDetails.requiresPost ? "Mailto one-click (opened link as fallback)" : (wasEnriched ? "Used enriched URL from email body" : undefined)
         });
         logger.debug('Logged unsubscribe action to Supabase', { 
           component: 'useUnsubscribe',
@@ -233,7 +311,7 @@ export function useUnsubscribe() {
         await refreshStatsAfterAction('unsubscribe');
         
         // Report completion to queue (only for EMAIL-based operations)
-        if (queueProgressCallback && methodDetails.type === "mailto" && !methodDetails.requiresPost) {
+        if (queueProgressCallback && finalMethodDetails.type === "mailto" && !finalMethodDetails.requiresPost) {
           queueProgressCallback(1, 1);
         }
       }
@@ -270,6 +348,8 @@ export function useUnsubscribe() {
     getAccessToken,
     isGmailConnected,
   ]);
+
+
 
   // --- Queue Integration ---
   // Create a queue executor wrapper that converts payloads and calls existing function

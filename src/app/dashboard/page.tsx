@@ -10,8 +10,6 @@ import Confetti from 'react-confetti'
 import { useWindowSize } from '@react-hook/window-size'
 import { ManageSubscriptionModal } from '@/components/modals/ManageSubscriptionModal'
 import { RenewalModal } from '@/components/modals/RenewalModal'
-import { ParserTester } from '@/components/dashboard/ParserTester'
-import { Button } from '@/components/ui/button'
 import { logger } from '@/lib/utils/logger'
 
 export default function Dashboard() {
@@ -21,7 +19,6 @@ export default function Dashboard() {
   const [showConfetti, setShowConfetti] = useState(false)
   const [showManageSubscriptionModal, setShowManageSubscriptionModal] = useState(false)
   const [showRenewalModal, setShowRenewalModal] = useState(false)
-  const [showParserTester, setShowParserTester] = useState(false)
   const [windowWidth, windowHeight] = useWindowSize()
 
   // Effect for handling checkout success
@@ -105,27 +102,8 @@ export default function Dashboard() {
         />
       )}
       
-      {/* Toggle button for parser tester */}
-      <div className="flex justify-end mb-4">
-        <Button
-          variant="outline"
-          onClick={() => setShowParserTester(!showParserTester)}
-          className="text-xs"
-        >
-          {showParserTester ? 'Back to Dashboard' : 'Test Parser (Dev)'}
-        </Button>
-      </div>
-
-      {showParserTester ? (
-        <div className="max-w-7xl mx-auto">
-          <ParserTester />
-        </div>
-      ) : (
-        <>
-          <Overview />
-          <InboxAnalysisContainer />
-        </>
-      )}
+      <Overview />
+      <InboxAnalysisContainer />
       
       <Footer />
       {showManageSubscriptionModal && (

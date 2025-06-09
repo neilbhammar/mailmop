@@ -16,6 +16,7 @@ import { Portal } from "@radix-ui/react-portal"
 interface RowActionsProps {
   sender: Sender
   onUnsubscribe: (email: string) => void
+  onReUnsubscribe?: (email: string) => void  // New callback for already-unsubscribed senders
   onViewInGmail: (email: string) => void
   onDelete: (email: string, count?: number) => void
   onMarkUnread: (email: string, unreadCount?: number) => void
@@ -28,6 +29,7 @@ interface RowActionsProps {
 export function RowActions({
   sender,
   onUnsubscribe,
+  onReUnsubscribe,
   onViewInGmail,
   onDelete,
   onMarkUnread,
@@ -81,9 +83,15 @@ export function RowActions({
                 tabIndex={0}
                 className={cn(
                   unsubscribeStyles,
-                  isActionTaken('unsubscribe') && "opacity-40 dark:opacity-30 cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent group-hover:text-slate-400 dark:group-hover:text-slate-500"
+                  isActionTaken('unsubscribe') && "opacity-40 dark:opacity-30 group-hover:text-slate-400 dark:group-hover:text-slate-500"
                 )}
-                onClick={() => !isActionTaken('unsubscribe') && onUnsubscribe(sender.email)}
+                onClick={() => {
+                  if (isActionTaken('unsubscribe')) {
+                    onReUnsubscribe?.(sender.email);
+                  } else {
+                    onUnsubscribe(sender.email);
+                  }
+                }}
               >
                 Unsubscribe
               </div>
@@ -91,7 +99,7 @@ export function RowActions({
             <Portal container={document.getElementById('tooltip-root')}>
               {isActionTaken('unsubscribe') && (
                 <TooltipContent sideOffset={5} className="z-[100]">
-                  <p>Unsubscribe request already sent for this sender</p>
+                  <p>You've already unsubscribed from this sender. Click to try again.</p>
                 </TooltipContent>
               )}
               {!isActionTaken('unsubscribe') && (
