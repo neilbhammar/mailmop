@@ -31,6 +31,7 @@ import {
   completeActionLog as completeLocalActionLog,
   clearCurrentActionLog,
 } from '@/lib/storage/actionLog';
+import { updateSenderAfterPartialDeletion, markSenderActionTaken } from '@/lib/storage/senderAnalysis';
 
 // --- Types ---
 import { ActionEndType } from '@/types/actions';
@@ -276,6 +277,9 @@ export function useDeleteWithExceptions() {
         let currentAccessToken: string;
 
         try {
+          // Track deletions per sender for updating counts later
+          const senderDeletionCounts = new Map<string, number>();
+          
           for (const sender of senders) {
             // Check both cancellation sources (critical pattern from analysis)
             if (isCancelledRef.current || cancellationRef.current || abortSignal?.aborted) {
@@ -384,10 +388,39 @@ export function useDeleteWithExceptions() {
 
             } while (nextPageToken && endType === 'success' && !isCancelledRef.current && !cancellationRef.current && !(abortSignal?.aborted));
 
-            // Do NOT mark sender action taken for filtered deletions
+            // Store the count of deleted emails for this sender
+            if (senderDeletedCount > 0) {
+              senderDeletionCounts.set(sender.email, senderDeletedCount);
+              console.log(`[DeleteWithExceptions] Sender ${sender.email}: deleted ${senderDeletedCount} emails`);
+            }
+
+            // Mark that delete with exceptions was performed on this sender (for UI indicator)
+            if (senderDeletedCount > 0) {
+              try {
+                await markSenderActionTaken(sender.email, 'delete_with_exceptions');
+              } catch (actionError) {
+                console.error(`[DeleteWithExceptions] Failed to mark action for sender ${sender.email}:`, actionError);
+                // Don't fail the operation if action marking fails
+              }
+            }
 
             if (endType !== 'success' && endType !== 'user_stopped') {
               break;
+            }
+          }
+
+          // --- Update Sender Counts ---
+          if (senderDeletionCounts.size > 0 && (endType === 'success' || endType === 'user_stopped')) {
+            console.log(`[DeleteWithExceptions] Updating sender counts for ${senderDeletionCounts.size} senders`);
+            try {
+              // Update each sender's count based on actual deletions
+              for (const [senderEmail, deletedCount] of senderDeletionCounts) {
+                await updateSenderAfterPartialDeletion(senderEmail, deletedCount);
+              }
+              console.log(`[DeleteWithExceptions] Successfully updated sender counts`);
+            } catch (updateError) {
+              console.error(`[DeleteWithExceptions] Failed to update sender counts:`, updateError);
+              // Don't fail the operation if sender update fails - it's not critical
             }
           }
 

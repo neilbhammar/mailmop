@@ -289,4 +289,83 @@ export async function updateMultipleSendersAfterDeletion(
   
   // Notify components that sender data has changed
   notifyAnalysisChange(); 
+}
+
+/**
+ * Updates sender counts after a partial deletion operation (like delete with exceptions).
+ * Reduces the total count by the specified amount and ensures data integrity.
+ * 
+ * @param senderEmail The email address of the sender
+ * @param deletedCount The number of emails that were actually deleted
+ */
+export async function updateSenderAfterPartialDeletion(
+  senderEmail: string,
+  deletedCount: number
+): Promise<void> {
+  const db = await getDB();
+  const sender = await db.get('senders', senderEmail);
+
+  if (!sender) {
+    console.warn(`[updateSenderAfterPartialDeletion] Sender not found: ${senderEmail}`);
+    return;
+  }
+
+  // Calculate new total count (never goes below 0)
+  const newTotalCount = Math.max(0, sender.count - deletedCount);
+  
+  // Cap unread count to not exceed new total count
+  // This handles the uncertainty of which emails (read/unread) were actually deleted
+  const newUnreadCount = Math.min(sender.unread_count, newTotalCount);
+
+  const updatedSender: SenderResult = {
+    ...sender,
+    count: newTotalCount,
+    unread_count: newUnreadCount,
+  };
+
+  await db.put('senders', updatedSender);
+  console.log(`[updateSenderAfterPartialDeletion] Updated sender ${senderEmail}: count ${sender.count} -> ${newTotalCount}, unread_count ${sender.unread_count} -> ${newUnreadCount}`);
+  
+  // Notify components that sender data has changed
+  notifyAnalysisChange(); 
+}
+
+/**
+ * Updates multiple senders after partial deletion operations.
+ * 
+ * @param updates Array of {senderEmail, deletedCount} objects
+ */
+export async function updateMultipleSendersAfterPartialDeletion(
+  updates: Array<{ senderEmail: string; deletedCount: number }>
+): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction('senders', 'readwrite');
+  
+  await Promise.all(
+    updates.map(async ({ senderEmail, deletedCount }) => {
+      const sender = await tx.store.get(senderEmail);
+      
+      if (sender) {
+        // Calculate new counts with safety checks
+        const newTotalCount = Math.max(0, sender.count - deletedCount);
+        const newUnreadCount = Math.min(sender.unread_count, newTotalCount);
+        
+        const updatedSender: SenderResult = {
+          ...sender,
+          count: newTotalCount,
+          unread_count: newUnreadCount,
+        };
+        
+        await tx.store.put(updatedSender);
+        console.log(`[updateMultipleSendersAfterPartialDeletion] Updated sender ${senderEmail}: count ${sender.count} -> ${newTotalCount}, unread_count ${sender.unread_count} -> ${newUnreadCount}`);
+      } else {
+        console.warn(`[updateMultipleSendersAfterPartialDeletion] Sender not found: ${senderEmail}`);
+      }
+    })
+  );
+  
+  await tx.done;
+  
+  // Notify components that sender data has changed
+  notifyAnalysisChange(); 
 } 
