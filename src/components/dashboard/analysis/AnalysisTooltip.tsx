@@ -11,6 +11,7 @@ import { formatRelativeTime, formatDuration } from '@/lib/utils/formatRelativeTi
 import { useEffect, useState } from 'react'
 import { useAnalysis } from '@/context/AnalysisProvider'
 import { LocalActionLog } from '@/types/actions'
+import { AlertCircle, AlertTriangle } from 'lucide-react'
 
 export function AnalysisTooltip() {
   const { isAnalyzing, checkAnalysisState, currentAnalysis } = useAnalysis();
@@ -118,11 +119,17 @@ export function AnalysisTooltip() {
   const status = getAnalysisStatus();
   if (!status) return null;
 
+  // Check if the last analysis was incomplete (any end_type other than 'success')
+  const isIncomplete = !isAnalyzing && lastAnalysis?.end_type && lastAnalysis.end_type !== 'success';
+
   return (
     <TooltipProvider>
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
-          <span className="border-b border-dotted border-slate-300 dark:border-slate-600 pb-[1px] cursor-pointer hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
+          <span className="border-b border-dotted border-slate-300 dark:border-slate-600 pb-[1px] cursor-pointer hover:text-slate-700 dark:hover:text-slate-200 transition-colors inline-flex items-center gap-1">
+            {isIncomplete && (
+              <AlertCircle className="h-3 w-3 text-amber-500" />
+            )}
             {isAnalyzing ? `${status}` : `Last Analyzed: ${status}`}
           </span>
         </TooltipTrigger>
@@ -132,7 +139,9 @@ export function AnalysisTooltip() {
           className="bg-white dark:bg-slate-800 rounded-lg shadow-[0_1px_4px_rgba(0,0,0,0.03)] dark:shadow-md dark:shadow-black/30 border border-slate-200 dark:border-slate-700 p-0 w-[320px] animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
         >
           <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="font-medium text-sm text-slate-900 dark:text-slate-100">Analysis Details</h3>
+            <h3 className="font-medium text-sm text-slate-900 dark:text-slate-100">
+              Analysis Details{isIncomplete ? ' - Incomplete' : ''}
+            </h3>
           </div>
           <div className="px-4 py-2 space-y-1">
             <div className="flex justify-between py-1">

@@ -41,7 +41,7 @@ export async function getActionStats(userId: string) {
 
   // Aggregate counts by type
   const result = (data || []).reduce((acc, action) => {
-    acc[action.type] = (acc[action.type] || 0) + (action.count || 1);
+    acc[action.type] = (acc[action.type] || 0) + (action.count || 0);
     return acc;
   }, {} as Record<string, number>);
 
