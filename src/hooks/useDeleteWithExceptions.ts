@@ -32,6 +32,7 @@ import {
   clearCurrentActionLog,
 } from '@/lib/storage/actionLog';
 import { updateSenderAfterPartialDeletion, markSenderActionTaken } from '@/lib/storage/senderAnalysis';
+import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
 
 // --- Types ---
 import { ActionEndType } from '@/types/actions';
@@ -441,6 +442,8 @@ export function useDeleteWithExceptions() {
 
           if (endType === 'success') {
             toast.success('Filtered Deletion Complete', { description: `Successfully deleted ${totalSuccessfullyDeleted.toLocaleString()} matching emails from ${senders.length} sender(s).` });
+            // Refresh all stats after successful deletion with exceptions
+            await refreshStatsAfterAction('delete_with_exceptions');
           } else if (endType === 'user_stopped') {
             toast.info('Deletion Cancelled', { description: `Deletion stopped after ${totalSuccessfullyDeleted.toLocaleString()} emails.` });
           }

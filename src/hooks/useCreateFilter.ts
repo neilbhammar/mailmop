@@ -16,6 +16,7 @@ import { createFiltersForSenders } from '@/lib/gmail/createFilter';
 
 // --- Storage & Logging ---
 import { createActionLog, completeActionLog } from '@/supabase/actions/logAction';
+import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
 
 // --- Queue Types ---
 import { CreateFilterJobPayload, ProgressCallback, ExecutorResult } from '@/types/queue';
@@ -208,6 +209,9 @@ export function useCreateFilter() {
           toast.success('Filter created successfully', {
             description: `Created filter for ${options.senders.length} sender${options.senders.length > 1 ? 's' : ''}`
           });
+
+          // Refresh all stats after successful filter creation
+          await refreshStatsAfterAction('create_filter');
 
           return { success: true };
         } else {

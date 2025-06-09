@@ -10,6 +10,7 @@ import { parseMailto } from '@/lib/gmail/parseMailto';
 import { sendUnsubEmail } from '@/lib/gmail/sendUnsubEmail';
 import { ActionType, ActionStatus, ActionEndType } from '@/types/actions';
 import { logger } from '@/lib/utils/logger';
+import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
 
 // --- Queue Types ---
 import { UnsubscribeJobPayload, ProgressCallback, ExecutorResult } from '@/types/queue';
@@ -227,6 +228,9 @@ export function useUnsubscribe() {
           component: 'useUnsubscribe',
           senderEmail: params.senderEmail
         });
+        
+        // Refresh all stats after successful unsubscribe
+        await refreshStatsAfterAction('unsubscribe');
         
         // Report completion to queue (only for EMAIL-based operations)
         if (queueProgressCallback && methodDetails.type === "mailto" && !methodDetails.requiresPost) {

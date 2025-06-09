@@ -44,6 +44,7 @@ export default function InboxStats() {
   // Only show action stats if we have non-zero values
   const showAnalyzed = actionStats?.analyzed > 0;
   const showDeleted = actionStats?.deleted > 0;
+  const showModified = actionStats?.modified > 0;
 
   // Helper to format numbers or show placeholder
   const formatNumber = (value: number | undefined) => {
@@ -87,6 +88,16 @@ export default function InboxStats() {
             <span className="text-slate-500 dark:text-slate-400">Deleted</span>
             <p className="font-medium text-slate-800 dark:text-slate-100 h-6 flex items-center">
               {formatNumber(actionStats?.deleted)}
+            </p>
+          </div>
+        )}
+
+        {/* Modified - Only show if we have non-zero data */}
+        {showModified && (
+          <div>
+            <span className="text-slate-500 dark:text-slate-400">Modified</span>
+            <p className="font-medium text-slate-800 dark:text-slate-100 h-6 flex items-center">
+              {formatNumber(actionStats?.modified)}
             </p>
           </div>
         )}
