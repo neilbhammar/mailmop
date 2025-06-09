@@ -100,9 +100,15 @@ export interface SenderResult {
   analysisId: string;
   hasUnsubscribe: boolean;
   unsubscribe?: {
+    // Original header data (can be overwritten freely during analysis)
     mailto?: string;
     url?: string;
     requiresPost?: boolean;
+    
+    // Enriched data (append-only, never overwritten)
+    enrichedUrl?: string;        // Working HTTP unsubscribe link from email body
+    enrichedAt?: number;         // Timestamp of enrichment
+    firstMessageId?: string;     // Message ID for enrichment (captured during analysis)
   };
   actionsTaken?: string[];
   messageIds?: string[];

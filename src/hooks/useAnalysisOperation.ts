@@ -433,7 +433,21 @@ export function useAnalysisOperations() {
                 existing.lastDate = sender.date;
               }
               existing.hasUnsubscribe = existing.hasUnsubscribe || sender.hasUnsubscribe;
-              if (sender.unsubscribe) existing.unsubscribe = { ...existing.unsubscribe, ...sender.unsubscribe };
+              if (sender.unsubscribe) {
+                // Append-only merge: preserve enriched data, merge header data
+                existing.unsubscribe = {
+                  // Always merge header data (existing logic unchanged)
+                  ...existing.unsubscribe,
+                  ...sender.unsubscribe,
+                  
+                  // Preserve enriched data (never overwritten)
+                  enrichedUrl: existing.unsubscribe?.enrichedUrl,
+                  enrichedAt: existing.unsubscribe?.enrichedAt,
+                  
+                  // Only set firstMessageId if we don't have one yet (captured during analysis)
+                  firstMessageId: existing.unsubscribe?.firstMessageId || sender.messageId,
+                };
+              }
             } else {
               senderMap.set(sender.email, {
                 senderEmail: sender.email,
@@ -443,7 +457,10 @@ export function useAnalysisOperations() {
                 lastDate: sender.isDateFromFallback ? '' : sender.date,
                 analysisId,
                 hasUnsubscribe: sender.hasUnsubscribe,
-                unsubscribe: sender.unsubscribe
+                unsubscribe: sender.unsubscribe ? {
+                  ...sender.unsubscribe,
+                  firstMessageId: sender.messageId // Capture first message ID for new senders
+                } : undefined
               });
             }
           }

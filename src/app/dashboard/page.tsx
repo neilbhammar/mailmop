@@ -101,8 +101,10 @@ export default function Dashboard() {
           gravity={0.3}
         />
       )}
-        <Overview />
-        <InboxAnalysisContainer />
+      
+      <Overview />
+      <InboxAnalysisContainer />
+      
       <Footer />
       {showManageSubscriptionModal && (
         <ManageSubscriptionModal

@@ -22,6 +22,7 @@ import { BlockSenderModal } from '@/components/modals/BlockSenderModal'
 import { useUnsubscribe, UnsubscribeMethodDetails } from '@/hooks/useUnsubscribe'
 import { getUnsubscribeMethod } from '@/lib/gmail/getUnsubscribeMethod'
 import { ConfirmUnsubscribeModal } from '@/components/modals/ConfirmUnsubscribeModal'
+import { ReUnsubscribeModal } from '@/components/modals/ReUnsubscribeModal'
 import { ApplyLabelModal } from "@/components/modals/ApplyLabelModal"
 import { useCreateFilter } from '@/hooks/useCreateFilter'
 import { getSenderByEmail } from '@/lib/storage/senderAnalysis'
@@ -137,6 +138,10 @@ export default function AnalysisView() {
     senderEmail: string;
     methodDetails: UnsubscribeMethodDetails;
   } | null>(null);
+  
+  // State for ReUnsubscribeModal
+  const [isReUnsubscribeModalOpen, setReUnsubscribeModalOpen] = useState(false);
+  const [reUnsubscribeData, setReUnsubscribeData] = useState<{ senderEmail: string; unsubscribe: any } | null>(null);
 
     // Add state for ApplyLabelModal
   const [isApplyLabelModalOpen, setIsApplyLabelModalOpen] = useState(false);
@@ -430,7 +435,7 @@ export default function AnalysisView() {
   }, [checkFeatureAccess, setIsApplyLabelModalOpen, setEmailsToApplyLabelTo, setActiveSingleSender]);
 
   // Placeholder handler for Unsubscribe
-  const handleUnsubscribeSingleSender = useCallback(async (email: string, isRetry: boolean = false) => {
+  const handleUnsubscribeSingleSender = useCallback(async (email: string, isReUnsubscribe: boolean = false) => {
     if (checkFeatureAccess('unsubscribe', 1)) {
       // First try to find sender in current allSenders array
       let sender = allSenders.find(s => s.email === email);
@@ -469,8 +474,8 @@ export default function AnalysisView() {
         console.error(`[handleUnsubscribeSingleSender] Sender data not found in allSenders (${allSenders.length} total) or IndexedDB for: ${email}`);
         console.log('[handleUnsubscribeSingleSender] Available senders in allSenders:', allSenders.map(s => s.email));
         
-        // As a last resort, try refreshing the sender data and retry once (but only if this isn't already a retry)
-        if (!isRetry) {
+        // As a last resort, try refreshing the sender data and retry once (but only if this isn't already a re-unsubscribe)
+        if (!isReUnsubscribe) {
           console.warn(`[handleUnsubscribeSingleSender] Attempting to refresh sender data as a final fallback for: ${email}`);
           try {
             await refreshSenderData();
@@ -495,6 +500,14 @@ export default function AnalysisView() {
         return;
       }
 
+      // Check if this is a re-unsubscribe request
+      if (isReUnsubscribe && sender.actionsTaken?.includes('unsubscribe')) {
+        // Show re-unsubscribe modal with options
+        setReUnsubscribeData({ senderEmail: email, unsubscribe: sender.unsubscribe });
+        setReUnsubscribeModalOpen(true);
+        return;
+      }
+
       const methodDetails = getUnsubscribeMethod(sender.unsubscribe);
       if (!methodDetails) {
         toast.error(`Could not determine a valid unsubscribe method for ${email}.`);
@@ -508,18 +521,26 @@ export default function AnalysisView() {
           setUnsubscribeModalData({ senderEmail: email, methodDetails });
           setConfirmUnsubscribeModalOpen(true);
         } else {
-          // Skip modal and directly run unsubscribe
-          await unsubscribeHook.run({ senderEmail: email }, methodDetails);
+          // Skip modal and directly run unsubscribe with enrichment
+          await unsubscribeHook.run(
+            { senderEmail: email, firstMessageId: sender.unsubscribe?.firstMessageId }, 
+            methodDetails
+          );
         }
       } else {
-        // For URL or mailto with requiresPost, run directly
-        await unsubscribeHook.run({ senderEmail: email }, methodDetails);
+        // For URL or mailto with requiresPost, run unsubscribe with enrichment
+        await unsubscribeHook.run(
+          { senderEmail: email, firstMessageId: sender.unsubscribe?.firstMessageId }, 
+          methodDetails
+        );
       }
     } else {
       // Premium modal was shown by checkFeatureAccess, store sender for potential view action
       setActiveSingleSender(email);
     }
   }, [checkFeatureAccess, allSenders, setActiveSingleSender, unsubscribeHook, refreshSenderData]);
+
+
 
   // Handler for block sender (single and bulk)
   const handleBlockSenders = useCallback(() => {
@@ -748,14 +769,31 @@ export default function AnalysisView() {
             // Only use legacy path for non-email operations (URL or POST)
             if (unsubscribeModalData && 
                 (unsubscribeModalData.methodDetails.type !== "mailto" || unsubscribeModalData.methodDetails.requiresPost)) {
+              
+              // Find sender to get firstMessageId
+              const sender = allSenders.find(s => s.email === unsubscribeModalData.senderEmail);
+              
               await unsubscribeHook.run(
-                { senderEmail: unsubscribeModalData.senderEmail }, 
+                { 
+                  senderEmail: unsubscribeModalData.senderEmail,
+                  firstMessageId: sender?.unsubscribe?.firstMessageId
+                }, 
                 unsubscribeModalData.methodDetails
               );
             }
             setUnsubscribeModalData(null); // Clear data after use
           }}
           onCancel={() => setUnsubscribeModalData(null)} // Clear data on cancel
+        />
+      )}
+
+      {/* Add ReUnsubscribe Modal */}
+      {reUnsubscribeData && (
+        <ReUnsubscribeModal
+          open={isReUnsubscribeModalOpen}
+          onOpenChange={setReUnsubscribeModalOpen}
+          senderEmail={reUnsubscribeData.senderEmail}
+          messageId={reUnsubscribeData.unsubscribe?.firstMessageId || ''}
         />
       )}
 

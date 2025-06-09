@@ -22,7 +22,16 @@ export function getUnsubscribeMethod(
     return null;
   }
 
-  const { url, mailto, requiresPost } = senderUnsubscribeDetails;
+  const { url, mailto, requiresPost, enrichedUrl } = senderUnsubscribeDetails;
+
+  // Priority: enriched URL > header URL > header mailto
+  if (enrichedUrl) {
+    return {
+      type: "url",
+      value: enrichedUrl,
+      requiresPost: false, // Enriched URLs from email bodies are typically normal HTTP links
+    };
+  }
 
   if (url) {
     return {

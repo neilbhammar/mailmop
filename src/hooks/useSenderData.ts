@@ -36,9 +36,15 @@ export interface Sender {
   actionsTaken: any;
   hasUnsubscribe: boolean;
   unsubscribe?: {
+    // Original header data
     mailto?: string;
     url?: string;
     requiresPost?: boolean;
+    
+    // Enriched data (append-only)
+    enrichedUrl?: string;
+    enrichedAt?: number;
+    firstMessageId?: string;
   };
   messageIds: any;
   sampleSubjects: any;
