@@ -15,9 +15,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-expiration-reminder-email]
-# Keep JWT verification enabled for this function (called by nightly-plan-check, not triggers)
-verify_jwt = true
+# Disable JWT verification for internal edge function calls (called by nightly-plan-check)
+verify_jwt = false
 
 [functions.nightly-plan-check]
-# Keep JWT verification enabled for this function (called by cron, not triggers)
-verify_jwt = true 
+# Disable JWT verification for internal scheduled calls
+verify_jwt = false 

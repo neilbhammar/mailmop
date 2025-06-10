@@ -1,5 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { corsHeaders } from '../_shared/cors.ts';
+
+// Inline CORS headers to avoid import issues
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 interface EmailRequest {
   user_id: string;
@@ -13,7 +18,7 @@ interface EmailRequest {
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: corsHeaders,
       status: 405,
     });
   }

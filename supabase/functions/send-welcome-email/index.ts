@@ -1,5 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+
+// Inline CORS headers to avoid import issues
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const SENDER_EMAIL = 'Neil from MailMop <neil@notifications.mailmop.com>';
