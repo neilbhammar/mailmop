@@ -172,8 +172,13 @@ export function BlockSenderModal({
                     key={sender} 
                     className="flex items-center justify-between py-1.5"
                   >
-                    <div className="flex flex-col flex-1 min-w-0 mr-4">
-                      <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{sender}</span>
+                    <div className="flex flex-col flex-1 min-w-0 mr-4 max-w-[300px]">
+                      <span 
+                        className="text-sm text-slate-700 dark:text-slate-300 truncate block" 
+                        title={sender}
+                      >
+                        {sender}
+                      </span>
                     </div>
                     <span className="text-sm text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap">
                       {getEmailCountForSender(sender).toLocaleString()}

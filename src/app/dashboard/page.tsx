@@ -1,8 +1,8 @@
 'use client'
 
-import { useAuth } from '@/context/AuthProvider'
 import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthProvider'
 import Overview from '@/components/dashboard/Overview'
 import InboxAnalysisContainer from '@/components/dashboard/InboxAnalysisContainer'
 import Footer from '@/components/dashboard/Footer'
@@ -10,85 +10,53 @@ import Confetti from 'react-confetti'
 import { useWindowSize } from '@react-hook/window-size'
 import { ManageSubscriptionModal } from '@/components/modals/ManageSubscriptionModal'
 import { RenewalModal } from '@/components/modals/RenewalModal'
-import { logger } from '@/lib/utils/logger'
+import { useActionStats } from '@/hooks/useActionStats'
 
 export default function Dashboard() {
-  const { user, session, plan } = useAuth()
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const [showConfetti, setShowConfetti] = useState(false)
+  const { user } = useAuth()
   const [showManageSubscriptionModal, setShowManageSubscriptionModal] = useState(false)
   const [showRenewalModal, setShowRenewalModal] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
   const [windowWidth, windowHeight] = useWindowSize()
 
-  // Effect for handling checkout success
+  const { stats: actionStats, isLoading: isLoadingActionStats } = useActionStats(user?.id)
+
+
+
+  // Handle confetti from URL params (for successful checkout)
   useEffect(() => {
-    const checkoutStatus = searchParams.get('checkout');
-    if (checkoutStatus === 'success') {
-      logger.debug('Checkout success detected (direct access), showing modal and confetti', {
-        component: 'Dashboard'
-      });
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('success') === 'true') {
+      setShowConfetti(true)
+      setShowManageSubscriptionModal(true)
       
-      // This handles direct access to dashboard?checkout=success (fallback case)
-      setShowConfetti(true);
-      setShowManageSubscriptionModal(true);
+      // Clean up URL without page reload
+      const url = new URL(window.location.href)
+      url.searchParams.delete('success')
+      window.history.replaceState({}, '', url.toString())
       
       // Stop confetti after 5 seconds
-      setTimeout(() => {
-        logger.debug('Stopping confetti', { component: 'Dashboard' });
-        setShowConfetti(false);
-      }, 5000);
-      
-      // Clean up the URL after a short delay to ensure everything loads
-      setTimeout(() => {
-        const url = new URL(window.location.href);
-        url.searchParams.delete('checkout');
-        window.history.replaceState({}, '', url);
-      }, 1000);
+      setTimeout(() => setShowConfetti(false), 5000)
     }
-  }, [searchParams]);
+  }, [])
 
-  // Effect for handling renewal parameter
+  // Handle renewal modal from URL params
   useEffect(() => {
-    const renewParam = searchParams.get('renew');
-    const allParams = Object.fromEntries(searchParams.entries());
-    
-    logger.debug('Checking renewal parameter', {
-      component: 'Dashboard',
-      renewParam,
-      allParams,
-      currentShowRenewalModal: showRenewalModal
-    });
-    
-    if (renewParam === 'true') {
-      logger.debug('Renewal parameter detected, showing renewal modal', {
-        component: 'Dashboard'
-      });
-      setShowRenewalModal(true);
-      logger.debug('setShowRenewalModal(true) called', { component: 'Dashboard' });
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('renewal') === 'true') {
+      setShowRenewalModal(true)
       
-      // Clean up the URL after a delay to ensure state updates first
-      setTimeout(() => {
-        const url = new URL(window.location.href);
-        url.searchParams.delete('renew');
-        window.history.replaceState({}, '', url);
-        logger.debug('URL cleaned up', { component: 'Dashboard' });
-      }, 100);
+      // Clean up URL without page reload
+      const url = new URL(window.location.href)
+      url.searchParams.delete('renewal')
+      window.history.replaceState({}, '', url.toString())
     }
-  }, [searchParams, showRenewalModal]);
-
-  // Add a separate effect to track state changes
-  useEffect(() => {
-    logger.debug('showRenewalModal state changed', {
-      component: 'Dashboard',
-      showRenewalModal
-    });
-  }, [showRenewalModal]);
+  }, [])
 
   const handleRenewalModalClose = () => {
-    logger.debug('Closing renewal modal', { component: 'Dashboard' });
-    setShowRenewalModal(false);
-  };
+    setShowRenewalModal(false)
+  }
 
   return (
     <div className="bg-white dark:bg-slate-900">
@@ -102,10 +70,13 @@ export default function Dashboard() {
         />
       )}
       
+
+      
       <Overview />
       <InboxAnalysisContainer />
       
       <Footer />
+      
       {showManageSubscriptionModal && (
         <ManageSubscriptionModal
           open={showManageSubscriptionModal}

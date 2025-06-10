@@ -17,6 +17,7 @@ import { createFiltersForSenders } from '@/lib/gmail/createFilter';
 // --- Storage & Logging ---
 import { createActionLog, completeActionLog } from '@/supabase/actions/logAction';
 import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
+import { playSuccessMp3 } from '@/lib/utils/sounds';
 
 // --- Queue Types ---
 import { CreateFilterJobPayload, ProgressCallback, ExecutorResult } from '@/types/queue';
@@ -206,6 +207,8 @@ export function useCreateFilter() {
             );
           }
 
+          // 🎵 Play success sound for successful filter creation  
+          playSuccessMp3();
           toast.success('Filter created successfully', {
             description: `Created filter for ${options.senders.length} sender${options.senders.length > 1 ? 's' : ''}`
           });

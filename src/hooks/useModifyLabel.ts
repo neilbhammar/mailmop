@@ -33,6 +33,7 @@ import {
 } from '@/lib/storage/actionLog';
 import { logger } from '@/lib/utils/logger';
 import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
+import { playSuccessMp3 } from '@/lib/utils/sounds';
 
 // --- Types ---
 import { ActionEndType } from '@/types/actions';
@@ -498,6 +499,10 @@ export function useModifyLabel() {
 
         const action = options.actionType === 'add' ? 'added to' : 'removed from';
         if (endType === 'success') {
+          if (totalProcessed > 0) {
+            // 🎵 Play success sound for successful label modification
+            playSuccessMp3();
+          }
           toast.success('Label Modification Complete', {
             description: `Successfully ${action} ${totalProcessed.toLocaleString()} emails from ${options.senders.length} sender(s).`
           });
