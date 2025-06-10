@@ -28,6 +28,7 @@ import { fetchMessageIds } from '@/lib/gmail/fetchMessageIds';
 import { fetchMetadata } from '@/lib/gmail/fetchMetadata';
 import { parseMetadataBatch } from '@/lib/gmail/parseHeaders';
 import { logger } from '@/lib/utils/logger';
+import { playSuccessMp3 } from '@/lib/utils/sounds';
 
 // --- Queue System Integration ---
 import { AnalysisJobPayload, ProgressCallback, ExecutorResult } from '@/types/queue';
@@ -523,6 +524,10 @@ export function useAnalysisOperations() {
           await completeActionLog(supabaseLogId, 'success', totalProcessed);
           completeAnalysis('success');
           updateProgress({ status: 'completed', progress: 100 });
+          
+          // 🎵 Play success sound for successful analysis completion
+          playSuccessMp3();
+          
           sendDesktopNotification('MailMop: Analysis Complete!', {
             body: `Successfully processed ${totalProcessed.toLocaleString()} emails. Click to view your results.`,
           });

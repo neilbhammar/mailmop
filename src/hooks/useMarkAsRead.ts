@@ -42,6 +42,7 @@ import {
 import { updateSenderUnreadCount } from '@/lib/storage/senderAnalysis';
 import { logger } from '@/lib/utils/logger';
 import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
+import { playSuccessMp3, playBigSuccessMp3 } from '@/lib/utils/sounds';
 
 // --- Types ---
 import { ActionEndType } from '@/types/actions';
@@ -554,9 +555,21 @@ export function useMarkAsRead() {
         });
 
         if (endType === 'success') {
-          toast.success('Mark as Read Complete', {
-            description: `Successfully marked ${totalMarkedAsRead.toLocaleString()} emails as read from ${senders.length} sender(s).`
-          });
+          if (totalMarkedAsRead === 0) {
+            toast.info('No Emails Marked as Read', { 
+              description: `No unread emails found from ${senders.length} sender(s). All emails are already read.` 
+            });
+          } else {
+            // 🎵 Play success sound for successful mark as read
+            if (totalMarkedAsRead > 100) {
+              playBigSuccessMp3(); // Big success sound for 100+ emails marked as read
+            } else {
+              playSuccessMp3(); // Regular success sound for smaller operations
+            }
+            toast.success('Mark as Read Complete', {
+              description: `Successfully marked ${totalMarkedAsRead.toLocaleString()} emails as read from ${senders.length} sender(s).`
+            });
+          }
           // Refresh all stats after successful mark as read
           await refreshStatsAfterAction('mark_as_read');
         } else if (endType === 'user_stopped') {

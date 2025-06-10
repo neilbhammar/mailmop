@@ -30,6 +30,7 @@ import { fetchMessageIds } from '@/lib/gmail/fetchMessageIds';
 import { batchDeleteMessages } from '@/lib/gmail/batchDeleteMessages'; // Our new helper
 import { markSenderActionTaken, updateSenderAfterDeletion } from '@/lib/storage/senderAnalysis'; // Import the new function
 import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
+import { playDeleteSound, playSuccessSound, playSuccessMp3, playBigSuccessMp3 } from '@/lib/utils/sounds';
 
 // --- Storage & Logging ---
 import { createActionLog, updateActionLog, completeActionLog } from '@/supabase/actions/logAction';
@@ -48,6 +49,8 @@ import { ReauthDialog } from '@/components/modals/ReauthDialog'; // For promptin
 // --- Types ---
 import { ActionEndType } from '@/types/actions';
 import { DeleteJobPayload, ProgressCallback, ExecutorResult } from '@/types/queue';
+
+
 
 // --- Constants ---
 const TWO_MINUTES_MS = 2 * 60 * 1000; // Threshold for token expiry check before batches
@@ -516,7 +519,17 @@ export function useDelete() {
           });
 
           if (endType === 'success') {
+            // 🎵 Play satisfying delete sound effect
+            if (totalSuccessfullyDeleted > 0) {
+              if (totalSuccessfullyDeleted > 100) {
+                playBigSuccessMp3(); // Big success sound for 100+ deletions
+              } else {
+                playSuccessMp3(); // Regular success sound for smaller deletions
+              }
+            }
+            
             toast.success('Deletion Complete', { description: `Successfully deleted ${totalSuccessfullyDeleted.toLocaleString()} emails from ${senders.length} sender(s).` });
+            
             // Refresh all stats after successful deletion
             await refreshStatsAfterAction('delete');
           } else if (endType === 'user_stopped') {

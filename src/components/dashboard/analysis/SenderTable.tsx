@@ -256,26 +256,28 @@ const SenderNameCell = memo(({
             >
               {name}
             </div>
-            <ChevronsUpDown className="h-3 w-3 text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100 flex-shrink-0" />
+            <ChevronsUpDown className="h-3 w-3 text-slate-400 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 flex-shrink-0" />
           </div>
         </TooltipTrigger>
         <Portal container={document.getElementById('tooltip-root')}>
           <TooltipContent 
             side="top" 
-            className="max-w-[300px] z-[100] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700"
+            className="max-w-[300px] max-h-[200px] z-[100] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700"
           >
             <div className="space-y-1">
               <div className="font-medium text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                 All names used by this sender:
               </div>
-              {/* Show current display name first */}
-              <div className="text-sm font-medium">{name}</div>
-              {/* Show other names */}
-              {allNames.filter(n => n !== name).map((senderName, index) => (
-                <div key={index} className="text-sm text-slate-600 dark:text-slate-300">
-                  {senderName}
-                </div>
-              ))}
+              <div className="max-h-[140px] overflow-y-auto space-y-1">
+                {/* Show current display name first */}
+                <div className="text-sm font-medium">{name}</div>
+                {/* Show other names */}
+                {allNames.filter(n => n !== name).map((senderName, index) => (
+                  <div key={index} className="text-sm text-slate-600 dark:text-slate-300">
+                    {senderName}
+                  </div>
+                ))}
+              </div>
             </div>
           </TooltipContent>
         </Portal>

@@ -165,7 +165,11 @@ export function RowActions({
             <div
               role="button"
               tabIndex={0}
-              className={iconButtonStyles}
+              className={cn(
+                iconButtonStyles,
+                // Stay gray if no unread emails, but keep it clickable
+                sender.unread_count === 0 && "text-slate-400 dark:text-slate-500 group-hover:text-slate-400 dark:group-hover:text-slate-500"
+              )}
               onClick={(e) => {
                 e.stopPropagation();
                 onMarkUnread(sender.email, sender.unread_count);
@@ -176,7 +180,12 @@ export function RowActions({
           </TooltipTrigger>
           <Portal container={document.getElementById('tooltip-root')}>
             <TooltipContent sideOffset={5} className="z-[100]">
-              <p>Mark all as read</p>
+              <p>
+                {sender.unread_count === 0 
+                  ? "No Unread Emails"
+                  : `Mark ${sender.unread_count} Unread`
+                }
+              </p>
             </TooltipContent>
           </Portal>
         </Tooltip>

@@ -33,6 +33,7 @@ import {
 } from '@/lib/storage/actionLog';
 import { updateSenderAfterPartialDeletion, markSenderActionTaken } from '@/lib/storage/senderAnalysis';
 import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
+import { playSuccessMp3, playBigSuccessMp3 } from '@/lib/utils/sounds';
 
 // --- Types ---
 import { ActionEndType } from '@/types/actions';
@@ -446,6 +447,12 @@ export function useDeleteWithExceptions() {
                 description: `No emails found that match your criteria. All emails from ${senders.length} sender(s) remain in your inbox.` 
               });
             } else {
+              // 🎵 Play success sound for successful deletions
+              if (totalSuccessfullyDeleted > 100) {
+                playBigSuccessMp3(); // Big success sound for 100+ deletions
+              } else {
+                playSuccessMp3(); // Regular success sound for smaller deletions
+              }
               toast.success('Filtered Deletion Complete', { description: `Successfully deleted ${totalSuccessfullyDeleted.toLocaleString()} matching emails from ${senders.length} sender(s).` });
             }
             // Refresh all stats after successful deletion with exceptions
