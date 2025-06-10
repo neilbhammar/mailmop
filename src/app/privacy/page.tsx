@@ -28,8 +28,8 @@ export default function PrivacyPolicy() {
           <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 my-6">
             <p className="font-semibold text-blue-800 dark:text-blue-200 mb-2">🔒 Privacy First Promise</p>
             <p className="text-blue-700 dark:text-blue-300 mb-0">
-              <strong>Your emails never leave your device.</strong> All analysis happens locally in your browser. 
-              We never see, store, or have access to your email content.
+              <strong>Your emails are processed locally in your browser.</strong> While we access email content to find working unsubscribe links, 
+              all processing happens on your device and no email content is sent to our servers.
             </p>
           </div>
 
@@ -39,10 +39,10 @@ export default function PrivacyPolicy() {
               MailMop is designed with privacy at its core. We believe your email data belongs to you, which is why our app operates primarily on your device rather than our servers.
             </p>
             <p>
-              <strong>Local-First Processing:</strong> All email analysis happens directly in your browser. Your emails and their contents never leave your device or pass through our servers.
+              <strong>Local-First Processing:</strong> All email analysis and content processing happens directly in your browser. Your emails and their contents never leave your device or pass through our servers.
             </p>
             <p>
-              <strong>No Email Content Storage:</strong> We don't store, process, or have access to the contents of your emails. The app only accesses email metadata (such as sender information and unsubscribe links) to provide its functionality.
+              <strong>What We Access:</strong> MailMop accesses email headers (sender, date, subject) for analysis and email content when finding fresh unsubscribe links. All processing is done locally on your device for your privacy and security.
             </p>
           </section>
 
@@ -139,7 +139,8 @@ export default function PrivacyPolicy() {
               MailMop uses the Gmail API to analyze your inbox locally. We request full Gmail scope to enable advanced queries, but all processing happens in your browser:
             </p>
             <ul>
-              <li><strong>Metadata Access:</strong> Sender, date, subject, labels (processed locally only)</li>
+              <li><strong>Email Headers:</strong> Sender, date, subject, labels (processed locally only)</li>
+              <li><strong>Email Content:</strong> HTML and text content to extract working unsubscribe links (processed locally only)</li>
               <li><strong>Email Actions:</strong> Delete, unsubscribe, mark as read, apply labels (when you request them)</li>
               <li><strong>Search Capabilities:</strong> Advanced filtering and bulk operations</li>
             </ul>

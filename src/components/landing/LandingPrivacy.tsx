@@ -75,9 +75,9 @@ export default function LandingPrivacy() {
                 <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center mb-4 border border-white/20 dark:bg-slate-600/30 dark:border-slate-500/40">
                   <MessageSquareLock className="h-6 w-6 text-white dark:text-slate-200" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2 dark:text-slate-100">Metadata Only</h3>
+                <h3 className="text-lg font-semibold text-white mb-2 dark:text-slate-100">Metadata Based</h3>
                 <p className="text-blue-200 text-sm dark:text-blue-300">
-                  We only process email headers, never the content of your messages.
+                  MailMop only uses email headers to run its analysis. Body content is used upon request to enrich unsubscribe links.
                 </p>
               </div>
               

@@ -23,7 +23,7 @@ I was drowning in my Gmail inbox with over 50,000 emails. Most existing inbox cl
 - **Respects privacy**: Processes emails locally, never uploads them
 - **Actually works**: Can handle massive inboxes (50k-500k+ emails)  
 - **Is transparent**: Open source so you can see exactly what it does
-- **Focuses on metadata**: Only looks at headers (sender, subject, date), never email content
+- **Focuses on metadata**: Only looks at headers (sender, subject, date), analyzes body content upon use of the unsubscribe feature to extract functional unsubscribe links.
 
 ### The Solution
 I built MailMop to be the email cleaning tool I wanted to exist. It uses the Gmail API's metadata-only scope to analyze your inbox locally, identifying bulk senders, promotions, and noise—all while keeping your emails on your device.
@@ -50,7 +50,7 @@ Your Gmail → Your Browser → Analysis → Results
 
 **Key Privacy Features:**
 - ✅ **Client-side processing**: All analysis happens in your browser
-- ✅ **Metadata only**: We never access email content, only headers, we request full access so that MailMop can do advanced queries when fetching  
+- ✅ **Metadata based**: We primarily access email headers, we request full access so that MailMop can do advanced queries when fetching and enrich unsubscribe links via body content.
 - ✅ **No email storage**: Your emails are never uploaded or stored
 - ✅ **Revoke anytime**: Disconnect with one click
 

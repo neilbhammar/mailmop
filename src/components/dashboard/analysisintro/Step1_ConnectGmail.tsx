@@ -131,7 +131,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                 </div>
                 <div className="ml-1.5 lg:ml-2 xl:ml-3">
                   <h3 className="text-xs lg:text-sm xl:text-base font-medium text-gray-900 dark:text-slate-100">See who's cluttering your inbox</h3>
-                  <p className="text-xs lg:text-sm text-gray-500 dark:text-slate-400">Find out which senders are taking up the most space. Analysis is done locally using metadata.</p>
+                  <p className="text-xs lg:text-sm text-gray-500 dark:text-slate-400">Analyze patterns and identify bulk senders to clean up your inbox efficiently.</p>
                 </div>
               </div>
               
@@ -183,7 +183,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
             <div className="flex items-center justify-center gap-1.5">
               <ShieldIcon size={8} className="lg:w-2.5 lg:h-2.5 xl:w-3 xl:h-3 text-gray-400 dark:text-slate-500" />
               <p className="text-xs text-gray-500 dark:text-slate-400">
-                Secure connection. We never see your emails.
+                Secure connection. All processing in your browser.
               </p>
             </div>
             <p className="text-xs text-gray-500 dark:text-slate-400">
@@ -292,7 +292,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                         <p className="text-gray-600 dark:text-slate-300 font-medium">MailMop connects securely to Gmail</p>
                         <div className="inline-flex items-center gap-1.5 text-xs text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-full mt-2">
                           <CheckIcon size={12} />
-                          <span>Your data stays private</span>
+                          <span>All processing stays local</span>
                         </div>
                       </div>
                     </div>
@@ -405,7 +405,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                         <p className="text-gray-600 dark:text-slate-300 font-medium">Fast analysis in your browser</p>
                         <div className="inline-flex items-center gap-1.5 text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 rounded-full mt-2">
                           <ShieldIcon size={12} />
-                          <span>No server processing</span>
+                          <span>No cloud processing</span>
                         </div>
                       </div>
                     </div>

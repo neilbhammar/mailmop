@@ -380,7 +380,7 @@ export default function Home() {
                 </span>
               </h1>
               <p className="text-lg sm:text-xl text-gray-600 mb-8 px-4 sm:px-0 dark:text-slate-300">
-                Mailmop helps you identify and clean up inbox clutter. All in your browser, <strong>for free</strong>. Mailmop never sees or stores your emails.
+                Mailmop helps you identify and clean up inbox clutter. All in your browser, <strong>for free</strong>. All email processing happens locally on your device.
               </p>
               <div className="flex flex-col sm:flex-row items-center gap-4 justify-center mb-6">
                 <button onClick={signIn} className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-md hover:shadow-lg transition-all duration-300 flex items-center justify-center group relative overflow-hidden dark:from-blue-500 dark:to-blue-600">
