@@ -143,7 +143,10 @@ export function DeleteConfirmModal({
       return emailCountMap[sender]
     }
     // Fallback to evenly distributed count
-    return Math.floor(emailCount / senders.length) || 0
+    const fallbackCount = Math.floor(emailCount / senders.length) || 0;
+    console.log(`[DEBUG] getEmailCountForSender('${sender}') fallback: emailCount=${emailCount}, senders.length=${senders.length}, result=${fallbackCount}`);
+    console.log('[DEBUG] emailCountMap state:', emailCountMap);
+    return fallbackCount;
   }
   
   // Handle delete with exceptions click

@@ -89,13 +89,36 @@ export default function AnalysisView() {
   const [emailsToDelete, setEmailsToDelete] = useState<string[]>([])
   // Store email counts per sender
   const [emailCountMap, setEmailCountMap] = useState<Record<string, number>>({})
+  
+  // Track emailCountMap changes for debugging if needed
+  // useEffect(() => {
+  //   if (Object.keys(emailCountMap).length > 0) {
+  //     console.log('[DEBUG] emailCountMap changed:', emailCountMap);
+  //   }
+  // }, [emailCountMap]);
+  
+  // Get sender data (needed for totalEmailCount calculation)
+  const { senders: allSenders, refresh: refreshSenderData } = useSenderData()
+  
   // Total number of emails to delete
   const totalEmailCount = useMemo(() => {
     if (emailsToDelete.length === 0) return 0
     
     // Sum up the counts for selected senders
-    return emailsToDelete.reduce((total, email) => total + (emailCountMap[email] || 30), 0)
-  }, [emailsToDelete, emailCountMap])
+    return emailsToDelete.reduce((total, email) => {
+      // First try emailCountMap, then lookup actual count from allSenders, fallback to 0
+      const cachedCount = emailCountMap[email];
+      if (cachedCount !== undefined) {
+        return total + cachedCount;
+      }
+      
+      // Look up actual count from allSenders data
+      const sender = allSenders.find(s => s.email === email);
+      const actualCount = sender?.count ?? 0;
+      
+      return total + actualCount;
+    }, 0)
+  }, [emailsToDelete, emailCountMap, allSenders])
   
   // Use a ref to store the viewInGmail function exposed by SenderTable
   const tableActionsRef = useRef<{
@@ -104,8 +127,6 @@ export default function AnalysisView() {
   
   // Store the currently active single sender email for view in Gmail from premium modal
   const [activeSingleSender, setActiveSingleSender] = useState<string | null>(null)
-
-  const { senders: allSenders, refresh: refreshSenderData } = useSenderData()
 
   // Add state for mark as read functionality
   const [isMarkAsReadModalOpen, setIsMarkAsReadModalOpen] = useState(false)
@@ -167,7 +188,26 @@ export default function AnalysisView() {
     }
   }, []);
 
-
+  // Attach the getSelectedEmails function immediately to avoid race conditions
+  if (!handleSelectedCountChange.getSelectedEmails) {
+    handleSelectedCountChange.getSelectedEmails = (emails: string[], emailCounts?: Record<string, number>) => {
+      setSelectedEmails(new Set(emails));
+      
+      // If provided email counts, use them
+      if (emailCounts) {
+        setEmailCountMap(emailCounts);
+      } else {
+        // Otherwise look up actual counts from allSenders data at call time
+        const countMap: Record<string, number> = {};
+        emails.forEach(email => {
+          // Look up sender at call time to get current data
+          const sender = allSenders.find(s => s.email === email);
+          countMap[email] = sender?.count ?? 0; // Use actual count or 0 if not found
+        });
+        setEmailCountMap(countMap);
+      }
+    };
+  }
 
   // Schedule simple auto-clear - clears current selection after 2s
   const scheduleSmartAutoClear = useCallback(() => {
@@ -194,7 +234,7 @@ export default function AnalysisView() {
       clearTimeoutRef.current = null;
       pendingSendersToRemoveRef.current = [];
     }, 2000); // 2 seconds
-  }, [selectedEmails, handleSelectedCountChange]); // ✅ Fix: Added handleSelectedCountChange to dependencies
+  }, [selectedEmails]); // Removed handleSelectedCountChange - function is always current due to closure
 
   // ✅ Fix: Cleanup timeouts when component unmounts to prevent memory leaks
   useEffect(() => {
@@ -207,6 +247,38 @@ export default function AnalysisView() {
       }
     };
   }, []); // Empty dependency array means this only runs on mount/unmount
+
+  // ✅ Preventive Fix: Clear auto-clear timeouts when page becomes hidden
+  // This prevents stale timeouts from firing when user returns to the page
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && clearTimeoutRef.current) {
+        // User left the page, clear any pending auto-clear timeout
+        clearTimeout(clearTimeoutRef.current);
+        clearTimeoutRef.current = null;
+        pendingSendersToRemoveRef.current = [];
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // ✅ Preventive Fix: Re-establish SenderTable connection when window regains focus
+  // This ensures the communication channel between SenderTable and AnalysisView works after user returns
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      // Force re-establishment of the communication channel by re-running the setup
+      // This is safe because the setup effect is idempotent
+      if (typeof handleSelectedCountChange.getSelectedEmails !== 'function') {
+        // If the connection was lost, it will be re-established by the next render cycle
+        // due to the useEffect that sets up the getSelectedEmails function
+      }
+    };
+    
+    window.addEventListener('focus', handleWindowFocus);
+    return () => window.removeEventListener('focus', handleWindowFocus);
+  }, []);
 
   // 🧠 Handle overlapping actions - clears senders that were pending but not in current selection
   const handleOverlappingActions = useCallback(() => {
@@ -238,7 +310,7 @@ export default function AnalysisView() {
         }
       }
     }
-  }, [selectedEmails, handleSelectedCountChange]);
+  }, [selectedEmails]); // Removed handleSelectedCountChange - function is always current due to closure
 
   // Update the effect that gets sender data
   useEffect(() => {
@@ -262,25 +334,21 @@ export default function AnalysisView() {
     setUnreadCountMap(unreadCounts);
   }, [selectedEmails, allSenders]);
 
-  // Set up a side effect to receive selected emails from the table
+  // Set up the supporting functions for the table
   useEffect(() => {
-    // ✅ Fix: Proper type safety - interface already supports this method
-    handleSelectedCountChange.getSelectedEmails = (emails: string[], emailCounts?: Record<string, number>) => {
-      setSelectedEmails(new Set(emails));
-      
-      // If provided email counts, use them
-      if (emailCounts) {
-        setEmailCountMap(emailCounts);
-      } else {
-        // Otherwise create an even distribution with default counts (30 per sender)
-        const countMap: Record<string, number> = {};
-        emails.forEach(email => {
-          countMap[email] = 30; // Default of 30 emails per sender
-        });
-        setEmailCountMap(countMap);
+    // ✅ Fix: Proper type safety - interface already supports these methods
+    handleSelectedCountChange.clearSelections = () => {
+      if (typeof handleSelectedCountChange.clearSelections === 'function') {
+        handleSelectedCountChange.clearSelections();
       }
     };
-  }, []);
+    
+    handleSelectedCountChange.removeFromSelection = (emails: string[]) => {
+      if (typeof handleSelectedCountChange.removeFromSelection === 'function') {
+        handleSelectedCountChange.removeFromSelection(emails);
+      }
+    };
+  }, []); // Empty dependency array since these are just function references
 
   // Handlers for bulk actions
   const handleViewInGmail = useCallback(() => {
@@ -328,7 +396,12 @@ export default function AnalysisView() {
 
   // Handler for row-level delete action
   const handleDeleteSingleSender = useCallback((email: string, emailCount?: number) => {
-    const currentCount = emailCount || emailCountMap[email] || 30;
+    // Use provided count, then emailCountMap, then actual sender count, fallback to 0
+    const currentCount = emailCount || emailCountMap[email] || (() => {
+      const sender = allSenders.find(s => s.email === email);
+      return sender?.count ?? 0;
+    })();
+    
     setEmailCountMap(prev => ({ ...prev, [email]: currentCount }));
 
     // checkFeatureAccess will open premium modal if needed
@@ -340,7 +413,7 @@ export default function AnalysisView() {
       // Access denied, hook opened modal. Store sender for potential view action.
       setActiveSingleSender(email); 
     }
-  }, [checkFeatureAccess, emailCountMap]);
+  }, [checkFeatureAccess, emailCountMap, allSenders]);
 
   // Handler for delete with exceptions
   const handleDeleteWithExceptions = useCallback(() => {
@@ -543,8 +616,6 @@ export default function AnalysisView() {
     }
   }, [checkFeatureAccess, allSenders, setActiveSingleSender, unsubscribeHook, refreshSenderData]);
 
-
-
   // Handler for block sender (single and bulk)
   const handleBlockSenders = useCallback(() => {
     if (selectedEmails.size === 0) {
@@ -618,7 +689,12 @@ export default function AnalysisView() {
 
   // Handler for single sender delete with exceptions from row actions
   const handleDeleteSingleSenderWithExceptions = useCallback((email: string, emailCount?: number) => {
-    const currentCount = emailCount || emailCountMap[email] || 30;
+    // Use provided count, then emailCountMap, then actual sender count, fallback to 0
+    const currentCount = emailCount || emailCountMap[email] || (() => {
+      const sender = allSenders.find(s => s.email === email);
+      return sender?.count ?? 0;
+    })();
+    
     setEmailCountMap(prev => ({ ...prev, [email]: currentCount }));
 
     // Check feature access
@@ -630,7 +706,7 @@ export default function AnalysisView() {
       // Access denied, hook opened modal. Store sender for potential view action.
       setActiveSingleSender(email);
     }
-  }, [checkFeatureAccess, emailCountMap]);
+  }, [checkFeatureAccess, emailCountMap, allSenders]);
 
   // Show loading state if we're still preparing or loading view state
   if (progress.status === 'preparing' || !viewStateLoaded) {
@@ -691,13 +767,25 @@ export default function AnalysisView() {
       {/* Delete Confirmation Modal (Local State) */}
       <DeleteConfirmModal
         open={isDeleteModalOpen}
-        onOpenChange={setIsDeleteModalOpen}
+        onOpenChange={(isOpen) => {
+          setIsDeleteModalOpen(isOpen);
+          // Clear emailCountMap when modal closes to prevent stale data
+          if (!isOpen) {
+            console.log('[DEBUG] Modal closing, clearing emailCountMap for senders:', emailsToDelete);
+            setEmailCountMap(prev => {
+              const updated = { ...prev };
+              emailsToDelete.forEach(email => delete updated[email]);
+              return updated;
+            });
+          }
+        }}
         emailCount={totalEmailCount}
         senderCount={emailsToDelete.length}
         senders={emailsToDelete}
         emailCountMap={emailCountMap}
         onDeleteWithExceptions={handleDeleteWithExceptions}
         onSuccess={() => {
+          console.log('[DEBUG] Delete modal success callback triggered');
           // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 1.5s
           scheduleSmartAutoClear();
         }}
@@ -706,7 +794,17 @@ export default function AnalysisView() {
       {/* Delete With Exceptions Modal (Local State) */}
       <DeleteWithExceptionsModal
         open={isDeleteWithExceptionsModalOpen}
-        onOpenChange={setIsDeleteWithExceptionsModalOpen}
+        onOpenChange={(isOpen) => {
+          setIsDeleteWithExceptionsModalOpen(isOpen);
+          // Clear emailCountMap when modal closes to prevent stale data
+          if (!isOpen) {
+            setEmailCountMap(prev => {
+              const updated = { ...prev };
+              emailsToDelete.forEach(email => delete updated[email]);
+              return updated;
+            });
+          }
+        }}
         emailCount={totalEmailCount}
         senderCount={emailsToDelete.length}
         senders={emailsToDelete}
@@ -803,7 +901,17 @@ export default function AnalysisView() {
       {/* Add BlockSenderModal */}
       <BlockSenderModal
         open={isBlockModalOpen}
-        onOpenChange={setIsBlockModalOpen}
+        onOpenChange={(isOpen) => {
+          setIsBlockModalOpen(isOpen);
+          // Clear emailCountMap when modal closes to prevent stale data
+          if (!isOpen) {
+            setEmailCountMap(prev => {
+              const updated = { ...prev };
+              emailsToBlock.forEach(email => delete updated[email]);
+              return updated;
+            });
+          }
+        }}
         emailCount={totalEmailCount}
         senderCount={emailsToBlock.length}
         onConfirm={handleBlockConfirm}

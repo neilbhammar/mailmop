@@ -1003,6 +1003,7 @@ export function SenderTable({
   }, [onSelectedCountChange, handleBulkViewInGmail, clearSelections, removeFromSelection, selectedEmails]);
 
   // This effect will update the selected emails whenever they change
+  // Also re-runs when onSelectedCountChange changes (when getSelectedEmails gets attached)
   useEffect(() => {
     if (onSelectedCountChange && typeof onSelectedCountChange.getSelectedEmails === 'function') {
       // Create a map of email counts
