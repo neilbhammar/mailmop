@@ -147,7 +147,7 @@ export default function Step1_ConnectGmail({ onNext, isFirstTimeUser }: Step1Pro
                 <div className="flex flex-col items-center text-center max-w-[140px]">
                   <SparklesIcon className="w-6 h-6 text-blue-600 dark:text-blue-400 mb-2" />
                   <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">Instant insights</p>
-                  <span className="text-xs text-gray-500 dark:text-slate-400">See who's filling your inbox.</span>
+                  <span className="text-xs text-gray-500 dark:text-slate-400">Who's filling your inbox.</span>
                 </div>
                 <div className="flex flex-col items-center text-center max-w-[140px]">
                   <TrashIcon className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mb-2" />
