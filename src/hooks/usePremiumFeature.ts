@@ -9,7 +9,7 @@
  * @returns Object with isPremium flag and usage tracking functions
  */
 
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/context/AuthProvider'
 import { createActionLog } from '@/supabase/actions/logAction'
 import { ActionType, ActionStatus } from '@/types/actions'
@@ -34,12 +34,28 @@ export type PremiumFeature = keyof typeof featureToActionType
 export function usePremiumFeature() {
   const { user, plan } = useAuth()
   
+  // Use a ref to always have the latest plan value (fixes stale closure issue)
+  const planRef = useRef(plan)
+  const userRef = useRef(user)
+  
+  // Keep refs updated with latest values
+  useEffect(() => {
+    planRef.current = plan
+    userRef.current = user
+    
+    // Debug logging to track plan changes
+    console.log('🔄 [usePremiumFeature] Plan updated:', { 
+      plan, 
+      timestamp: new Date().toISOString() 
+    })
+  }, [plan, user])
+  
   // State for premium feature modal
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false)
   const [currentFeature, setCurrentFeature] = useState<PremiumFeature | null>(null)
   const [itemCount, setItemCount] = useState(0)
   
-  // Determine if user has premium access
+  // Determine if user has premium access (using current plan value)
   const isPremium = plan === 'pro'
   
   /**
@@ -51,8 +67,11 @@ export function usePremiumFeature() {
     feature: PremiumFeature, 
     count: number = 1
   ) => {
+    // Use ref to get latest user value
+    const currentUser = userRef.current
+    
     // Only log if we have a user ID
-    if (!user?.id) return
+    if (!currentUser?.id) return
     
     try {
       // Log specifically as a 'premium_attempt'
@@ -61,7 +80,7 @@ export function usePremiumFeature() {
       const status: ActionStatus = 'completed'; 
       
       await createActionLog({
-        user_id: user.id,
+        user_id: currentUser.id,
         type: actionType,
         status: status,
         count: count, // Log how many items were involved
@@ -71,7 +90,7 @@ export function usePremiumFeature() {
       // Log error to console, but don't interrupt user flow
       console.error(`Failed to log premium feature attempt (${feature}):`, error)
     }
-  }, [user?.id])
+  }, []) // No dependencies needed since we use refs
   
   /**
    * Check if a feature is available. If not, log the failed attempt and show the premium modal.
@@ -83,12 +102,27 @@ export function usePremiumFeature() {
     feature: PremiumFeature,
     count: number = 1
   ): boolean => {
+    // Use ref to get the latest plan value (fixes stale closure issue)
+    const currentPlan = planRef.current
+    const isPremiumAccess = currentPlan === 'pro'
+    
+    // Debug logging to track premium checks
+    console.log('🔍 [usePremiumFeature] Premium access check:', { 
+      feature, 
+      currentPlan,
+      isPremiumAccess,
+      count,
+      timestamp: new Date().toISOString()
+    })
+    
     // If the user has premium access, allow the feature immediately
-    if (isPremium) {
+    if (isPremiumAccess) {
+      console.log('✅ [usePremiumFeature] Premium access granted for:', feature)
       return true
     }
     
     // --- User does NOT have premium access --- 
+    console.log('❌ [usePremiumFeature] Premium access denied for:', feature, 'Plan:', currentPlan)
     
     // 1. Log the failed attempt
     logFailedPremiumAttempt(feature, count)
@@ -102,7 +136,7 @@ export function usePremiumFeature() {
     
     // 4. Return false indicating access is denied
     return false
-  }, [isPremium, logFailedPremiumAttempt])
+  }, [logFailedPremiumAttempt]) // Only depend on the logging function
   
   return {
     isPremium,

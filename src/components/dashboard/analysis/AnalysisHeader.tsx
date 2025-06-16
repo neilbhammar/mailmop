@@ -217,10 +217,10 @@ export function AnalysisHeader({
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="outline" 
-                  size="icon"
-                  className="h-9 w-9 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
+                  className="h-9 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300 px-3 gap-2"
                 >
                   <Filter className="h-4 w-4" />
+                  <span className="hidden md:inline text-sm font-medium">Filter</span>
                 </Button>
               </DropdownMenuTrigger>
               {(showUnreadOnly || showHasUnsubscribe) && (
