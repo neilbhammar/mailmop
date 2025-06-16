@@ -1,13 +1,14 @@
 'use client'
 
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
-import { CheckIcon, ChevronRightIcon, ShieldIcon, MailIcon, SparklesIcon, TrashIcon, BanIcon, ExternalLinkIcon, RefreshCw, SendIcon, FilterIcon } from 'lucide-react'
+import { CheckIcon, ChevronRightIcon, ShieldIcon, MailIcon, SparklesIcon, TrashIcon, BanIcon, ExternalLinkIcon, RefreshCw, SendIcon, FilterIcon, ChevronDownIcon } from 'lucide-react'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getAccessToken } from '@/lib/gmail/token'
 import { fetchGmailStats } from '@/lib/gmail/fetchGmailStats'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthProvider'
+import * as CollapsiblePrimitive from '@radix-ui/react-collapsible'
 
 interface Step1Props {
   onNext: () => void;
@@ -25,6 +26,7 @@ export default function Step1_ConnectGmail({ onNext, isFirstTimeUser }: Step1Pro
   const [fetchingStats, setFetchingStats] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const { user } = useAuth()
+  const [whyOpen, setWhyOpen] = useState(false)
   
   // Auto-detect first-time users (account created ≤ 24h ago) if prop not supplied
   const computedFirstTime = useMemo(() => {
@@ -137,78 +139,62 @@ export default function Step1_ConnectGmail({ onNext, isFirstTimeUser }: Step1Pro
             )}
           </div>
           
-          {/* First-time user explanation - RADICALLY DIFFERENT COMPACT APPROACH */}
+          {/* First-time user simplified look */}
           {firstTime ? (
-            <div className="space-y-6 lg:space-y-8">
-              {/* Trust pillars */}
-              <div className="grid gap-5 lg:gap-8 sm:grid-cols-1 lg:grid-cols-3">
-                {/* Pillar 1 */}
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 rounded-lg bg-blue-100 dark:bg-blue-500/20 p-2">
-                    <SparklesIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Instant insights</h3>
-                    <p className="text-xs text-gray-600 dark:text-slate-400 leading-normal">See who&rsquo;s filling your inbox and how often.</p>
-                  </div>
+            <div className="space-y-8">
+              {/* Three quick value props */}
+              <div className="flex flex-col sm:flex-row justify-center gap-6 sm:gap-12">
+                <div className="flex flex-col items-center text-center max-w-[140px]">
+                  <SparklesIcon className="w-6 h-6 text-blue-600 dark:text-blue-400 mb-2" />
+                  <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">Instant insights</p>
+                  <span className="text-xs text-gray-500 dark:text-slate-400">See who's filling your inbox.</span>
                 </div>
-                {/* Pillar 2 */}
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 p-2">
-                    <TrashIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">One-click cleanup</h3>
-                    <p className="text-xs text-gray-600 dark:text-slate-400 leading-normal">Bulk delete, mark read, and more right in your browser.</p>
-                  </div>
+                <div className="flex flex-col items-center text-center max-w-[140px]">
+                  <TrashIcon className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mb-2" />
+                  <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">One-click cleanup</p>
+                  <span className="text-xs text-gray-500 dark:text-slate-400">Bulk delete & mark read.</span>
                 </div>
-                {/* Pillar 3 */}
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 rounded-lg bg-amber-100 dark:bg-amber-500/20 p-2">
-                    <ShieldIcon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Privacy built-in</h3>
-                    <p className="text-xs text-gray-600 dark:text-slate-400 leading-normal">Emails never leave your device - all local.</p>
-                  </div>
+                <div className="flex flex-col items-center text-center max-w-[140px]">
+                  <ShieldIcon className="w-6 h-6 text-amber-600 dark:text-amber-400 mb-2" />
+                  <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">Privacy built-in</p>
+                  <span className="text-xs text-gray-500 dark:text-slate-400">Everything stays local.</span>
                 </div>
               </div>
 
-              {/* Permission summary with reasons */}
-              <div className="rounded-lg lg:rounded-xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-700/30 p-5 lg:p-7 space-y-5">
-                <h3 className="text-sm lg:text-base font-semibold text-gray-900 dark:text-slate-100 mb-4">How MailMop uses your Gmail</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-xs lg:text-sm">
-                  <div className="flex items-start gap-3">
-                    <MailIcon className="w-4 h-4 text-blue-600 mt-0.5" />
-                    <div className="space-y-0.5 leading-snug">
-                      <p className="font-medium text-gray-900 dark:text-slate-100">Read email metadata</p>
-                      <p className="text-gray-600 dark:text-slate-400">Pattern analysis & stats.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <TrashIcon className="w-4 h-4 text-red-600 mt-0.5" />
-                    <div className="space-y-0.5 leading-snug">
-                      <p className="font-medium text-gray-900 dark:text-slate-100">Bulk delete</p>
-                      <p className="text-gray-600 dark:text-slate-400">Fast inbox cleanup.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <SendIcon className="w-4 h-4 text-emerald-600 mt-0.5" />
-                    <div className="space-y-0.5 leading-snug">
-                      <p className="font-medium text-gray-900 dark:text-slate-100">Send unsubscribe</p>
-                      <p className="text-gray-600 dark:text-slate-400">1-click opt-outs.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <FilterIcon className="w-4 h-4 text-purple-600 mt-0.5" />
-                    <div className="space-y-0.5 leading-snug">
-                      <p className="font-medium text-gray-900 dark:text-slate-100">Filters & labels</p>
-                      <p className="text-gray-600 dark:text-slate-400">Auto-sort future mail.</p>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 dark:text-slate-400">All email access happens locally on your device—never on our servers. Revoke anytime.</p>
-              </div>
+              {/* Smooth Collapsible details */}
+              <CollapsiblePrimitive.Root open={whyOpen} onOpenChange={setWhyOpen}>
+                <motion.div
+                  className="mx-auto max-w-md rounded-lg border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800/30"
+                  initial={false}
+                  animate={{ overflow: 'hidden', height: 'auto' }}
+                >
+                  {/* Trigger */}
+                  <CollapsiblePrimitive.Trigger className="w-full px-4 py-3 flex items-center justify-between text-sm font-medium leading-6 text-gray-900 dark:text-slate-100 cursor-pointer select-none">
+                    Why does MailMop need Gmail access?
+                    <ChevronDownIcon className={cn("h-4 w-4 transform transition-transform", whyOpen && 'rotate-180')} />
+                  </CollapsiblePrimitive.Trigger>
+                  <AnimatePresence initial={false}>
+                    {whyOpen && (
+                      <CollapsiblePrimitive.Content asChild forceMount>
+                        <motion.div
+                          key="content"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25, ease: 'easeInOut' }}
+                          className="px-4 pb-4 pt-2 space-y-3 text-xs text-gray-600 dark:text-slate-400"
+                        >
+                          <div className="flex items-center gap-2"><MailIcon className="w-4 h-4 text-blue-500"/><span>Read metadata only for pattern analysis.</span></div>
+                          <div className="flex items-center gap-2"><TrashIcon className="w-4 h-4 text-red-500"/><span>Bulk delete without leaving your browser.</span></div>
+                          <div className="flex items-center gap-2"><SendIcon className="w-4 h-4 text-emerald-500"/><span>Send unsubscribe requests in one click.</span></div>
+                          <div className="flex items-center gap-2"><FilterIcon className="w-4 h-4 text-purple-500"/><span>Create filters & labels automatically.</span></div>
+                          <p className="pt-2 text-[10px] leading-4 text-gray-400 dark:text-slate-500">Access is entirely client-side—no storage or processing on our servers.</p>
+                        </motion.div>
+                      </CollapsiblePrimitive.Content>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              </CollapsiblePrimitive.Root>
             </div>
           ) : (
             /* Existing benefits for returning users */
