@@ -663,6 +663,8 @@ export function useAnalysisOperations() {
       // Wait for completion by monitoring progress state
       return new Promise<ExecutorResult>((resolve) => {
         const checkStatus = () => {
+          // 🔧 FIX: Always get the current progress from the latest progressRef
+          // This avoids the stale closure issue by accessing the ref fresh each time
           const currentProgress = progressRef.current;
           
           if (abortSignal.aborted || cancellationRef.current) {
@@ -701,7 +703,7 @@ export function useAnalysisOperations() {
     } finally {
       abortSignal.removeEventListener('abort', handleAbort);
     }
-  }, [startAnalysis, cancelAnalysis, progressRef]);
+  }, [startAnalysis, cancelAnalysis]); // 🔧 FIX: Removed progressRef from dependencies
 
   // Register the executor when the hook mounts
   useEffect(() => {
