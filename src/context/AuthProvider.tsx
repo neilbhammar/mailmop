@@ -70,7 +70,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           const fetchedProfile = await fetchProfile(session.user.id)
           if (fetchedProfile) {
-            setPlan(fetchedProfile.plan === 'pro' ? 'pro' : 'free')
+            const newPlan = fetchedProfile.plan === 'pro' ? 'pro' : 'free'
+            console.log('🔄 [AuthProvider] Setting plan from profile:', { 
+              oldPlan: plan,
+              newPlan,
+              profilePlan: fetchedProfile.plan,
+              timestamp: new Date().toISOString()
+            })
+            setPlan(newPlan)
             setProfile(fetchedProfile)
           }
           setUser(session.user)
@@ -144,8 +151,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               try {
               const fetchedProfile = await fetchProfile(session.user.id)
               if (fetchedProfile) {
-                  console.log('[Auth] Updated profile:', fetchedProfile)
-                  setPlan(fetchedProfile.plan === 'pro' ? 'pro' : 'free')
+                  const newPlan = fetchedProfile.plan === 'pro' ? 'pro' : 'free'
+                  console.log('🔄 [AuthProvider] Real-time plan update:', { 
+                    oldPlan: plan,
+                    newPlan,
+                    profilePlan: fetchedProfile.plan,
+                    timestamp: new Date().toISOString()
+                  })
+                  setPlan(newPlan)
                 setProfile(fetchedProfile)
                   // Emit a custom event when profile is updated
                   window.dispatchEvent(new CustomEvent('profileUpdated', { detail: fetchedProfile }))

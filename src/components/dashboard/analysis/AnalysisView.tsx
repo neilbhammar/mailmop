@@ -482,7 +482,21 @@ export default function AnalysisView() {
     // Only use unread count if it exists and is greater than 0
     const actualUnreadCount = (unreadCount ?? sender?.unread_count) || 0;
 
-    if (checkFeatureAccess('mark_read', 1)) {
+    console.log('🎯 [AnalysisView] Mark Read button clicked:', { 
+      email, 
+      unreadCount, 
+      actualUnreadCount,
+      timestamp: new Date().toISOString()
+    })
+
+    const hasAccess = checkFeatureAccess('mark_read', 1)
+    console.log('🎯 [AnalysisView] Premium check result:', { 
+      email, 
+      hasAccess,
+      timestamp: new Date().toISOString()
+    })
+
+    if (hasAccess) {
       setEmailsToMark([email]);
       // Only add to unreadCountMap if there are unread emails
       if (actualUnreadCount > 0) {

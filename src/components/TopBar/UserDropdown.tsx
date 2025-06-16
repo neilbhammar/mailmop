@@ -32,6 +32,14 @@ export function UserDropdown({ user }: UserDropdownProps) {
   const avatarUrl = user.user_metadata?.avatar_url
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Debug logging to track plan changes in UserDropdown
+  useEffect(() => {
+    console.log('🔄 [UserDropdown] Plan updated:', { 
+      plan, 
+      timestamp: new Date().toISOString() 
+    })
+  }, [plan])
+
   // Handle click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
