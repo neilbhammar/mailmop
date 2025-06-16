@@ -12,6 +12,8 @@ import {
 import { ExternalLink, Trash2, MailOpen, MoreHorizontal, PenSquare, Tag, Ban, PencilOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Portal } from "@radix-ui/react-portal"
+import { useSenderActionMeta } from '@/hooks/useSenderActionMeta'
+import { formatRelativeTime } from "@/lib/utils/formatRelativeTime"
 
 interface RowActionsProps {
   sender: Sender
@@ -38,8 +40,25 @@ export function RowActions({
   onBlock,
   onDropdownOpen
 }: RowActionsProps) {
+  const deleteMeta = useSenderActionMeta(sender.email, 'delete')
+  const deleteWithExceptionsMeta = useSenderActionMeta(sender.email, 'delete_with_exceptions')
+  const applyLabelMeta = useSenderActionMeta(sender.email, 'modify_label')
+  const unsubscribeMeta = useSenderActionMeta(sender.email, 'unsubscribe')
+  const blockMeta = useSenderActionMeta(sender.email, 'block')
+
   const isActionTaken = (action: 'unsubscribe' | 'delete' | 'markUnread' | 'block') => {
-    return sender.actionsTaken && sender.actionsTaken.includes(action);
+    switch (action) {
+      case 'delete':
+        return deleteMeta.completed
+      case 'unsubscribe':
+        return unsubscribeMeta.completed
+      case 'markUnread':
+        return false
+      case 'block':
+        return sender.actionsTaken?.includes('block') || false
+      default:
+        return false
+    }
   }
 
   // Base styles for icon buttons
@@ -71,6 +90,9 @@ export function RowActions({
     onBlock(sender.email);
   };
 
+  // Unified tooltip styling
+  const tooltipClass = "z-[100] max-w-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300";
+
   return (
     <div className="flex items-center justify-end gap-1.5">
       {/* Unsubscribe Button - Only show if hasUnsubscribe is true */}
@@ -98,12 +120,12 @@ export function RowActions({
             </TooltipTrigger>
             <Portal container={document.getElementById('tooltip-root')}>
               {isActionTaken('unsubscribe') && (
-                <TooltipContent sideOffset={5} className="z-[100]">
+                <TooltipContent side="top" sideOffset={8} className={tooltipClass}>
                   <p>You've already unsubscribed from this sender. Click to try again.</p>
                 </TooltipContent>
               )}
               {!isActionTaken('unsubscribe') && (
-                <TooltipContent sideOffset={5} className="z-[100]">
+                <TooltipContent side="top" sideOffset={8} className={tooltipClass}>
                   <p>Unsubscribe from {sender.name || sender.email}</p>
                 </TooltipContent>
               )}
@@ -126,7 +148,7 @@ export function RowActions({
             </div>
           </TooltipTrigger>
           <Portal container={document.getElementById('tooltip-root')}>
-            <TooltipContent sideOffset={5} className="z-[100]">
+            <TooltipContent side="top" sideOffset={8} className={tooltipClass}>
               <p>View in Gmail</p>
             </TooltipContent>
           </Portal>
@@ -151,8 +173,12 @@ export function RowActions({
             </div>
           </TooltipTrigger>
           <Portal container={document.getElementById('tooltip-root')}>
-            <TooltipContent sideOffset={5} className="z-[100]">
-              <p>{isActionTaken('delete') ? 'Already deleted emails from this sender' : 'Delete all emails from sender'}</p>
+            <TooltipContent side="top" sideOffset={8} className={tooltipClass}>
+              <p>
+                {deleteMeta.queued && 'Delete queued – will process soon'}
+                {!deleteMeta.queued && deleteMeta.completed && 'Already deleted emails from this sender'}
+                {!deleteMeta.queued && !deleteMeta.completed && 'Delete all emails from sender'}
+              </p>
             </TooltipContent>
           </Portal>
         </Tooltip>
@@ -179,12 +205,9 @@ export function RowActions({
             </div>
           </TooltipTrigger>
           <Portal container={document.getElementById('tooltip-root')}>
-            <TooltipContent sideOffset={5} className="z-[100]">
+            <TooltipContent side="top" sideOffset={8} className={tooltipClass}>
               <p>
-                {sender.unread_count === 0 
-                  ? "No Unread Emails"
-                  : `Mark ${sender.unread_count} Unread`
-                }
+                {sender.unread_count === 0 ? 'No Unread Emails' : `Mark ${sender.unread_count} Unread`}
               </p>
             </TooltipContent>
           </Portal>
@@ -214,7 +237,7 @@ export function RowActions({
               </DropdownMenuTrigger>
             </TooltipTrigger>
             <Portal container={document.getElementById('tooltip-root')}>
-              <TooltipContent sideOffset={5} className="z-[100]">
+              <TooltipContent side="top" sideOffset={8} className={tooltipClass}>
                 <p>More Actions</p>
               </TooltipContent>
             </Portal>
@@ -224,36 +247,82 @@ export function RowActions({
           align="end" 
           className="w-56 bg-white dark:bg-slate-800 rounded-lg border border-gray-100 dark:border-slate-700 shadow-md z-50 py-1"
         >
-          <DropdownMenuItem 
-            onSelect={(e) => {
-              e.preventDefault();
-              onDeleteWithExceptions(sender.email, sender.count);
-            }}
-            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer"
-          >
-            <PencilOff className="h-4 w-4 mr-2 shrink-0" />
-            <span>Delete with Exceptions</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onSelect={(e) => {
-              e.preventDefault();
-              onApplyLabel(sender.email);
-            }}
-            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer"
-          >
-            <Tag className="h-4 w-4 mr-2" />
-            <span>Apply Label</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={handleBlock}
-            className={cn(
-              "flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer",
-              isActionTaken('block') && "opacity-40 cursor-not-allowed data-[highlighted]:bg-white dark:data-[highlighted]:bg-slate-800"
-            )}
-          >
-            <Ban className="h-4 w-4 mr-2" />
-            <span>{isActionTaken('block') ? 'Sender blocked' : 'Block Sender'}</span>
-          </DropdownMenuItem>
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuItem 
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    onDeleteWithExceptions(sender.email, sender.count);
+                  }}
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer"
+                >
+                  <PencilOff className="h-4 w-4 mr-2 shrink-0" />
+                  <span>
+                    Delete with Exceptions
+                    {deleteWithExceptionsMeta.queued && ' (queued)'}
+                  </span>
+                </DropdownMenuItem>
+              </TooltipTrigger>
+              <Portal container={document.getElementById('tooltip-root')}>
+                <TooltipContent side="left" sideOffset={8} className={tooltipClass}>
+                  <p>
+                    {deleteWithExceptionsMeta.queued && 'Delete with exceptions queued'}
+                    {!deleteWithExceptionsMeta.queued && deleteWithExceptionsMeta.completed && `Action taken ${formatRelativeTime(new Date(deleteWithExceptionsMeta.completedAt || 0))}`}
+                    {!deleteWithExceptionsMeta.queued && !deleteWithExceptionsMeta.completed && 'Delete matching some criteria and keep others'}
+                  </p>
+                </TooltipContent>
+              </Portal>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuItem 
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    onApplyLabel(sender.email);
+                  }}
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer"
+                >
+                  <Tag className="h-4 w-4 mr-2" />
+                  <span>Apply Label</span>
+                </DropdownMenuItem>
+              </TooltipTrigger>
+              <Portal container={document.getElementById('tooltip-root')}>
+                <TooltipContent side="left" sideOffset={8} className={tooltipClass}>
+                  <p>
+                    {applyLabelMeta.queued && 'Apply label queued'}
+                    {!applyLabelMeta.queued && applyLabelMeta.completed && `Action taken ${formatRelativeTime(new Date(applyLabelMeta.completedAt || 0))}`}
+                    {!applyLabelMeta.queued && !applyLabelMeta.completed && 'Apply a label to all emails from this sender'}
+                  </p>
+                </TooltipContent>
+              </Portal>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuItem 
+                  onClick={handleBlock}
+                  className={cn(
+                    "flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer",
+                    isActionTaken('block') && "opacity-40 cursor-not-allowed data-[highlighted]:bg-white dark:data-[highlighted]:bg-slate-800"
+                  )}
+                >
+                  <Ban className="h-4 w-4 mr-2" />
+                  <span>{isActionTaken('block') ? 'Sender blocked' : 'Block Sender'}</span>
+                </DropdownMenuItem>
+              </TooltipTrigger>
+              <Portal container={document.getElementById('tooltip-root')}>
+                <TooltipContent side="left" sideOffset={8} className={tooltipClass}>
+                  <p>
+                    {blockMeta.completed ? `Sender blocked ${formatRelativeTime(new Date(blockMeta.completedAt || 0))}` : 'Block all future messages from this sender'}
+                  </p>
+                </TooltipContent>
+              </Portal>
+            </Tooltip>
+          </TooltipProvider>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

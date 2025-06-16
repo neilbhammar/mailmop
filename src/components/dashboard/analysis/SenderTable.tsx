@@ -29,6 +29,7 @@ import { formatRelativeTime } from '@/lib/utils/formatRelativeTime'
 import { Portal } from "@radix-ui/react-portal"
 import { useViewInGmail } from '@/hooks/useViewInGmail'
 import { ApplyLabelModal } from '@/components/modals/ApplyLabelModal'
+import { useSenderActionMeta } from '@/hooks/useSenderActionMeta'
 
 // Define column widths for consistent layout
 const COLUMN_WIDTHS = {
@@ -75,13 +76,16 @@ const SenderRow = memo(({
   columnWidths: typeof COLUMN_WIDTHS
   showUnreadOnly: boolean
 }) => {
+  // Determine if any action is queued for this sender
+  const { queued } = useSenderActionMeta(row.original.email)
   return (
     <tr 
       key={row.original.email}
       className={cn(
         "relative h-14 cursor-pointer group transition-colors duration-75",
         "hover:bg-blue-50/75 dark:hover:bg-slate-700",
-        (isSelected || isActive) && "bg-blue-50/75 dark:bg-slate-700/75"
+        (isSelected || isActive) && "bg-blue-50/75 dark:bg-slate-700/75",
+        queued && "bg-orange-100/40 dark:bg-orange-700/10"
       )}
       onClick={(e) => onRowClick(e, row)}
       onMouseLeave={onRowMouseLeave}
@@ -751,26 +755,11 @@ export function SenderTable({
       ),
       cell: ({ row }) => {
         const sender = row.original;
-        const hasDeleteWithExceptions = sender.actionsTaken?.includes('delete_with_exceptions') || false;
         const countValue = showUnreadOnly ? sender.unread_count : (row.getValue("count") as number);
         
         return (
           <div className="truncate text-right pr-2">
             <span className="text-blue-700 dark:text-blue-400 inline-flex items-center gap-1">
-              {hasDeleteWithExceptions && showUnreadOnly && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                    </TooltipTrigger>
-                    <Portal container={document.getElementById('tooltip-root')}>
-                      <TooltipContent side="top" sideOffset={4} className="z-[100] max-w-xs">
-                        <p>Estimate after partial deletion. May be inaccurate.</p>
-                      </TooltipContent>
-                    </Portal>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
               {countValue}
             </span>
           </div>
@@ -1066,7 +1055,7 @@ export function SenderTable({
     <>
       {/* Add a portal root for tooltips that will render outside table constraints */}
       <Portal>
-        <div id="tooltip-root" className="fixed inset-0 pointer-events-none z-50" />
+        <div id="tooltip-root" className="fixed inset-0 pointer-events-none z-[60]" />
       </Portal>
       
       <div className="w-full h-full flex flex-col relative select-none">

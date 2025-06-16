@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
 import { ReauthDialog } from '@/components/modals/ReauthDialog';
 import { logger } from '@/lib/utils/logger';
+import { storeSenderAction, updateActionStatus } from '@/lib/storage/actionStorage'
 
 // Context types
 interface QueueContextType {
@@ -159,7 +160,38 @@ export function QueueProvider({ children }: { children: ReactNode }) {
       targetSenders = [payload.senderEmail];
     }
 
-    const job: Job = {
+    const actionTimestamps: Record<string, number> = {};
+    const mapJobTypeToAction = (jobType: JobType): Parameters<typeof storeSenderAction>[0]['type'] => {
+      switch (jobType) {
+        case 'delete':
+          return 'delete';
+        case 'deleteWithExceptions':
+          return 'delete_with_exceptions';
+        case 'markRead':
+          return 'mark_as_read';
+        case 'applyLabel':
+          return 'apply_label';
+        case 'modifyLabel':
+          return 'modify_label';
+        case 'createFilter':
+          return 'create_filter';
+        case 'unsubscribe':
+          return 'unsubscribe';
+        default:
+          return 'delete';
+      }
+    };
+
+    if (targetSenders) {
+      const actionType = mapJobTypeToAction(type);
+      targetSenders.forEach(email => {
+        const ts = Date.now();
+        storeSenderAction({ senderEmail: email, timestamp: ts, type: actionType, status: 'pending' });
+        actionTimestamps[email] = ts;
+      })
+    }
+
+    const job: Job & { actionTimestamps?: Record<string, number> } = {
       id: jobId,
       type,
       payload,
@@ -168,6 +200,7 @@ export function QueueProvider({ children }: { children: ReactNode }) {
       status: 'queued',
       abortController,
       targetSenders,
+      actionTimestamps,
     };
 
     dispatch({ type: 'ENQUEUE_JOB', payload: job });
@@ -187,8 +220,17 @@ export function QueueProvider({ children }: { children: ReactNode }) {
   // Cancel a job
   const cancel = useCallback((jobId: string) => {
     logger.debug('Cancelling job', { component: 'QueueProvider', jobId });
+
+    // Mark any pending sender actions related to this job as failed/cancelled
+    const jobToCancel = state.jobs.find(j => j.id === jobId) as (Job & { actionTimestamps?: Record<string, number> }) | undefined;
+    if (jobToCancel?.actionTimestamps) {
+      Object.entries(jobToCancel.actionTimestamps).forEach(([email, ts]) => {
+        updateActionStatus(email, ts, 'failed', 'cancelled');
+      });
+    }
+
     dispatch({ type: 'CANCEL_JOB', payload: { id: jobId } });
-  }, []);
+  }, [state.jobs]);
 
   // Clear completed jobs
   const clearCompleted = useCallback(() => {
@@ -286,6 +328,15 @@ export function QueueProvider({ children }: { children: ReactNode }) {
 
       // Handle completion
       if (result.success) {
+        // Mark pending actions as completed for each sender
+        if ((nextJob as any).actionTimestamps) {
+          nextJob.targetSenders?.forEach(email => {
+            const ts = (nextJob as any).actionTimestamps[email];
+            if (ts) {
+              updateActionStatus(email, ts, 'completed');
+            }
+          });
+        }
         logger.debug('Job completed successfully', { 
           component: 'QueueProvider', 
           jobId: nextJob.id 
@@ -295,6 +346,15 @@ export function QueueProvider({ children }: { children: ReactNode }) {
           payload: { id: nextJob.id, status: 'success' } 
         });
       } else {
+        // Mark pending actions as failed for each sender
+        if ((nextJob as any).actionTimestamps) {
+          nextJob.targetSenders?.forEach(email => {
+            const ts = (nextJob as any).actionTimestamps[email];
+            if (ts) {
+              updateActionStatus(email, ts, 'failed', result.error);
+            }
+          });
+        }
         logger.error('Job failed', { 
           component: 'QueueProvider', 
           jobId: nextJob.id, 

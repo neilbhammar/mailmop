@@ -7,7 +7,7 @@ export const ACTION_CHANGE_EVENT = 'mailmop:action-change';
 export interface SenderAction {
   senderEmail: string;
   timestamp: number;
-  type: 'delete' | 'unsubscribe' | 'block' | 'markUnread';
+  type: 'delete' | 'delete_with_exceptions' | 'unsubscribe' | 'mark_as_read' | 'apply_label' | 'modify_label' | 'create_filter' | 'block';
   status: 'pending' | 'completed' | 'failed';
   error?: string;
 }
@@ -127,4 +127,26 @@ export function getPendingActions(): SenderAction[] {
   } catch {
     return [];
   }
+}
+
+// Helper to store a new pending action (returns timestamp)
+export function queueSenderAction(senderEmail: string, type: SenderAction['type']): number {
+  const timestamp = Date.now();
+  storeSenderAction({ senderEmail, type, timestamp, status: 'pending' });
+  return timestamp;
+}
+
+// Helper to mark any pending actions of a given type as completed/failed
+export function completePendingActions(
+  senderEmail: string,
+  type: SenderAction['type'],
+  success: boolean,
+  error?: string
+): void {
+  const actions = getSenderActions(senderEmail);
+  actions
+    .filter(a => a.type === type && a.status === 'pending')
+    .forEach(pending => {
+      updateActionStatus(senderEmail, pending.timestamp, success ? 'completed' : 'failed', error);
+    });
 } 

@@ -1,6 +1,7 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { SenderResult } from '@/types/gmail';
 import { ActionType } from '@/types/actions';
+import { completePendingActions } from './actionStorage'
 
 // Database name and version
 const DB_NAME = 'mailmop';
@@ -148,6 +149,13 @@ export async function markSenderActionTaken(
     console.log(`[markSenderActionTaken] Marked '${action}' for sender: ${senderEmail}`);
     // Notify components that sender data has changed
     notifyAnalysisChange(); 
+
+    // Mark any pending actions for this sender/type as completed
+    try {
+      completePendingActions(senderEmail, action as any, true);
+    } catch (err) {
+      console.warn('[markSenderActionTaken] failed to complete pending action', err);
+    }
   } else {
     console.log(`[markSenderActionTaken] Action '${action}' already marked for sender: ${senderEmail}`);
   }
