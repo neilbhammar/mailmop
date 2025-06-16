@@ -46,6 +46,10 @@ interface MarkAsReadConfirmModalProps {
    */
   unreadCountMap?: Record<string, number>
   /**
+   * Optional array of all senders for live data lookup
+   */
+  allSenders?: Array<{ email: string; unread_count?: number }>
+  /**
    * Optional callback when action is successfully confirmed (not cancelled)
    */
   onSuccess?: () => void
@@ -67,6 +71,7 @@ export function MarkAsReadConfirmModal({
   onConfirm, // Optional - for backward compatibility
   senders = [],
   unreadCountMap = {},
+  allSenders,
   onSuccess
 }: MarkAsReadConfirmModalProps) {
   // Track loading state during the operation
@@ -137,6 +142,10 @@ export function MarkAsReadConfirmModal({
   
   // Get the unread count for a sender, defaulting to 0
   const getUnreadCountForSender = (sender: string): number => {
+    if (allSenders && allSenders.length > 0) {
+      const senderData = allSenders.find(s => s.email === sender);
+      return senderData?.unread_count || 0;
+    }
     return unreadCountMap[sender] || 0
   }
   

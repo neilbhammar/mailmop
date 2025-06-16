@@ -178,6 +178,26 @@ export default function AnalysisView() {
     return emailsToApplyLabelTo.reduce((total, email) => total + (emailCountMap[email] || 0), 0); // Default to 0 if no count found
   }, [emailsToApplyLabelTo, emailCountMap]);
 
+  // Total number of unread emails to mark as read (mirrors totalEmailCount pattern)
+  const totalUnreadCount = useMemo(() => {
+    if (emailsToMark.length === 0) return 0
+    
+    // Sum up the unread counts for selected senders
+    return emailsToMark.reduce((total, email) => {
+      // First try unreadCountMap, then lookup actual unread count from allSenders, fallback to 0
+      const cachedCount = unreadCountMap[email];
+      if (cachedCount !== undefined) {
+        return total + cachedCount;
+      }
+      
+      // Look up actual unread count from allSenders data
+      const sender = allSenders.find(s => s.email === email);
+      const actualUnreadCount = sender?.unread_count ?? 0;
+      
+      return total + actualUnreadCount;
+    }, 0)
+  }, [emailsToMark, unreadCountMap, allSenders]);
+
   // Wrapper function for setSelectedCount that keeps track of table actions
   const handleSelectedCountChange: SelectionCountHandler = useCallback((count: number) => {
     setSelectedCount(count);
@@ -841,10 +861,11 @@ export default function AnalysisView() {
       <MarkAsReadConfirmModal
         open={isMarkAsReadModalOpen}
         onOpenChange={setIsMarkAsReadModalOpen}
-        unreadCount={emailsToMark.reduce((sum, email) => sum + (unreadCountMap[email] || 0), 0)}
+        unreadCount={totalUnreadCount}
         senderCount={emailsToMark.length}
         senders={emailsToMark}
         unreadCountMap={unreadCountMap}
+        allSenders={allSenders}
         onSuccess={() => {
           // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 1.5s
           scheduleSmartAutoClear();
