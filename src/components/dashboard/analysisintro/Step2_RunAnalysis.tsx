@@ -245,9 +245,9 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
         eta={reauthModal.eta}
       />
       
-      <div className="h-full w-full flex items-center">
+      <div className="h-full w-full flex items-center justify-center">
         {/* Left side - Animation/visualization */}
-        <div className="hidden xl:flex xl:w-2/5 2xl:w-1/2 h-full bg-slate-50 dark:bg-slate-800/70 items-center justify-center p-4 xl:p-6 relative">
+        <div className="hidden xl:flex xl:w-1/2 2xl:w-1/2 h-full bg-slate-50 dark:bg-slate-800/70 items-center justify-center p-4 xl:p-6 relative">
           <div className="w-full max-w-lg flex flex-col">
             {/* Keep tab open notice - Made more prominent */}
             <motion.div 
@@ -352,7 +352,7 @@ export default function Step2_RunAnalysis({ onStart }: Step2Props) {
         </div>
         
         {/* Right side - Content */}
-        <div className="w-full xl:w-3/5 2xl:w-1/2 px-4 sm:px-6 xl:px-8 py-2 lg:py-4 xl:py-6 flex items-center justify-center overflow-y-auto">
+        <div className="w-full xl:w-1/2 2xl:w-1/2 px-6 lg:px-8 py-4 lg:py-6 flex items-center justify-center overflow-y-auto">
           <div className="w-full max-w-lg flex flex-col space-y-3 lg:space-y-4">
             {/* Header */}
             <div className="flex justify-center">

@@ -1,24 +1,40 @@
 'use client'
 
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
-import { CheckIcon, ChevronRightIcon, ShieldIcon, MailIcon, SparklesIcon, TrashIcon, BanIcon, ExternalLinkIcon, RefreshCw } from 'lucide-react'
-import { useState, useEffect, useRef } from 'react'
+import { CheckIcon, ChevronRightIcon, ShieldIcon, MailIcon, SparklesIcon, TrashIcon, BanIcon, ExternalLinkIcon, RefreshCw, SendIcon, FilterIcon } from 'lucide-react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getAccessToken } from '@/lib/gmail/token'
 import { fetchGmailStats } from '@/lib/gmail/fetchGmailStats'
+import { cn } from '@/lib/utils'
+import { useAuth } from '@/context/AuthProvider'
 
 interface Step1Props {
   onNext: () => void;
+  /**
+   * Optional override. If provided, will force first-time user state. If omitted, we auto-detect
+   * based on the Supabase user `created_at` timestamp (<=24h old).
+   */
+  isFirstTimeUser?: boolean;
 }
 
-export default function Step1_ConnectGmail({ onNext }: Step1Props) {
+export default function Step1_ConnectGmail({ onNext, isFirstTimeUser }: Step1Props) {
   const { requestPermissions, isLoading } = useGmailPermissions()
   const [currentAnimation, setCurrentAnimation] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [fetchingStats, setFetchingStats] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const { user } = useAuth()
   
-  // No longer using auto-rotate, will be triggered by hover
+  // Auto-detect first-time users (account created ≤ 24h ago) if prop not supplied
+  const computedFirstTime = useMemo(() => {
+    if (!user?.created_at) return false
+    const created = new Date(user.created_at).getTime()
+    return Date.now() - created < 24 * 60 * 60 * 1000
+  }, [user?.created_at])
+
+  // Final flag: explicit prop overrides auto detection when defined
+  const firstTime = isFirstTimeUser ?? computedFirstTime
   
   const handleConnect = async () => {
     try {
@@ -51,6 +67,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
   }
 
   useEffect(() => {
+    if (!firstTime) {
     const startAutoRotation = () => {
       intervalRef.current = setInterval(() => {
         if (!isPaused) {
@@ -67,13 +84,24 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isPaused]);
+    }
+  }, [isPaused, firstTime]);
 
   return (
-    <div className="h-full w-full flex items-center">
-      {/* Left side - Content (was previously on right) */}
-      <div className="w-full xl:w-3/5 2xl:w-1/2 px-4 sm:px-6 xl:px-8 py-2 lg:py-4 xl:py-6 flex items-center justify-center overflow-y-auto">
-        <div className="w-full max-w-lg flex flex-col justify-center h-full space-y-3 lg:space-y-4">
+    <div className="h-full w-full flex items-center justify-center">
+      {/* Content area - fixed spacing and centering */}
+      <div className={cn(
+        "px-6 lg:px-8 py-4 lg:py-6 flex items-center justify-center overflow-y-auto",
+        firstTime 
+          ? "w-full max-w-4xl mx-auto" // Centered with max width for first-time users
+          : "w-full xl:w-1/2 2xl:w-1/2" // 50% width on xl+ for returning users
+      )}>
+        <div className={cn(
+          "flex flex-col justify-center h-full space-y-3 lg:space-y-4 w-full",
+          firstTime 
+            ? "max-w-2xl mx-auto" // Centered for first-time users
+            : "max-w-lg" // Keep existing width for returning users
+        )}>
           {/* Google Logo */}
           <div className="flex justify-center">
             <div className="w-10 h-10 lg:w-12 lg:h-12 xl:w-16 xl:h-16 rounded-full bg-blue-50 dark:bg-slate-700 flex items-center justify-center">
@@ -86,15 +114,104 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
             </div>
           </div>
           
-          {/* Title and description */}
+          {/* Title and description - Different for first-time users */}
           <div className="text-center">
-            <h1 className="text-base lg:text-lg xl:text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-1 lg:mb-2">Securely Connect Your Inbox</h1>
+            {firstTime ? (
+              <>
+                <h1 className="text-lg lg:text-xl xl:text-3xl font-semibold text-gray-900 dark:text-slate-100 mb-2 lg:mb-3">
+                🎉 Welcome! Let's connect your inbox
+                </h1>
+                <p className="text-sm lg:text-base xl:text-lg text-gray-600 dark:text-slate-400 leading-relaxed max-w-xl mx-auto mb-6">
+                  You've successfully created your MailMop account. Now MailMop needs permission to securely analyze your inbox and help you clean it.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-base lg:text-lg xl:text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-1 lg:mb-2">
+                  Securely Connect Your Inbox
+                </h1>
             <p className="text-xs lg:text-sm xl:text-base text-gray-600 dark:text-slate-400 leading-relaxed">
             MailMop analyzes email metadata to identify who's cluttering your inbox and help you take action, all within your browser.
             </p>
+              </>
+            )}
           </div>
           
-          {/* Benefits - now with hover functionality to control animations */}
+          {/* First-time user explanation - RADICALLY DIFFERENT COMPACT APPROACH */}
+          {firstTime ? (
+            <div className="space-y-6 lg:space-y-8">
+              {/* Trust pillars */}
+              <div className="grid gap-5 lg:gap-8 sm:grid-cols-1 lg:grid-cols-3">
+                {/* Pillar 1 */}
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 rounded-lg bg-blue-100 dark:bg-blue-500/20 p-2">
+                    <SparklesIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Instant insights</h3>
+                    <p className="text-xs text-gray-600 dark:text-slate-400 leading-normal">See who&rsquo;s filling your inbox and how often.</p>
+                  </div>
+                </div>
+                {/* Pillar 2 */}
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 p-2">
+                    <TrashIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">One-click cleanup</h3>
+                    <p className="text-xs text-gray-600 dark:text-slate-400 leading-normal">Bulk delete, mark read, and more right in your browser.</p>
+                  </div>
+                </div>
+                {/* Pillar 3 */}
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 rounded-lg bg-amber-100 dark:bg-amber-500/20 p-2">
+                    <ShieldIcon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Privacy built-in</h3>
+                    <p className="text-xs text-gray-600 dark:text-slate-400 leading-normal">Emails never leave your device - all local.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Permission summary with reasons */}
+              <div className="rounded-lg lg:rounded-xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-700/30 p-5 lg:p-7 space-y-5">
+                <h3 className="text-sm lg:text-base font-semibold text-gray-900 dark:text-slate-100 mb-4">How MailMop uses your Gmail</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-xs lg:text-sm">
+                  <div className="flex items-start gap-3">
+                    <MailIcon className="w-4 h-4 text-blue-600 mt-0.5" />
+                    <div className="space-y-0.5 leading-snug">
+                      <p className="font-medium text-gray-900 dark:text-slate-100">Read email metadata</p>
+                      <p className="text-gray-600 dark:text-slate-400">Pattern analysis & stats.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <TrashIcon className="w-4 h-4 text-red-600 mt-0.5" />
+                    <div className="space-y-0.5 leading-snug">
+                      <p className="font-medium text-gray-900 dark:text-slate-100">Bulk delete</p>
+                      <p className="text-gray-600 dark:text-slate-400">Fast inbox cleanup.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <SendIcon className="w-4 h-4 text-emerald-600 mt-0.5" />
+                    <div className="space-y-0.5 leading-snug">
+                      <p className="font-medium text-gray-900 dark:text-slate-100">Send unsubscribe</p>
+                      <p className="text-gray-600 dark:text-slate-400">1-click opt-outs.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <FilterIcon className="w-4 h-4 text-purple-600 mt-0.5" />
+                    <div className="space-y-0.5 leading-snug">
+                      <p className="font-medium text-gray-900 dark:text-slate-100">Filters & labels</p>
+                      <p className="text-gray-600 dark:text-slate-400">Auto-sort future mail.</p>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-slate-400">All email access happens locally on your device—never on our servers. Revoke anytime.</p>
+              </div>
+            </div>
+          ) : (
+            /* Existing benefits for returning users */
           <div className="bg-white-50 dark:bg-slate-800/50 rounded-lg lg:rounded-xl">
             <div className="py-1.5 lg:py-2 xl:py-3 px-2 lg:px-3 xl:px-6 space-y-1.5 lg:space-y-2 xl:space-y-3">
               <div 
@@ -155,30 +272,56 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
               </div>
             </div>
           </div>
+          )}
           
           {/* CTA Button */}
           <button
             onClick={handleConnect}
             disabled={isLoading || fetchingStats}
-            className="flex w-full items-center justify-center px-3 lg:px-4 xl:px-6 py-2 lg:py-2.5 xl:py-3 rounded-lg lg:rounded-xl bg-blue-600 dark:bg-blue-500 text-white font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={cn(
+              "flex w-full items-center justify-center rounded-lg lg:rounded-xl bg-blue-600 dark:bg-blue-500 text-white font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed",
+              firstTime 
+                ? "px-4 lg:px-6 py-2.5 lg:py-3 text-sm lg:text-base" // Smaller for mobile
+                : "px-3 lg:px-4 xl:px-6 py-2 lg:py-2.5 xl:py-3 text-xs lg:text-sm xl:text-base" // Keep existing for returning users
+            )}
           >
             {isLoading || fetchingStats ? (
               <div className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-2 h-3 w-3 lg:h-4 lg:w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 lg:h-5 lg:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span className="text-xs lg:text-sm xl:text-base">Connecting...</span>
+                <span className={firstTime ? "text-sm lg:text-base" : "text-xs lg:text-sm xl:text-base"}>
+                  Connecting...
+                </span>
               </div>
             ) : (
               <div className="flex items-center">
-                <span className="text-xs lg:text-sm xl:text-base">Connect my Gmail</span>
-                <ChevronRightIcon className="ml-1.5 lg:ml-2 w-3 h-3 lg:w-4 lg:h-4" />
+                <span className={firstTime ? "text-sm lg:text-base" : "text-xs lg:text-sm xl:text-base"}>
+                  Connect my Gmail
+                </span>
+                <ChevronRightIcon className={cn(
+                  "ml-2",
+                  firstTime ? "w-4 h-4 lg:w-5 lg:h-5" : "w-3 h-3 lg:w-4 lg:h-4"
+                )} />
               </div>
             )}
           </button>
           
           {/* Security and trust indicators */}
+          {firstTime ? (
+            <div className="text-center space-y-1">
+              <div className="flex items-center justify-center space-x-1">
+                <ShieldIcon className="w-3 h-3 text-gray-500 dark:text-slate-400" />
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  Secure connection. All processing in your browser.
+                </p>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-slate-400">
+                You can revoke access anytime in your MailMop settings.
+              </p>
+            </div>
+          ) : (
           <div className="text-center space-y-1 lg:space-y-2">
             <div className="flex items-center justify-center gap-1.5">
               <ShieldIcon size={8} className="lg:w-2.5 lg:h-2.5 xl:w-3 xl:h-3 text-gray-400 dark:text-slate-500" />
@@ -190,12 +333,14 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
               You can revoke access anytime in your MailMop settings.
             </p>
           </div>
+          )}
         </div>
       </div>
       
-      {/* Right side - Rotating animations (was previously on left) */}
+      {/* Right side - Animations only for returning users */}
+      {!firstTime && (
       <div 
-        className="hidden xl:flex xl:w-2/5 2xl:w-1/2 h-full bg-slate-50 dark:bg-slate-800/70 items-center justify-center p-4 xl:p-6 relative"
+        className="hidden xl:flex xl:w-1/2 2xl:w-1/2 h-full bg-slate-50 dark:bg-slate-800/70 items-center justify-center p-4 xl:p-6 relative"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
@@ -255,7 +400,6 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                         animate={{ 
                           boxShadow: ["0px 0px 0px rgba(59, 130, 246, 0)", "0px 0px 20px rgba(59, 130, 246, 0.3)", "0px 0px 0px rgba(59, 130, 246, 0)"]
                         }}
-                        // TODO: Dark mode for box shadow? Or is it fine?
                         transition={{ 
                           duration: 2, 
                           repeat: Infinity, 
@@ -278,7 +422,6 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                           animate={{ 
                             borderColor: ["rgba(59, 130, 246, 0)", "rgba(59, 130, 246, 0.5)", "rgba(59, 130, 246, 0)"] 
                           }}
-                          // TODO: Dark mode for border color animation? Or is it fine?
                           transition={{ 
                             duration: 2, 
                             repeat: Infinity,
@@ -330,7 +473,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                             <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-slate-500"></div>
                             <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-slate-500"></div>
                           </div>
-                          {/* Centered Title - shifted slightly right with padding */}
+                            {/* Centered Title */}
                           <div className="flex-1 text-center text-xs text-gray-500 dark:text-slate-400 font-medium pl-2">
                             Local Analysis
                           </div>
@@ -481,7 +624,7 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                           <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-slate-500 mr-3"></div>
                           <div className="flex-1">
                             <div className="h-2.5 bg-gray-200 dark:bg-slate-500 rounded w-1/2 mb-1.5"></div>
-                            <div className="h-2 bg-gray-100 dark:bg-slate-600 rounded w-1/4"></div>
+                              <div className="h-2 bg-gray-100 dark:bg-slate-600 rounded w-2/3"></div>
                           </div>
                           <div className="flex gap-2 items-center">
                             <div className="px-2 py-0.5 bg-blue-50 dark:bg-blue-500/10 rounded-md text-xs font-medium text-blue-600 dark:text-blue-400">Unsubscribe</div>
@@ -520,55 +663,11 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
                         </motion.div>
                       </div>
                       
-                      <motion.div 
-                        className="mt-6 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/30 rounded-lg p-3 flex items-center justify-between"
-                        animate={{ 
-                          boxShadow: ["0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 12px rgba(16, 185, 129, 0.3)", "0px 0px 12px rgba(16, 185, 129, 0.3)", "0px 0px 0px rgba(16, 185, 129, 0)"]
-                        }}
-                        // TODO: Dark mode for box shadow? Or is it fine?
-                        transition={{ 
-                          duration: 4,
-                          times: [0, 0.65, 0.75, 0.85, 1],
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                      >
-                        <div className="flex items-center">
-                          <CheckIcon className="h-5 w-5 text-emerald-500 dark:text-emerald-400 mr-2" />
-                          <motion.span 
-                            className="text-sm font-medium text-emerald-800 dark:text-emerald-200"
-                            animate={{
-                              opacity: [0.5, 0.5, 1, 1, 0.5]
-                            }}
-                            transition={{ 
-                              duration: 4,
-                              times: [0, 0.65, 0.75, 0.85, 1],
-                              repeat: Infinity
-                            }}
-                          >
-                            3,240 emails cleaned
-                          </motion.span>
-                        </div>
-                        <motion.span 
-                          className="text-xs text-emerald-600 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 rounded-full"
-                          animate={{
-                            opacity: [0.5, 0.5, 1, 1, 0.5]
-                          }}
-                          transition={{ 
-                            duration: 4,
-                            times: [0, 0.65, 0.75, 0.85, 1],
-                            repeat: Infinity
-                          }}
-                        >
-                          94% space freed
-                        </motion.span>
-                      </motion.div>
-                      
                       <div className="text-center mt-6">
-                        <p className="text-gray-600 dark:text-slate-300 font-medium">Clean up your inbox</p>
+                          <p className="text-gray-600 dark:text-slate-300 font-medium">Clean up your inbox in minutes</p>
                         <div className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-full mt-2">
                           <CheckIcon size={12} />
-                          <span>Save hours of manual work</span>
+                            <span>Bulk actions available</span>
                         </div>
                       </div>
                     </div>
@@ -577,22 +676,9 @@ export default function Step1_ConnectGmail({ onNext }: Step1Props) {
               )}
             </AnimatePresence>
           </div>
-
-          {/* Dots indicator fixed at bottom */}
-          <div className="mt-auto mb-12 flex justify-center space-x-2">
-            {[0, 1, 2].map((i) => (
-              <button
-                key={i}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  currentAnimation === i ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-slate-600'
-                }`}
-                onClick={() => setCurrentAnimation(i)}
-                aria-label={`View ${i === 0 ? 'connect' : i === 1 ? 'analyze' : 'clean'} animation`}
-              />
-            ))}
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 } 
