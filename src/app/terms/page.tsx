@@ -270,7 +270,37 @@ export default function TermsOfService() {
           </section>
 
           <section>
-            <h2>17. Contact Information</h2>
+            <h2>17. No Affiliation with Google or Gmail</h2>
+            <p>
+              MailMop is an independent product. It is <strong>not</strong> endorsed by, sponsored by, or
+              affiliated with Google LLC or the Gmail service. All Google and Gmail trademarks are the
+              property of Google LLC.
+            </p>
+          </section>
+
+          <section>
+            <h2>18. Age Requirements (13+)</h2>
+            <p>
+              You must be at least <strong>13&nbsp;years old</strong> to use MailMop. By accessing or using the
+              Service, you represent that you are 13&nbsp;or older and have the legal capacity to enter
+              into these Terms. If you are under&nbsp;18, you represent that your parent or legal guardian
+              has reviewed and agreed to these Terms on your behalf.
+            </p>
+          </section>
+
+          <section>
+            <h2>19. Changes to These Terms</h2>
+            <p>
+              We may revise these Terms of Service from time to time. If we make material changes we
+              will notify you by updating the "Last updated" date at the top of this page and, for
+              significant changes, by displaying a prominent notice within the Service or via e-mail.
+              <strong>Your continued use of MailMop after any changes means you accept the revised
+              Terms.</strong>
+            </p>
+          </section>
+
+          <section>
+            <h2>20. Contact Information</h2>
             <p>
               If you have any questions about these Terms of Service, please contact us:
             </p>

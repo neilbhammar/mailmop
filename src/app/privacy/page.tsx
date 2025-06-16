@@ -176,6 +176,37 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
+            <h2>Data Retention &amp; Deletion</h2>
+            <p>
+              We retain the minimal personal data described above only for as long as it is strictly
+              necessary to deliver the Service or to comply with legal obligations. In practice, most
+              data is removed automatically when you delete your MailMop account. Raw analytics logs
+              are automatically deleted or anonymised after <strong>30&nbsp;days</strong>. You can request
+              immediate deletion of all data associated with your account at any time by contacting us
+              (see "Contact &amp; Questions" below).
+            </p>
+          </section>
+
+          <section>
+            <h2>Children&apos;s Privacy (COPPA)</h2>
+            <p>
+              MailMop is <strong>not intended for children under 13 years of age</strong>. We do not knowingly
+              collect or store personal information from anyone under&nbsp;13. If you are a parent or
+              guardian and believe your child has provided us with information, please contact us
+              immediately so we can delete it.
+            </p>
+          </section>
+
+          <section>
+            <h2>No Affiliation with Google or Gmail</h2>
+            <p>
+              MailMop is an independent product. It is <strong>not</strong> endorsed by, sponsored by, or
+              otherwise affiliated with Google LLC or the Gmail service. All references to Google,
+              Gmail, and associated trademarks are for descriptive purposes only.
+            </p>
+          </section>
+
+          <section>
             <h2>Your Rights & Data Control</h2>
             <p>
               You have complete control over your data:
