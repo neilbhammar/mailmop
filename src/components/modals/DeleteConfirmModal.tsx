@@ -9,7 +9,14 @@ import {
   DialogTitle
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Trash2 } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Trash2, Trash } from "lucide-react"
 import { useQueue } from "@/hooks/useQueue"
 import { estimateRuntimeMs } from "@/lib/utils/estimateRuntime"
 
@@ -77,11 +84,16 @@ export function DeleteConfirmModal({
   // Track loading state during deletion process
   const [isDeleting, setIsDeleting] = useState(false)
   
+  // State for delete method selection
+  const [deleteMethod, setDeleteMethod] = useState<'trash' | 'permanent'>('trash')
+  
   // Get queue functions
   const { enqueue } = useQueue()
   
-  // Format the title based on email count
-  const title = `Delete ${emailCount.toLocaleString()} emails?`
+  // Format the title based on email count and method
+  const title = deleteMethod === 'trash' 
+    ? `Trash ${emailCount.toLocaleString()} emails?`
+    : `Delete ${emailCount.toLocaleString()} emails?`
   
   // Handle the confirmation click
   const handleConfirm = async () => {
@@ -108,28 +120,45 @@ export function DeleteConfirmModal({
         // Convert senders to the format expected by the queue
         const sendersForQueue = senders.map(email => ({
           email,
-          count: getEmailCountForSender(email)
+          emailCount: getEmailCountForSender(email)
         }))
         
-        // Calculate initial ETA for stable display
-        const initialEtaMs = estimateRuntimeMs({
-          operationType: 'delete',
-          emailCount,
-          mode: 'single'
-        })
-        
-        // Add job to queue
-        enqueue('delete', {
-          senders: sendersForQueue,
-          initialEtaMs
-        })
+        if (deleteMethod === 'trash') {
+          // Soft delete - apply TRASH label using modify label queue
+          const initialEtaMs = estimateRuntimeMs({
+            operationType: 'mark', // Label modification is similar to mark
+            emailCount,
+            mode: 'single'
+          })
+          
+          // Add label modification job to queue to apply TRASH label
+          enqueue('modifyLabel', {
+            senders: sendersForQueue,
+            labelIds: ['TRASH'],
+            actionType: 'add',
+            initialEtaMs
+          })
+        } else {
+          // Permanent delete - use existing delete queue
+          const initialEtaMs = estimateRuntimeMs({
+            operationType: 'delete',
+            emailCount,
+            mode: 'single'
+          })
+          
+          // Add job to queue
+          enqueue('delete', {
+            senders: sendersForQueue,
+            initialEtaMs
+          })
+        }
         
         // Call success callback before closing modal
         if (onSuccess) onSuccess();
         // Close modal immediately - user can track progress in ProcessQueue
         onOpenChange(false)
       } catch (error) {
-        console.error("Error adding delete job to queue:", error)
+        console.error("Error adding job to queue:", error)
         // Modal will stay open if there's an error
       } finally {
         setIsDeleting(false)
@@ -169,8 +198,12 @@ export function DeleteConfirmModal({
       <DialogContent className="max-w-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
-              <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <div className={`w-8 h-8 rounded-full ${deleteMethod === 'trash' ? 'bg-orange-100 dark:bg-orange-500/20' : 'bg-red-100 dark:bg-red-500/20'} flex items-center justify-center`}>
+              {deleteMethod === 'trash' ? (
+                <Trash className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              ) : (
+                <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+              )}
             </div>
             <DialogTitle className="text-xl font-semibold dark:text-slate-100">
               {title}
@@ -210,14 +243,61 @@ export function DeleteConfirmModal({
             </div>
           </div>
           
-          <div className="p-3 border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 rounded-md">
-            <p className="text-sm text-red-700 dark:text-red-300 font-medium">
-              Warning: This action is permanent
-            </p>
-            <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-              All {emailCount.toLocaleString()} emails will be permanently deleted and cannot be recovered.
-            </p>
+          {/* Delete Method Selection */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Delete method:
+            </label>
+            
+            <Select value={deleteMethod} onValueChange={(value: 'trash' | 'permanent') => setDeleteMethod(value)}>
+              <SelectTrigger className="w-full bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 dark:text-slate-300">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600">
+                <SelectItem value="trash" className="dark:text-slate-300 dark:hover:bg-slate-700">
+                  <div className="flex items-center gap-2">
+                    <Trash className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    <span>Move to Trash</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="permanent" className="dark:text-slate-300 dark:hover:bg-slate-700">
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+                    <span>Permanently Delete</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          
+          {/* Warning/Info Message */}
+          {deleteMethod === 'trash' ? (
+            <div className="p-3 border border-orange-200 dark:border-orange-500/30 bg-orange-50 dark:bg-orange-500/10 rounded-md">
+              <div className="flex items-start gap-2">
+                <div className="w-4 h-4 rounded-full bg-orange-100 dark:bg-orange-500/20 flex items-center justify-center mt-0.5 flex-shrink-0">
+                  <span className="text-orange-600 dark:text-orange-400 text-xs">ℹ</span>
+                </div>
+                <div>
+                  <p className="text-sm text-orange-700 dark:text-orange-300 font-medium">
+                    Trash label will be applied - emails will auto-delete in 30 days. Gmail storage will not free up until deletion.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 rounded-md">
+              <div className="flex items-start gap-2">
+                <div className="w-4 h-4 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center mt-0.5 flex-shrink-0">
+                  <span className="text-red-600 dark:text-red-400 text-xs">⚠</span>
+                </div>
+                <div>
+                  <p className="text-sm text-red-700 dark:text-red-300 font-medium">
+                    This action cannot be undone. Emails will be permanently deleted.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           
           <p className="text-sm text-slate-600 dark:text-slate-400">
             Want more granular control? Try{' '}
@@ -240,16 +320,19 @@ export function DeleteConfirmModal({
           </Button>
           <Button
             onClick={handleConfirm}
-            className="bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-600 dark:text-red-100"
+            className={deleteMethod === 'trash' 
+              ? "bg-orange-600 hover:bg-orange-700 text-white dark:bg-orange-700 dark:hover:bg-orange-600 dark:text-orange-100"
+              : "bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-600 dark:text-red-100"
+            }
             disabled={isDeleting}
           >
             {isDeleting ? (
               <>
-                <span className="animate-pulse">{onConfirm ? 'Deleting' : 'Adding to Queue'}</span>
+                <span className="animate-pulse">{onConfirm ? (deleteMethod === 'trash' ? 'Moving to Trash' : 'Deleting') : 'Adding to Queue'}</span>
                 <span className="animate-pulse ml-1">...</span>
               </>
             ) : (
-              'Permanently Delete'
+              deleteMethod === 'trash' ? 'Move to Trash' : 'Permanently Delete'
             )}
           </Button>
         </DialogFooter>

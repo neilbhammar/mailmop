@@ -109,11 +109,11 @@ export function BlockSenderModal({
         // Convert senders to the format expected by the queue
         const sendersForQueue = senders.map(email => ({
           email,
-          count: getEmailCountForSender(email)
+          emailCount: getEmailCountForSender(email)
         }));
         
         // Calculate initial ETA for stable display
-        const totalEmailCount = sendersForQueue.reduce((sum, sender) => sum + sender.count, 0);
+        const totalEmailCount = sendersForQueue.reduce((sum, sender) => sum + sender.emailCount, 0);
         const initialEtaMs = estimateRuntimeMs({
           operationType: 'delete',
           emailCount: totalEmailCount,

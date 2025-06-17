@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getSenderActions, ACTION_CHANGE_EVENT, SenderAction } from '@/lib/storage/actionStorage'
+import { getSenderActions, ACTION_CHANGE_EVENT, SenderAction, isSenderTrashed } from '@/lib/storage/actionStorage'
 
 interface ActionMeta {
   queued: boolean
@@ -7,6 +7,7 @@ interface ActionMeta {
   completed?: boolean
   completedAt?: number
   lastAction?: SenderAction
+  isTrashed?: boolean
 }
 
 export function useSenderActionMeta(email: string, type?: SenderAction['type']): ActionMeta {
@@ -45,5 +46,20 @@ function calcMeta(email: string, type?: SenderAction['type']): ActionMeta {
     }
   }
 
-  return { queued, queuedAt, completed, completedAt, lastAction }
+  // Check if sender has been moved to trash
+  const isTrashed = isSenderTrashed(email)
+
+  // Debug logging for specific emails
+  if (email.includes('groupme') || email.includes('support@groupme')) {
+    console.log(`[DEBUG] calcMeta('${email}', '${type}'):`, {
+      totalActions: actions.length,
+      relevantActions: relevant.length,
+      queued,
+      completed,
+      isTrashed,
+      lastAction
+    });
+  }
+
+  return { queued, queuedAt, completed, completedAt, lastAction, isTrashed }
 } 

@@ -496,7 +496,7 @@ function SenderRow({
   const senderCountValue = showUnreadOnly ? sender.unread_count : sender.count
   
   // Determine if any action is queued for this sender (matches SenderTable behavior)
-  const { queued } = useSenderActionMeta(sender.email)
+  const { queued, isTrashed } = useSenderActionMeta(sender.email)
 
   return (
     <tr 
@@ -525,18 +525,18 @@ function SenderRow({
           allNames={sender.allNames}
           hasMultipleNames={sender.hasMultipleNames}
           className="dark:text-slate-200" 
-          strikethrough={sender.count === 0}
+          strikethrough={sender.count === 0 || isTrashed}
         />
       </td>
       <td className={cn("px-4 truncate", COLUMN_WIDTHS.email)}>
         <TruncatedCell 
           content={sender.email} 
           className="text-slate-800 opacity-80 dark:text-slate-300 dark:opacity-70"
-          strikethrough={sender.count === 0}
+          strikethrough={sender.count === 0 || isTrashed}
         />
       </td>
       <td className={cn("px-4", COLUMN_WIDTHS.lastEmail)}>
-        <LastEmailCell date={sender.lastEmail} strikethrough={sender.count === 0} />
+        <LastEmailCell date={sender.lastEmail} strikethrough={sender.count === 0 || isTrashed} />
       </td>
       <td className={cn("px-4 text-right", COLUMN_WIDTHS.count)}>
         <span className="text-blue-700 dark:text-blue-400">

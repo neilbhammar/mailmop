@@ -10,6 +10,9 @@ export interface SenderAction {
   type: 'delete' | 'delete_with_exceptions' | 'unsubscribe' | 'mark_as_read' | 'apply_label' | 'modify_label' | 'create_filter' | 'block';
   status: 'pending' | 'completed' | 'failed';
   error?: string;
+  // Additional metadata for label actions
+  labelIds?: string[];
+  actionType?: 'add' | 'remove';
 }
 
 // Helper to notify components of changes
@@ -94,11 +97,24 @@ export function updateActionStatus(
     const actionIndex = senderActions.findIndex(a => a.timestamp === timestamp);
     if (actionIndex === -1) return;
     
+    // Preserve all existing metadata while updating status
     senderActions[actionIndex] = {
       ...senderActions[actionIndex],
       status,
       ...(error && { error })
     };
+    
+    // Debug logging for modify_label actions
+    if (senderActions[actionIndex].type === 'modify_label' && 
+        (senderEmail.includes('groupme') || senderEmail.includes('support@groupme'))) {
+      console.log(`[DEBUG] updateActionStatus('${senderEmail}', ${timestamp}, '${status}'):`, {
+        updatedAction: senderActions[actionIndex],
+        hasLabelIds: !!senderActions[actionIndex].labelIds,
+        hasActionType: !!senderActions[actionIndex].actionType,
+        labelIds: senderActions[actionIndex].labelIds,
+        actionType: senderActions[actionIndex].actionType
+      });
+    }
     
     // Update storage
     actions[senderEmail] = senderActions;
@@ -149,4 +165,62 @@ export function completePendingActions(
     .forEach(pending => {
       updateActionStatus(senderEmail, pending.timestamp, success ? 'completed' : 'failed', error);
     });
+}
+
+/**
+ * Checks if a sender has been moved to trash (has a completed modify_label action with TRASH label)
+ */
+export function isSenderTrashed(senderEmail: string): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  const actions = getSenderActions(senderEmail);
+  
+  // Debug logging
+  if (senderEmail.includes('groupme') || senderEmail.includes('support@groupme')) {
+    console.log(`[DEBUG] isSenderTrashed('${senderEmail}'):`, {
+      totalActions: actions.length,
+      actions: actions,
+      modifyLabelActions: actions.filter(a => a.type === 'modify_label'),
+      trashActions: actions.filter(a => 
+        a.type === 'modify_label' &&
+        a.status === 'completed' &&
+        a.actionType === 'add' &&
+        a.labelIds?.includes('TRASH')
+      )
+    });
+  }
+  
+  const result = actions.some(action => 
+    action.type === 'modify_label' &&
+    action.status === 'completed' &&
+    action.actionType === 'add' &&
+    action.labelIds?.includes('TRASH')
+  );
+  
+  // Debug logging
+  if (senderEmail.includes('groupme') || senderEmail.includes('support@groupme')) {
+    console.log(`[DEBUG] isSenderTrashed('${senderEmail}') result:`, result);
+  }
+  
+  return result;
+}
+
+/**
+ * Helper to store a modify_label action with label metadata
+ */
+export function queueLabelAction(
+  senderEmail: string, 
+  labelIds: string[], 
+  actionType: 'add' | 'remove'
+): number {
+  const timestamp = Date.now();
+  storeSenderAction({ 
+    senderEmail, 
+    type: 'modify_label', 
+    timestamp, 
+    status: 'pending',
+    labelIds,
+    actionType
+  });
+  return timestamp;
 } 

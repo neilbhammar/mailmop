@@ -45,6 +45,11 @@ export function RowActions({
   const applyLabelMeta = useSenderActionMeta(sender.email, 'modify_label')
   const unsubscribeMeta = useSenderActionMeta(sender.email, 'unsubscribe')
   const blockMeta = useSenderActionMeta(sender.email, 'block')
+  
+  // Check if sender has been moved to trash specifically
+  const isMovedToTrash = applyLabelMeta.lastAction?.labelIds?.includes('TRASH') && 
+                        applyLabelMeta.lastAction?.actionType === 'add' && 
+                        applyLabelMeta.completed
 
   const isActionTaken = (action: 'unsubscribe' | 'delete' | 'markUnread' | 'block') => {
     switch (action) {
@@ -175,9 +180,10 @@ export function RowActions({
           <Portal container={document.getElementById('tooltip-root')}>
             <TooltipContent side="top" sideOffset={8} className={tooltipClass}>
               <p>
-                {deleteMeta.queued && 'Delete queued – will process soon'}
-                {!deleteMeta.queued && deleteMeta.completed && 'Already deleted emails from this sender'}
-                {!deleteMeta.queued && !deleteMeta.completed && 'Delete all emails from sender'}
+                {isMovedToTrash && 'Added to trash'}
+                {!isMovedToTrash && deleteMeta.queued && 'Delete queued – will process soon'}
+                {!isMovedToTrash && !deleteMeta.queued && deleteMeta.completed && 'Already deleted emails from this sender'}
+                {!isMovedToTrash && !deleteMeta.queued && !deleteMeta.completed && 'Delete all emails from sender'}
               </p>
             </TooltipContent>
           </Portal>

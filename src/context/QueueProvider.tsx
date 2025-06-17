@@ -186,7 +186,28 @@ export function QueueProvider({ children }: { children: ReactNode }) {
       const actionType = mapJobTypeToAction(type);
       targetSenders.forEach(email => {
         const ts = Date.now();
-        storeSenderAction({ senderEmail: email, timestamp: ts, type: actionType, status: 'pending' });
+        
+        // For modifyLabel jobs, include label metadata
+        if (type === 'modifyLabel' && 'labelIds' in payload && 'actionType' in payload) {
+          const actionData = { 
+            senderEmail: email, 
+            timestamp: ts, 
+            type: actionType, 
+            status: 'pending' as const,
+            labelIds: payload.labelIds,
+            actionType: payload.actionType
+          };
+          
+          // Debug logging
+          if (email.includes('groupme') || email.includes('support@groupme')) {
+            console.log(`[DEBUG] Storing modifyLabel action for ${email}:`, actionData);
+          }
+          
+          storeSenderAction(actionData);
+        } else {
+          storeSenderAction({ senderEmail: email, timestamp: ts, type: actionType, status: 'pending' });
+        }
+        
         actionTimestamps[email] = ts;
       })
     }

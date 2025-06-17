@@ -688,15 +688,19 @@ export function SenderTable({
           </span>
         </button>
       ),
-      cell: ({ row }) => (
-        <SenderNameCell 
-          name={row.getValue("name")} 
-          allNames={row.original.allNames}
-          hasMultipleNames={row.original.hasMultipleNames}
-          className="dark:text-slate-200" 
-          strikethrough={row.original.count === 0}
-        />
-      )
+      cell: ({ row }) => {
+        // Check if sender has been moved to trash
+        const { isTrashed } = useSenderActionMeta(row.original.email)
+        return (
+          <SenderNameCell 
+            name={row.getValue("name")} 
+            allNames={row.original.allNames}
+            hasMultipleNames={row.original.hasMultipleNames}
+            className="dark:text-slate-200" 
+            strikethrough={row.original.count === 0 || isTrashed}
+          />
+        )
+      }
     },
     {
       accessorKey: "email",
@@ -710,13 +714,17 @@ export function SenderTable({
           </span>
         </button>
       ),
-      cell: ({ row }) => (
-        <TruncatedCell 
-          content={row.getValue("email")} 
-          className="text-slate-800 opacity-80 dark:text-slate-300 dark:opacity-70"
-          strikethrough={row.original.count === 0}
-        />
-      )
+      cell: ({ row }) => {
+        // Check if sender has been moved to trash
+        const { isTrashed } = useSenderActionMeta(row.original.email)
+        return (
+          <TruncatedCell 
+            content={row.getValue("email")} 
+            className="text-slate-800 opacity-80 dark:text-slate-300 dark:opacity-70"
+            strikethrough={row.original.count === 0 || isTrashed}
+          />
+        )
+      }
     },
     {
       accessorKey: "lastEmail",
@@ -730,9 +738,13 @@ export function SenderTable({
           </span>
         </button>
       ),
-      cell: ({ row }) => (
-        <LastEmailCell date={row.getValue("lastEmail")} strikethrough={row.original.count === 0} />
-      ),
+      cell: ({ row }) => {
+        // Check if sender has been moved to trash
+        const { isTrashed } = useSenderActionMeta(row.original.email)
+        return (
+          <LastEmailCell date={row.getValue("lastEmail")} strikethrough={row.original.count === 0 || isTrashed} />
+        )
+      },
       sortingFn: (rowA, rowB) => {
         // Robust sort that handles unparsable timestamps (treats them as oldest)
         const tsA = Date.parse(rowA.getValue("lastEmail")) // millis or NaN
