@@ -29,9 +29,11 @@ interface AnalysisHeaderProps {
   onSearchChange?: (search: string) => void
   onToggleUnreadOnly?: (enabled: boolean) => void
   onToggleHasUnsubscribe?: (enabled: boolean) => void
+  onToggleGroupByDomain?: (enabled: boolean) => void
   // Add current state props for proper display
   showUnreadOnly?: boolean
   showHasUnsubscribe?: boolean
+  showGroupByDomain?: boolean
 }
 
 export function AnalysisHeader({
@@ -46,9 +48,11 @@ export function AnalysisHeader({
   onSearchChange = () => console.log('Search changed'),
   onToggleUnreadOnly = () => console.log('Toggle unread only'),
   onToggleHasUnsubscribe = () => console.log('Toggle has unsubscribe'),
+  onToggleGroupByDomain = () => console.log('Toggle group by domain'),
   // Use props for current state instead of local state
   showUnreadOnly = false,
-  showHasUnsubscribe = false
+  showHasUnsubscribe = false,
+  showGroupByDomain = false
 }: AnalysisHeaderProps) {
   const hasSelection = selectedCount > 0;
   const { senders, isLoading, isAnalyzing } = useSenderData();
@@ -58,6 +62,7 @@ export function AnalysisHeader({
   // Loading states for filters
   const [isUnreadFilterLoading, setIsUnreadFilterLoading] = useState(false);
   const [isUnsubscribeFilterLoading, setIsUnsubscribeFilterLoading] = useState(false);
+  const [isGroupByDomainLoading, setIsGroupByDomainLoading] = useState(false);
 
   // Calculate total emails from all senders
   const getTotals = useMemo(() => {
@@ -116,6 +121,13 @@ export function AnalysisHeader({
     }
   }, [showHasUnsubscribe, isUnsubscribeFilterLoading]);
 
+  useEffect(() => {
+    if (isGroupByDomainLoading) {
+      const timer = setTimeout(() => setIsGroupByDomainLoading(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isGroupByDomainLoading]);
+
   // Get the status message
   const getStatusMessage = () => {
     if (isLoading) return "Loading..."
@@ -163,6 +175,21 @@ export function AnalysisHeader({
       setTimeout(() => {
         const newValue = !showHasUnsubscribe;
         onToggleHasUnsubscribe(newValue);
+      }, 0);
+    });
+  };
+
+  // Handle group by domain toggle
+  const handleGroupByDomainToggle = () => {
+    // Set loading state immediately
+    setIsGroupByDomainLoading(true);
+    
+    // Use requestAnimationFrame to ensure spinner gets at least one frame to animate
+    // before the heavy filtering blocks the main thread
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const newValue = !showGroupByDomain;
+        onToggleGroupByDomain(newValue);
       }, 0);
     });
   };
@@ -223,7 +250,7 @@ export function AnalysisHeader({
                   <span className="hidden md:inline text-sm font-medium">Filter</span>
                 </Button>
               </DropdownMenuTrigger>
-              {(showUnreadOnly || showHasUnsubscribe) && (
+              {(showUnreadOnly || showHasUnsubscribe || showGroupByDomain) && (
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white dark:border-slate-900"></div>
               )}
               <DropdownMenuContent align="end" className="w-[260px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg dark:shadow-slate-900/50 py-2">
@@ -272,6 +299,33 @@ export function AnalysisHeader({
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
                       showHasUnsubscribe ? 'On' : 'Off'
+                    )}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="flex items-center justify-between cursor-pointer px-3 py-2 text-sm text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70"
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    handleGroupByDomainToggle();
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 01-8 0 4 4 0 018 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 14a9 9 0 00-9 9h18a9 9 0 00-9-9z" />
+                    </svg>
+                    <span className="text-sm text-slate-700 dark:text-slate-200">Group by Domain</span>
+                  </div>
+                  <span className={cn(
+                    "px-2 py-0.5 text-xs font-medium rounded-md flex items-center justify-center min-w-[32px]",
+                    showGroupByDomain 
+                      ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300" 
+                      : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                  )}>
+                    {isGroupByDomainLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      showGroupByDomain ? 'On' : 'Off'
                     )}
                   </span>
                 </DropdownMenuItem>

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { SenderTable } from "./SenderTable"
+import { VirtualizedDomainTable } from "./VirtualizedDomainTable"
 import { AnalysisHeader } from "./AnalysisHeader"
 import { AnalysisFooter } from "./AnalysisFooter"
 import { useAnalysisOperations } from '@/hooks/useAnalysisOperation'
@@ -27,6 +28,7 @@ import { ApplyLabelModal } from "@/components/modals/ApplyLabelModal"
 import { useCreateFilter } from '@/hooks/useCreateFilter'
 import { getSenderByEmail } from '@/lib/storage/senderAnalysis'
 import { useViewState } from '@/hooks/useViewState'
+import { getRootDomainFromEmail } from '@/lib/utils/rootDomain'
 
 // Create a custom type for the selection count change handler
 // that includes our viewInGmail extension
@@ -51,6 +53,8 @@ export default function AnalysisView() {
     showHasUnsubscribe, 
     setShowUnreadOnly, 
     setShowHasUnsubscribe,
+    groupByDomain,
+    setGroupByDomain,
     isLoaded: viewStateLoaded 
   } = useViewState()
   const { progress } = useAnalysisOperations()
@@ -177,6 +181,202 @@ export default function AnalysisView() {
     if (emailsToApplyLabelTo.length === 0) return 0;
     return emailsToApplyLabelTo.reduce((total, email) => total + (emailCountMap[email] || 0), 0); // Default to 0 if no count found
   }, [emailsToApplyLabelTo, emailCountMap]);
+
+  // Domain grouping state
+  const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set());
+
+  // NEW: domain table sorting state
+  const [domainSort, setDomainSort] = useState<{ field: 'domain' | 'senderCount' | 'lastEmail' | 'count'; direction: 'asc' | 'desc' }>({ field: 'count', direction: 'desc' });
+
+  // Callback for changing sort
+  const handleDomainSortChange = useCallback((field: 'domain' | 'senderCount' | 'lastEmail' | 'count') => {
+    setDomainSort(prev => {
+      if (prev.field === field) {
+        // Toggle direction
+        return { field, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      // Default to desc when switching field
+      return { field, direction: 'desc' };
+    });
+  }, []);
+
+  // Domain aggregation logic
+  const { domainAggregations, flattenedData } = useMemo(() => {
+    if (!groupByDomain || !allSenders.length) {
+      return { domainAggregations: new Map(), flattenedData: [] };
+    }
+
+    // Apply the same filtering logic as SenderTable
+    let filteredSenders = allSenders;
+    
+    // Apply unread filter if enabled
+    if (showUnreadOnly) {
+      filteredSenders = filteredSenders.filter(sender => sender.unread_count > 0);
+    }
+    
+    // Apply unsubscribe filter if enabled
+    if (showHasUnsubscribe) {
+      filteredSenders = filteredSenders.filter(sender => sender.hasUnsubscribe);
+    }
+    
+    // Apply search term filter
+    if (searchTerm) {
+      const lowercaseSearch = searchTerm.toLowerCase();
+      const terms = lowercaseSearch.split(' ').filter(Boolean);
+      
+      filteredSenders = filteredSenders.filter(sender => {
+        const searchableText = `${sender.name || ''} ${sender.email}`.toLowerCase();
+        return terms.every(term => searchableText.includes(term));
+      });
+    }
+
+    // Group senders by domain
+    const domainMap = new Map<string, TableSender[]>();
+    
+    filteredSenders.forEach(sender => {
+      const domain = getRootDomainFromEmail(sender.email);
+      if (!domainMap.has(domain)) {
+        domainMap.set(domain, []);
+      }
+      domainMap.get(domain)!.push(sender);
+    });
+
+    // Create domain aggregations
+    const aggregations = new Map();
+    const flattened: Array<{ type: 'domain' | 'sender'; data: any }> = [];
+
+    // Sort domains according to domainSort
+    const sortedDomains = Array.from(domainMap.entries()).sort((a, b) => {
+      const [domainA, sendersA] = a;
+      const [domainB, sendersB] = b;
+
+      // helper calculations
+      const totalA = sendersA.reduce((sum, s) => sum + (showUnreadOnly ? s.unread_count : s.count), 0);
+      const totalB = sendersB.reduce((sum, s) => sum + (showUnreadOnly ? s.unread_count : s.count), 0);
+      const senderCountA = sendersA.length;
+      const senderCountB = sendersB.length;
+      const lastA = sendersA.reduce((latest, s) => {
+        if (!latest) return s.lastEmail;
+        const tsLatest = Date.parse(latest);
+        const tsCurrent = Date.parse(s.lastEmail);
+        const safeLatest = isNaN(tsLatest) ? -Infinity : tsLatest;
+        const safeCurrent = isNaN(tsCurrent) ? -Infinity : tsCurrent;
+        return safeCurrent > safeLatest ? s.lastEmail : latest;
+      }, '');
+      const lastB = sendersB.reduce((latest, s) => {
+        if (!latest) return s.lastEmail;
+        const tsLatest = Date.parse(latest);
+        const tsCurrent = Date.parse(s.lastEmail);
+        const safeLatest = isNaN(tsLatest) ? -Infinity : tsLatest;
+        const safeCurrent = isNaN(tsCurrent) ? -Infinity : tsCurrent;
+        return safeCurrent > safeLatest ? s.lastEmail : latest;
+      }, '');
+
+      const tsA = Date.parse(lastA);
+      const tsB = Date.parse(lastB);
+
+      const safeLastA = isNaN(tsA) ? -Infinity : tsA;
+      const safeLastB = isNaN(tsB) ? -Infinity : tsB;
+
+      let cmp = 0;
+      switch (domainSort.field) {
+        case 'domain':
+          cmp = domainA.localeCompare(domainB);
+          break;
+        case 'senderCount':
+          cmp = senderCountA - senderCountB;
+          break;
+        case 'lastEmail':
+          cmp = safeLastA - safeLastB;
+          break;
+        case 'count':
+        default:
+          cmp = totalA - totalB;
+          break;
+      }
+      return domainSort.direction === 'asc' ? cmp : -cmp;
+    });
+
+    sortedDomains.forEach(([domain, senders]) => {
+      // Sort senders within domain by count (descending)
+      const sortedSenders = senders.sort((a, b) => {
+        const aCount = showUnreadOnly ? a.unread_count : a.count;
+        const bCount = showUnreadOnly ? b.unread_count : b.count;
+        return bCount - aCount;
+      });
+
+      // Calculate domain aggregation
+      const totalCount = sortedSenders.reduce((sum, sender) => sum + (showUnreadOnly ? sender.unread_count : sender.count), 0);
+      const totalUnreadCount = sortedSenders.reduce((sum, sender) => sum + sender.unread_count, 0);
+      const hasUnsubscribe = sortedSenders.some(sender => sender.hasUnsubscribe);
+      const lastEmail = sortedSenders.reduce((latest, sender) => {
+        if (!latest) return sender.lastEmail;
+        const tsLatest = Date.parse(latest);
+        const tsCurrent = Date.parse(sender.lastEmail);
+        const safeLatest = isNaN(tsLatest) ? -Infinity : tsLatest;
+        const safeCurrent = isNaN(tsCurrent) ? -Infinity : tsCurrent;
+        return safeCurrent > safeLatest ? sender.lastEmail : latest;
+      }, '');
+
+      const domainData = {
+        domain,
+        senders: sortedSenders,
+        totalCount,
+        totalUnreadCount,
+        hasUnsubscribe,
+        lastEmail,
+        senderCount: sortedSenders.length,
+        isExpanded: expandedDomains.has(domain)
+      };
+
+      aggregations.set(domain, domainData);
+
+      // Add domain header row
+      flattened.push({ type: 'domain', data: domainData });
+
+      // Add sender rows if expanded
+      if (expandedDomains.has(domain)) {
+        sortedSenders.forEach(sender => {
+          flattened.push({ type: 'sender', data: sender });
+        });
+      }
+    });
+
+    return { domainAggregations: aggregations, flattenedData: flattened };
+  }, [allSenders, groupByDomain, showUnreadOnly, showHasUnsubscribe, searchTerm, expandedDomains, domainSort]);
+
+  // Toggle domain expansion
+  const toggleDomainExpansion = useCallback((domain: string) => {
+    setExpandedDomains(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(domain)) {
+        newSet.delete(domain);
+      } else {
+        newSet.add(domain);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Toggle email selection (for domain table)
+  const toggleEmailSelection = useCallback((email: string, selected: boolean) => {
+    setSelectedEmails(prev => {
+      const newSet = new Set(prev);
+      if (selected && newSet.size < 25) { // Respect the 25-row limit
+        newSet.add(email);
+      } else if (!selected) {
+        newSet.delete(email);
+      } else {
+        toast.error("Maximum 25 senders can be selected at once");
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Clear selections (for domain table)
+  const clearSelectionsForDomainTable = useCallback(() => {
+    setSelectedEmails(new Set());
+  }, []);
 
   // Total number of unread emails to mark as read (mirrors totalEmailCount pattern)
   const totalUnreadCount = useMemo(() => {
@@ -369,6 +569,13 @@ export default function AnalysisView() {
       }
     };
   }, []); // Empty dependency array since these are just function references
+
+  // Sync selected emails with the selection count handler for domain table
+  useEffect(() => {
+    if (groupByDomain) {
+      handleSelectedCountChange(selectedEmails.size);
+    }
+  }, [selectedEmails, groupByDomain, handleSelectedCountChange]);
 
   // Handlers for bulk actions
   const handleViewInGmail = useCallback(() => {
@@ -770,13 +977,40 @@ export default function AnalysisView() {
         onSearchChange={setSearchTerm}
         onToggleUnreadOnly={setShowUnreadOnly}
         onToggleHasUnsubscribe={setShowHasUnsubscribe}
+        onToggleGroupByDomain={setGroupByDomain}
         showUnreadOnly={showUnreadOnly}
         showHasUnsubscribe={showHasUnsubscribe}
+        showGroupByDomain={groupByDomain}
       />
 
       {/* TABLE CONTAINER */}
-      <div className="flex-1 min-h-0 relative">
-        <div className="absolute inset-0">
+      <div className="flex-1 overflow-hidden">
+        {groupByDomain ? (
+          <VirtualizedDomainTable
+            flattenedData={flattenedData}
+            domainAggregations={domainAggregations}
+            selectedEmails={selectedEmails}
+            setSelectedEmails={setSelectedEmails}
+            toggleDomainExpansion={toggleDomainExpansion}
+            toggleEmailSelection={toggleEmailSelection}
+            clearSelections={clearSelectionsForDomainTable}
+            showUnreadOnly={showUnreadOnly}
+            isLoading={progress.status === 'analyzing'}
+            isAnalyzing={progress.status === 'analyzing'}
+            onBlockSingleSender={handleBlockSingleSender}
+            onApplyLabelSingle={handleApplyLabelSingle}
+            onDeleteSingleSender={handleDeleteSingleSender}
+            onDeleteWithExceptions={handleDeleteSingleSenderWithExceptions}
+            onUnsubscribeSingleSender={handleUnsubscribeSingleSender}
+            onMarkSingleSenderRead={handleMarkSingleSenderRead}
+            viewSenderInGmail={viewSenderInGmail}
+            handleDropdownOpen={(email: string) => {
+              // Handle dropdown open logic if needed
+            }}
+            domainSort={domainSort}
+            handleDomainSortChange={handleDomainSortChange}
+          />
+        ) : (
           <SenderTable 
             onSelectedCountChange={handleSelectedCountChange} 
             searchTerm={searchTerm}
@@ -789,7 +1023,7 @@ export default function AnalysisView() {
             onUnsubscribeSingleSender={handleUnsubscribeSingleSender}
             onApplyLabelSingle={handleApplyLabelSingle}
           />
-        </div>
+        )}
       </div>
 
       <AnalysisFooter 

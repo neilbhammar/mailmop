@@ -78,8 +78,8 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         const now = new Date();
         const timeSinceUpdate = now.getTime() - lastUpdated.getTime();
         
-        // If analysis hasn't been updated in more than 15 seconds, consider it interrupted
-        if (timeSinceUpdate > 15000) {
+        // If analysis hasn't been updated in more than 60 seconds, consider it interrupted
+        if (timeSinceUpdate > 60000) {
           logger.debug('Analysis appears interrupted, marking as error', { 
             component: 'AnalysisProvider',
             timeSinceUpdateSeconds: Math.round(timeSinceUpdate/1000)

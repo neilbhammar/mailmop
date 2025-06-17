@@ -10,6 +10,7 @@ const VIEW_STATE_KEY = 'mailmop-view-state';
 interface ViewState {
   showUnreadOnly: boolean;
   showHasUnsubscribe: boolean;
+  groupByDomain: boolean;
   // Future extensibility for additional filters
   searchTerm?: string;
   sortField?: string;
@@ -20,10 +21,11 @@ interface ViewState {
 const DEFAULT_VIEW_STATE: ViewState = {
   showUnreadOnly: false,
   showHasUnsubscribe: false,
+  groupByDomain: false,
 };
 
 // Valid view mode values for validation
-const VALID_BOOLEAN_KEYS = ['showUnreadOnly', 'showHasUnsubscribe'];
+const VALID_BOOLEAN_KEYS = ['showUnreadOnly', 'showHasUnsubscribe', 'groupByDomain'];
 
 /**
  * Custom hook for managing view state with localStorage persistence
@@ -198,6 +200,11 @@ export function useViewState() {
     setViewState(prev => ({ ...prev, showHasUnsubscribe: value }));
   }, []);
 
+  // NEW: setter for groupByDomain
+  const setGroupByDomain = useCallback((value: boolean) => {
+    setViewState(prev => ({ ...prev, groupByDomain: value }));
+  }, []);
+
   // Future extensibility: additional setters can be added here
   // const setSearchTerm = useCallback((value: string) => {
   //   setViewState(prev => ({ ...prev, searchTerm: value }));
@@ -224,10 +231,12 @@ export function useViewState() {
     // Current state values
     showUnreadOnly: viewState.showUnreadOnly,
     showHasUnsubscribe: viewState.showHasUnsubscribe,
+    groupByDomain: viewState.groupByDomain,
     
     // Setters
     setShowUnreadOnly,
     setShowHasUnsubscribe,
+    setGroupByDomain,
     
     // Utility
     isLoaded, // Indicates if localStorage has been checked and state restored

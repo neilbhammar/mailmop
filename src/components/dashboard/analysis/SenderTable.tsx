@@ -85,7 +85,7 @@ const SenderRow = memo(({
         "relative h-14 cursor-pointer group transition-colors duration-75",
         "hover:bg-blue-50/75 dark:hover:bg-slate-700",
         (isSelected || isActive) && "bg-blue-50/75 dark:bg-slate-700/75",
-        queued && "bg-orange-100/40 dark:bg-orange-700/10"
+        queued && "bg-green-100/40 dark:bg-green-700/10"
       )}
       onClick={(e) => onRowClick(e, row)}
       onMouseLeave={onRowMouseLeave}
@@ -734,10 +734,14 @@ export function SenderTable({
         <LastEmailCell date={row.getValue("lastEmail")} strikethrough={row.original.count === 0} />
       ),
       sortingFn: (rowA, rowB) => {
-        // Convert date strings to Date objects for proper comparison
-        const a = new Date(rowA.getValue("lastEmail"))
-        const b = new Date(rowB.getValue("lastEmail"))
-        return a > b ? 1 : a < b ? -1 : 0
+        // Robust sort that handles unparsable timestamps (treats them as oldest)
+        const tsA = Date.parse(rowA.getValue("lastEmail")) // millis or NaN
+        const tsB = Date.parse(rowB.getValue("lastEmail"))
+
+        const safeA = isNaN(tsA) ? -Infinity : tsA
+        const safeB = isNaN(tsB) ? -Infinity : tsB
+
+        return safeA > safeB ? 1 : safeA < safeB ? -1 : 0
       }
     },
     {
@@ -1152,3 +1156,6 @@ export function SenderTable({
     </>
   )
 }
+
+// export cell components for reuse in other tables
+export { SenderNameCell, TruncatedCell, LastEmailCell }
