@@ -174,123 +174,148 @@ export default async function BlogPostPage({
           </div>
         </header>
 
-        <main className="container mx-auto px-6 py-12 md:max-w-3xl">
-          <article itemScope itemType="https://schema.org/Article">
-            {/* SEO optimization: meta information */}
-            <meta itemProp="headline" content={post.title} />
-            <meta itemProp="description" content={post.description} />
-            <meta itemProp="datePublished" content={publishDate} />
-            <meta itemProp="dateModified" content={publishDate} />
-            <link itemProp="mainEntityOfPage" href={url} />
-            
-            {/* Clean, minimal article header */}
-            <header className="mb-10">
-              {post.tags && post.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {post.tags.slice(0, 3).map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full"
-                    >
-                      {tag.replace('-', ' ')}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <h1 itemProp="name" className="text-3xl md:text-4xl font-bold mb-6 leading-tight tracking-tight">
-                {post.title}
-              </h1>
-
-              <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-                {post.description}
-              </p>
-
-              <div className="flex items-center gap-5 text-sm text-muted-foreground border-t border-b py-4">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <time itemProp="datePublished" dateTime={publishDate}>{formattedDate}</time>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  <span>{post.readingTime} min read</span>
-                </div>
-              </div>
-            </header>
-
-            {/* Simple inline TOC - only shown if there are headings */}
-            {headings.length > 0 && (
-              <nav aria-label="Table of Contents" className="mb-10 p-4 bg-muted/30 rounded-lg">
-                <h2 className="font-medium text-base mb-3">Table of Contents</h2>
-                <ul className="space-y-2">
-                  {headings.map((heading) => (
-                    <li key={heading.id} className={heading.level === 3 ? "ml-4" : ""}>
-                      <a 
-                        href={`#${heading.id}`}
-                        className="text-sm text-muted-foreground hover:text-primary transition-colors inline-flex items-center"
+        {/* Full width main content area */}
+        <main className="w-full">
+          <div className="max-w-4xl mx-auto px-6 py-12">
+            <article itemScope itemType="https://schema.org/Article">
+              {/* SEO optimization: meta information */}
+              <meta itemProp="headline" content={post.title} />
+              <meta itemProp="description" content={post.description} />
+              <meta itemProp="datePublished" content={publishDate} />
+              <meta itemProp="dateModified" content={publishDate} />
+              <link itemProp="mainEntityOfPage" href={url} />
+              
+              {/* Enhanced article header */}
+              <header className="mb-16 max-w-4xl relative">
+                <div className="absolute -left-6 top-0 w-1 h-32 bg-gradient-to-b from-primary to-primary/30 rounded-full hidden lg:block"></div>
+                
+                {post.tags && post.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-8">
+                    {post.tags.slice(0, 3).map((tag, index) => (
+                      <span
+                        key={tag}
+                        className={`px-4 py-2 text-sm font-semibold rounded-full border transition-colors ${
+                          index === 0 
+                            ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' 
+                            : 'bg-background/90 backdrop-blur-sm text-muted-foreground border-border/80 hover:bg-muted/50'
+                        }`}
                       >
-                        {heading.text}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            )}
+                        {tag.replace('-', ' ')}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
-            {/* Article Content - Clean typography */}
-            <div itemProp="articleBody" className="prose prose-slate max-w-none dark:prose-invert">
-              <MDXRemote
-                source={post.content}
-                options={{
-                  mdxOptions: {
-                    remarkPlugins: [remarkGfm],
-                    rehypePlugins: [
-                      rehypeHighlight,
-                      rehypeSlug,
-                      [rehypeAutolinkHeadings, { behavior: 'wrap' }],
-                    ],
-                  },
-                }}
-              />
-            </div>
-            
-            {/* Author info for SEO */}
-            <div itemProp="author" itemScope itemType="https://schema.org/Person" className="hidden">
-              <meta itemProp="name" content={post.author || 'MailMop Team'} />
-            </div>
-            
-            <div itemProp="publisher" itemScope itemType="https://schema.org/Organization" className="hidden">
-              <meta itemProp="name" content="MailMop" />
-              <meta itemProp="url" content="https://mailmop.com" />
-              <div itemProp="logo" itemScope itemType="https://schema.org/ImageObject">
-                <meta itemProp="url" content="https://mailmop.com/logo10.png" />
-              </div>
-            </div>
-          </article>
+                <h1 itemProp="name" className="text-4xl md:text-6xl font-bold mb-8 leading-tight tracking-tight">
+                  {post.title}
+                </h1>
 
-          {/* Clean CTA */}
-          <section className="mt-16 pt-8 border-t">
-            <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-6">
-              <div className="flex flex-col md:flex-row md:items-center gap-6">
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold mb-2">
-                    Clean up your Gmail inbox effortlessly
-                  </h3>
-                  <p className="text-muted-foreground text-sm">
-                    MailMop analyzes your inbox and helps you free up space in minutes, not hours.
-                  </p>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-6 text-sm p-6 bg-card/60 backdrop-blur-sm rounded-xl border border-border/80">
+                  <div className="flex items-center gap-6 text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-primary" />
+                      <time itemProp="datePublished" dateTime={publishDate} className="font-medium">
+                        {formattedDate}
+                      </time>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-primary" />
+                      <span className="font-medium">{post.readingTime} min read</span>
+                    </div>
+                  </div>
+                  <div className="sm:ml-auto">
+                    <Link 
+                      href="/"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg text-sm font-semibold hover:bg-primary/20 transition-colors border border-primary/30"
+                    >
+                      Try MailMop Free
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </div>
                 </div>
-                <Link
-                  href="/"
-                  className="inline-flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
-                >
-                  Try MailMop Free
-                </Link>
+              </header>
+
+              {/* Article Content - Better typography and wider layout */}
+              <div itemProp="articleBody" className="prose prose-slate prose-lg max-w-none dark:prose-invert prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-foreground prose-p:leading-relaxed prose-p:text-foreground/90 prose-strong:text-foreground prose-strong:font-semibold prose-code:text-primary prose-code:bg-muted/50 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:border prose-code:border-border/50 prose-pre:bg-card prose-pre:border prose-pre:border-border prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:not-italic prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
+                <MDXRemote
+                  source={post.content}
+                  options={{
+                    mdxOptions: {
+                      remarkPlugins: [remarkGfm],
+                      rehypePlugins: [
+                        rehypeHighlight,
+                        rehypeSlug,
+                        [rehypeAutolinkHeadings, { behavior: 'wrap' }],
+                      ],
+                    },
+                  }}
+                />
+                            </div>
+            
+              {/* Author info for SEO */}
+              <div itemProp="author" itemScope itemType="https://schema.org/Person" className="hidden">
+                <meta itemProp="name" content={post.author || 'MailMop Team'} />
               </div>
-            </div>
-          </section>
-          
-          {/* Related posts could be added here for internal linking and SEO */}
+              
+              <div itemProp="publisher" itemScope itemType="https://schema.org/Organization" className="hidden">
+                <meta itemProp="name" content="MailMop" />
+                <meta itemProp="url" content="https://mailmop.com" />
+                <div itemProp="logo" itemScope itemType="https://schema.org/ImageObject">
+                  <meta itemProp="url" content="https://mailmop.com/logo10.png" />
+                </div>
+              </div>
+            </article>
+
+            {/* Enhanced CTA */}
+            <section className="mt-20 pt-12 border-t max-w-4xl">
+              <div className="relative bg-card/70 backdrop-blur-sm rounded-2xl p-8 md:p-12 overflow-hidden border border-border/80">
+                <div className="absolute top-4 right-4 w-24 h-24 bg-primary/5 dark:bg-primary/10 rounded-full blur-xl"></div>
+                <div className="absolute bottom-4 left-4 w-16 h-16 bg-primary/3 dark:bg-primary/5 rounded-full blur-lg"></div>
+                
+                <div className="relative z-10">
+                  <div className="text-center max-w-2xl mx-auto">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium mb-6 border border-primary/30">
+                      ✨ Ready to declutter?
+                    </div>
+                    
+                    <h3 className="text-2xl md:text-3xl font-bold mb-4 text-foreground">
+                      Clean up your Gmail inbox in minutes
+                    </h3>
+                    
+                    <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
+                      Stop spending hours manually organizing emails. MailMop analyzes your inbox and identifies exactly what's taking up space, so you can reclaim your productivity.
+                    </p>
+                    
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                      <Link
+                        href="/"
+                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold text-lg shadow-sm"
+                      >
+                        Try MailMop Free
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                      <Link
+                        href="/blog"
+                        className="inline-flex items-center justify-center px-6 py-3 bg-background/90 backdrop-blur-sm border border-border/80 rounded-lg hover:bg-muted/50 transition-colors font-semibold text-lg"
+                      >
+                        More Gmail Tips
+                      </Link>
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground mt-4">
+                      Free forever • No credit card required • 2 minutes to get started
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+            
+            {/* Related posts could be added here for internal linking and SEO */}
+          </div>
         </main>
         
         <footer className="container mx-auto px-6 py-8 border-t mt-12">
