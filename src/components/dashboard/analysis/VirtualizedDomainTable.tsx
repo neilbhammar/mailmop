@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useCallback } from 'react'
+import React, { useMemo, useRef, useCallback, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '@/lib/utils'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -67,6 +67,13 @@ interface VirtualizedDomainTableProps {
     direction: 'asc' | 'desc'
   }
   handleDomainSortChange: (field: 'domain' | 'senderCount' | 'lastEmail' | 'count') => void
+  // Selection management for auto deselection
+  onSelectedCountChange?: {
+    (count: number): void;
+    removeFromSelection?: (emails: string[]) => void;
+    clearSelections?: () => void;
+    getSelectedEmails?: (emails: string[], emailCounts?: Record<string, number>) => void;
+  }
 }
 
 export function VirtualizedDomainTable({
@@ -90,6 +97,7 @@ export function VirtualizedDomainTable({
   handleDropdownOpen,
   domainSort,
   handleDomainSortChange,
+  onSelectedCountChange,
 }: VirtualizedDomainTableProps) {
   const tableBodyRef = useRef<HTMLDivElement>(null)
   
@@ -98,6 +106,34 @@ export function VirtualizedDomainTable({
   
   // Store the intended action (select or deselect) for shift+click operations
   const lastSelectionActionRef = useRef<boolean>(true)
+
+  // Update parent component when selection count changes (for auto deselection support)
+  useEffect(() => {
+    if (onSelectedCountChange) {
+      onSelectedCountChange(selectedEmails.size);
+    }
+  }, [selectedEmails.size, onSelectedCountChange]);
+
+  // Provide selected emails to parent component
+  useEffect(() => {
+    if (onSelectedCountChange && typeof onSelectedCountChange.getSelectedEmails === 'function') {
+      // Create a map of email counts for selected emails
+      const emailCountMap: Record<string, number> = {};
+      
+      // Get sender data for selected emails
+      selectedEmails.forEach(email => {
+        // Find sender in flattened data
+        const senderItem = flattenedData.find(item => 
+          item.type === 'sender' && item.data.email === email
+        );
+        if (senderItem) {
+          emailCountMap[email] = senderItem.data.count;
+        }
+      });
+      
+      onSelectedCountChange.getSelectedEmails(Array.from(selectedEmails), emailCountMap);
+    }
+  }, [selectedEmails, onSelectedCountChange, flattenedData]);
 
   // Set up virtualizer
   const { getVirtualItems, getTotalSize } = useVirtualizer({

@@ -12,6 +12,7 @@ import { enrichSender } from '@/lib/gmail/enrichSender';
 import { ActionType, ActionStatus, ActionEndType } from '@/types/actions';
 import { logger } from '@/lib/utils/logger';
 import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
+import { storeSenderAction, updateActionStatus } from '@/lib/storage/actionStorage';
 
 // --- Queue Types ---
 import { UnsubscribeJobPayload, ProgressCallback, ExecutorResult } from '@/types/queue';
@@ -71,6 +72,15 @@ export function useUnsubscribe() {
       senderEmail: params.senderEmail,
       methodType: methodDetails.type,
       hasFirstMessageId: !!params.firstMessageId
+    });
+
+    // Store the action as pending in localStorage for tracking
+    const actionTimestamp = Date.now();
+    storeSenderAction({
+      senderEmail: params.senderEmail,
+      timestamp: actionTimestamp,
+      type: 'unsubscribe',
+      status: 'pending'
     });
 
     // STEP 1: Try enrichment if we have firstMessageId and no enriched URL yet
@@ -275,6 +285,10 @@ export function useUnsubscribe() {
 
       if (success) {
         logger.debug('Proceeding with logging after successful operation', { component: 'useUnsubscribe' });
+        
+        // Update the action status to completed in localStorage
+        updateActionStatus(params.senderEmail, actionTimestamp, 'completed');
+        
         await markSenderActionTaken(params.senderEmail, 'unsubscribe');
         logger.debug('Marked action taken for sender', { 
           component: 'useUnsubscribe',
@@ -318,6 +332,9 @@ export function useUnsubscribe() {
         component: 'useUnsubscribe',
         finalErrorMessage
       });
+      
+      // Update the action status to failed in localStorage
+      updateActionStatus(params.senderEmail, actionTimestamp, 'failed', finalErrorMessage);
       
       actionEndType = 'runtime_error';
       success = false; 

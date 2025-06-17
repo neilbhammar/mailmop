@@ -358,25 +358,76 @@ export default function AnalysisView() {
     });
   }, []);
 
-  // Toggle email selection (for domain table)
-  const toggleEmailSelection = useCallback((email: string, selected: boolean) => {
-    setSelectedEmails(prev => {
-      const newSet = new Set(prev);
-      if (selected && newSet.size < 25) { // Respect the 25-row limit
-        newSet.add(email);
-      } else if (!selected) {
-        newSet.delete(email);
-      } else {
-        toast.error("Maximum 25 senders can be selected at once");
-      }
-      return newSet;
-    });
-  }, []);
-
   // Clear selections (for domain table)
   const clearSelectionsForDomainTable = useCallback(() => {
     setSelectedEmails(new Set());
   }, []);
+
+  // Toggle email selection (for domain table) - UPDATE TO MATCH SENDERTABLE PATTERN
+  const toggleEmailSelection = useCallback((email: string, selected: boolean) => {
+    let success = true;
+    
+    setSelectedEmails(prev => {
+      const newSet = new Set(prev);
+      
+      // If we're trying to add and we'll exceed the limit, prevent it
+      if (selected && !prev.has(email) && prev.size >= 25) {
+        success = false;
+        return prev; // Return unchanged set
+      }
+      
+      // Otherwise proceed with the toggle
+      if (selected) {
+        newSet.add(email);
+      } else {
+        newSet.delete(email);
+      }
+      return newSet;
+    });
+    
+    // Show warning if max limit reached
+    if (!success) {
+      toast.error("Maximum 25 senders can be selected at once");
+    }
+  }, []);
+
+  // Remove specific emails from selection (for domain table auto deselection)
+  const removeFromSelectionForDomainTable = useCallback((emailsToRemove: string[]) => {
+    setSelectedEmails(prev => {
+      const newSet = new Set(prev);
+      emailsToRemove.forEach(email => newSet.delete(email));
+      return newSet;
+    });
+  }, []);
+
+  // Create a selection count handler for domain table that matches SenderTable pattern
+  const handleSelectedCountChangeForDomainTable: {
+    (count: number): void;
+    removeFromSelection?: (emails: string[]) => void;
+    clearSelections?: () => void;
+    getSelectedEmails?: (emails: string[], emailCounts?: Record<string, number>) => void;
+  } = useCallback((count: number) => {
+    // Base handler - just receives the count
+  }, []);
+
+  // Set up the supporting functions for the domain table (matching SenderTable pattern)
+  useEffect(() => {
+    if (groupByDomain) {
+      // Add the removeFromSelection function to the handler for auto deselection
+      handleSelectedCountChangeForDomainTable.removeFromSelection = removeFromSelectionForDomainTable;
+      
+      // Add clearSelections function
+      handleSelectedCountChangeForDomainTable.clearSelections = clearSelectionsForDomainTable;
+      
+      // Add getSelectedEmails function for compatibility
+      handleSelectedCountChangeForDomainTable.getSelectedEmails = (emails: string[], emailCounts?: Record<string, number>) => {
+        // Update emailCountMap if provided
+        if (emailCounts) {
+          setEmailCountMap(prev => ({ ...prev, ...emailCounts }));
+        }
+      };
+    }
+  }, [groupByDomain, removeFromSelectionForDomainTable, clearSelectionsForDomainTable]);
 
   // Total number of unread emails to mark as read (mirrors totalEmailCount pattern)
   const totalUnreadCount = useMemo(() => {
@@ -433,28 +484,41 @@ export default function AnalysisView() {
   const scheduleSmartAutoClear = useCallback(() => {
     const currentSendersActedUpon = Array.from(selectedEmails).sort();
     
+    console.log('🎯 [AnalysisView] scheduleSmartAutoClear called', {
+      currentSendersActedUpon,
+      groupByDomain,
+      timestamp: new Date().toISOString()
+    });
+    
     // Store the current senders we're going to remove after 2s
     pendingSendersToRemoveRef.current = currentSendersActedUpon;
     
     // Schedule the partial clear for the new action
     clearTimeoutRef.current = setTimeout(() => {
-      // Use SenderTable's removeFromSelection to properly sync the UI
-      if (handleSelectedCountChange.removeFromSelection) {
-        handleSelectedCountChange.removeFromSelection(currentSendersActedUpon);
-      } else {
-        // Fallback to direct state update (shouldn't happen)
-        setSelectedEmails(currentSelection => {
-          const newSelection = new Set(currentSelection);
-          currentSendersActedUpon.forEach(sender => newSelection.delete(sender));
-          return newSelection;
+      console.log('🎯 [AnalysisView] Auto-clear timeout fired', {
+        sendersToRemove: currentSendersActedUpon,
+        groupByDomain,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Direct state update that works for both tables
+      setSelectedEmails(currentSelection => {
+        const newSelection = new Set(currentSelection);
+        currentSendersActedUpon.forEach(sender => newSelection.delete(sender));
+        console.log('🎯 [AnalysisView] Auto-clear completed', {
+          removedSenders: currentSendersActedUpon,
+          remainingSelection: Array.from(newSelection),
+          groupByDomain,
+          timestamp: new Date().toISOString()
         });
-      }
+        return newSelection;
+      });
       
       // Reset refs
       clearTimeoutRef.current = null;
       pendingSendersToRemoveRef.current = [];
     }, 2000); // 2 seconds
-  }, [selectedEmails]); // Removed handleSelectedCountChange - function is always current due to closure
+  }, [selectedEmails, groupByDomain]); // Added groupByDomain for logging
 
   // ✅ Fix: Cleanup timeouts when component unmounts to prevent memory leaks
   useEffect(() => {
@@ -518,19 +582,15 @@ export default function AnalysisView() {
       
       // Immediately remove senders that were pending but not in new action
       if (sendersToRemoveNow.length > 0) {
-        if (handleSelectedCountChange.removeFromSelection) {
-          handleSelectedCountChange.removeFromSelection(sendersToRemoveNow);
-        } else {
-          // Fallback to direct state update (shouldn't happen)
-          setSelectedEmails(currentSelection => {
-            const newSelection = new Set(currentSelection);
-            sendersToRemoveNow.forEach(sender => newSelection.delete(sender));
-            return newSelection;
-          });
-        }
+        // Direct state update that works for both tables
+        setSelectedEmails(currentSelection => {
+          const newSelection = new Set(currentSelection);
+          sendersToRemoveNow.forEach(sender => newSelection.delete(sender));
+          return newSelection;
+        });
       }
     }
-  }, [selectedEmails]); // Removed handleSelectedCountChange - function is always current due to closure
+  }, [selectedEmails]); // Simplified dependencies
 
   // Update the effect that gets sender data
   useEffect(() => {
@@ -1009,6 +1069,7 @@ export default function AnalysisView() {
             }}
             domainSort={domainSort}
             handleDomainSortChange={handleDomainSortChange}
+            onSelectedCountChange={handleSelectedCountChangeForDomainTable}
           />
         ) : (
           <SenderTable 
