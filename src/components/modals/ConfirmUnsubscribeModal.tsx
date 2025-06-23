@@ -31,6 +31,7 @@ interface ConfirmUnsubscribeModalProps {
   }
   onConfirm?: () => void // Optional: Called when user confirms sending the email (legacy support)
   onCancel?: () => void // Optional: Called when user explicitly cancels
+  onSuccess?: () => void // Called after the confirm flow completes successfully
 }
 
 const SESSION_STORAGE_KEY = "skipUnsubConfirm"
@@ -42,6 +43,7 @@ export function ConfirmUnsubscribeModal({
   methodDetails,
   onConfirm,
   onCancel,
+  onSuccess,
 }: ConfirmUnsubscribeModalProps) {
   const [dontShowAgain, setDontShowAgain] = useState(false)
   const { enqueue } = useQueue()
@@ -77,6 +79,9 @@ export function ConfirmUnsubscribeModal({
       // Legacy path for URL-based or POST operations
       onConfirm?.()
     }
+
+    // Notify parent for auto-deselect logic
+    onSuccess?.()
 
     onOpenChange(false)
   }

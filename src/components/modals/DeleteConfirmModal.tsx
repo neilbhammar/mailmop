@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -84,8 +84,28 @@ export function DeleteConfirmModal({
   // Track loading state during deletion process
   const [isDeleting, setIsDeleting] = useState(false)
   
-  // State for delete method selection
-  const [deleteMethod, setDeleteMethod] = useState<'trash' | 'permanent'>('trash')
+  // --- Persisted delete-method preference (localStorage) ---
+  const DELETE_METHOD_PREF_KEY = 'deleteMethodPreference';
+
+  // Initialise from localStorage; default to 'permanent'
+  const [deleteMethod, setDeleteMethod] = useState<'trash' | 'permanent'>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(DELETE_METHOD_PREF_KEY);
+      if (stored === 'trash' || stored === 'permanent') {
+        return stored as 'trash' | 'permanent';
+      }
+    }
+    return 'permanent';
+  });
+
+  // Persist whenever user changes preference
+  useEffect(() => {
+    try {
+      localStorage.setItem(DELETE_METHOD_PREF_KEY, deleteMethod);
+    } catch (_) {
+      /* ignore quota / SSR errors */
+    }
+  }, [deleteMethod]);
   
   // Get queue functions
   const { enqueue } = useQueue()
@@ -117,11 +137,13 @@ export function DeleteConfirmModal({
       try {
         setIsDeleting(true)
         
-        // Convert senders to the format expected by the queue
-        const sendersForQueue = senders.map(email => ({
-          email,
-          emailCount: getEmailCountForSender(email)
-        }))
+        // Build payload with correct field names expected by each executor
+        const sendersForQueue = senders.map(email => {
+          const countValue = getEmailCountForSender(email);
+          return deleteMethod === 'trash'
+            ? { email, emailCount: countValue } // modifyLabel executor expects emailCount
+            : { email, count: countValue };      // delete executor expects count
+        });
         
         if (deleteMethod === 'trash') {
           // Soft delete - apply TRASH label using modify label queue

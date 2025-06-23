@@ -503,7 +503,7 @@ function SenderRow({
       className={cn(
         "h-14 border-b border-slate-200/50 dark:border-slate-700/50 hover:bg-blue-50/40 dark:hover:bg-slate-700/30 transition-colors cursor-pointer group bg-white dark:bg-slate-800",
         isSelected && 'bg-blue-50/75 dark:bg-slate-700/50',
-        queued && "bg-green-100/40 dark:bg-green-700/10"
+        queued && "bg-amber-100/40 dark:bg-amber-700/10"
       )}
       onClick={(e) => {
         // Ignore clicks on action buttons

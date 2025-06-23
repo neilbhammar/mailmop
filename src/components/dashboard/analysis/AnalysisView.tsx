@@ -517,8 +517,13 @@ export default function AnalysisView() {
       // Reset refs
       clearTimeoutRef.current = null;
       pendingSendersToRemoveRef.current = [];
-    }, 2000); // 2 seconds
-  }, [selectedEmails, groupByDomain]); // Added groupByDomain for logging
+
+      // Also clear selection in SenderTable / DomainTable via callback
+      if (typeof handleSelectedCountChange.clearSelections === 'function') {
+        handleSelectedCountChange.clearSelections();
+      }
+    }, 3000); // 3 seconds (was 2s)
+  }, [selectedEmails, groupByDomain, handleSelectedCountChange]); // Added handleSelectedCountChange to deps
 
   // ✅ Fix: Cleanup timeouts when component unmounts to prevent memory leaks
   useEffect(() => {
@@ -614,22 +619,6 @@ export default function AnalysisView() {
     setUnreadCountMap(unreadCounts);
   }, [selectedEmails, allSenders]);
 
-  // Set up the supporting functions for the table
-  useEffect(() => {
-    // ✅ Fix: Proper type safety - interface already supports these methods
-    handleSelectedCountChange.clearSelections = () => {
-      if (typeof handleSelectedCountChange.clearSelections === 'function') {
-        handleSelectedCountChange.clearSelections();
-      }
-    };
-    
-    handleSelectedCountChange.removeFromSelection = (emails: string[]) => {
-      if (typeof handleSelectedCountChange.removeFromSelection === 'function') {
-        handleSelectedCountChange.removeFromSelection(emails);
-      }
-    };
-  }, []); // Empty dependency array since these are just function references
-
   // Sync selected emails with the selection count handler for domain table
   useEffect(() => {
     if (groupByDomain) {
@@ -656,11 +645,10 @@ export default function AnalysisView() {
   }, [selectedEmails, viewMultipleSendersInGmail, activeSingleSender, viewSenderInGmail]);
 
   // --- SMART AUTO-DESELECT STRATEGY (GitHub Issue #64) ---
-  // 🎯 CLEAR SELECTION 1.5 seconds after actions are CONFIRMED, BUT cancel if another action on same senders:
-  //    Delete, Delete with Exceptions, Mark as Read, Apply Label, Block Sender
-  // ❌ KEEP SELECTION for non-destructive actions: View in Gmail, Unsubscribe
-  // The smart logic prevents clearing if the user is still working with the same sender group,
-  // while still providing auto-clear to prevent accidental repeated actions
+  // 🎯 CLEAR SELECTION 3 seconds after any action is CONFIRMED, except "View in Gmail". If the
+  // user triggers another action within those 3 s we reschedule (so you can chain operations on
+  // the same sender batch). This now includes Unsubscribe as well.
+  // The logic helps prevent accidental repeat actions while keeping the workflow fluid.
 
   // Handler to initiate the delete flow - uses checkFeatureAccess
   const handleDelete = useCallback(() => {
@@ -1115,7 +1103,7 @@ export default function AnalysisView() {
         onDeleteWithExceptions={handleDeleteWithExceptions}
         onSuccess={() => {
           console.log('[DEBUG] Delete modal success callback triggered');
-          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 1.5s
+          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 3s
           scheduleSmartAutoClear();
         }}
       />
@@ -1139,7 +1127,7 @@ export default function AnalysisView() {
         senders={emailsToDelete}
         emailCountMap={emailCountMap}
         onSuccess={() => {
-          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 1.5s
+          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 3s
           scheduleSmartAutoClear();
         }}
       />
@@ -1176,7 +1164,7 @@ export default function AnalysisView() {
         unreadCountMap={unreadCountMap}
         allSenders={allSenders}
         onSuccess={() => {
-          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 1.5s
+          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 3s
           scheduleSmartAutoClear();
         }}
       />
@@ -1214,6 +1202,10 @@ export default function AnalysisView() {
             }
             setUnsubscribeModalData(null); // Clear data after use
           }}
+          onSuccess={() => {
+            // Auto-clear selection after unsubscribe confirmation
+            scheduleSmartAutoClear();
+          }}
           onCancel={() => setUnsubscribeModalData(null)} // Clear data on cancel
         />
       )}
@@ -1248,7 +1240,7 @@ export default function AnalysisView() {
         senders={emailsToBlock}
         emailCountMap={emailCountMap}
         onSuccess={() => {
-          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 1.5s
+          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 3s
           scheduleSmartAutoClear();
         }}
       />
@@ -1262,7 +1254,7 @@ export default function AnalysisView() {
         emailCount={emailCountForApplyLabel}
         emailCountMap={emailCountMap}
         onSuccess={() => {
-          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 1.5s
+          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 3s
           scheduleSmartAutoClear();
         }}
       />

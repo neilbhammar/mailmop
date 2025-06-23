@@ -85,7 +85,7 @@ const SenderRow = memo(({
         "relative h-14 cursor-pointer group transition-colors duration-75",
         "hover:bg-blue-50/75 dark:hover:bg-slate-700",
         (isSelected || isActive) && "bg-blue-50/75 dark:bg-slate-700/75",
-        queued && "bg-green-100/50 dark:bg-green-700/20"
+        queued && "bg-amber-100/50 dark:bg-amber-700/20"
       )}
       onClick={(e) => onRowClick(e, row)}
       onMouseLeave={onRowMouseLeave}
