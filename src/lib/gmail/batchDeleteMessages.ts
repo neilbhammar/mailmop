@@ -73,21 +73,21 @@ export async function batchDeleteMessages(
       
       logger.debug('Token scope validation', {
         component: 'batchDeleteMessages',
-        hasScope: tokenData.scope?.includes('gmail.modify'),
+        hasScope: tokenData.scope?.includes('mail.google.com'),
         expiresIn: tokenData.expires_in,
         audience: tokenData.audience?.substring(0, 20) + '...' // Truncate for safety
       });
       
-      // Check if we have the modify scope
-      const hasModifyScope = tokenData.scope?.includes('gmail.modify');
+      // Check if we have the modify scope (we use the broad mail.google.com scope)
+      const hasModifyScope = tokenData.scope?.includes('mail.google.com');
       if (!hasModifyScope) {
-        logger.error('Token missing gmail.modify scope', {
+        logger.error('Token missing mail.google.com scope', {
           component: 'batchDeleteMessages',
           currentScopes: tokenData.scope,
-          requiredScope: 'https://www.googleapis.com/auth/gmail.modify'
+          requiredScope: 'https://mail.google.com/'
         });
       } else {
-        logger.debug('Token has required gmail.modify scope', { component: 'batchDeleteMessages' });
+        logger.debug('Token has required mail.google.com scope', { component: 'batchDeleteMessages' });
       }
     } catch (tokenDebugError) {
       logger.warn('Could not validate token scopes', { 
