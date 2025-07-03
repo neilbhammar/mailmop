@@ -22,6 +22,11 @@ const nextConfig = {
   },
   
   async headers() {
+    // Determine allowed origins based on environment
+    const allowedOrigins = process.env.NODE_ENV === 'production' 
+      ? ['https://mailmop.com', 'https://www.mailmop.com']
+      : ['http://localhost:3000', 'https://localhost:3000'];
+    
     return [
       {
         // Apply security headers to all routes
@@ -34,6 +39,26 @@ const nextConfig = {
           {
             key: 'X-Powered-By',
             value: '' // Hide X-Powered-By header
+          },
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: allowedOrigins.join(', ')
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS'
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization, X-Requested-With'
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
           }
         ],
       },

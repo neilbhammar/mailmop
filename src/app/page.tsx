@@ -327,6 +327,8 @@ export default function Home() {
         src="https://cloud.umami.is/script.js"
         data-website-id="99d13ac3-8c9d-4499-94d7-4aa6e5e7f56d"
         strategy="afterInteractive"
+        integrity="sha384-uxG+1wCVuQuKiP39yWjuIROyk76ZsIgy9BLOUVJUi/+7DmYPjr1h+5LLNBQZ3SxK"
+        crossOrigin="anonymous"
       />
       
       <LandingNavbar signIn={signIn} lenis={lenisInstanceRef.current} />
