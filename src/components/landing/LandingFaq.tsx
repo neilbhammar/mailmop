@@ -16,8 +16,8 @@ const faqs = [
   {
     id: 'safety',
     question: "How do I know that MailMop is safe?",
-    answer: "Good question! You can actually read through all of our code here. We're also undergoing Google's CASA security assesment.",
-    answerWithLink: <>Good question! You can actually read through all of our code <a href="https://github.com/neilbhammar/mailmop" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-500">here</a>. We're also undergoing Google's CASA security assesment.</>
+    answer: "Good question! You can actually read through all of our code here. We also passed Google's Third Party CASA Certification.",
+    answerWithLink: <>Good question! You can actually read through all of our code <a href="https://github.com/neilbhammar/mailmop" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-500">here</a>. We also passed Google's Third Party CASA Certification.</>
   },
   {
     id: 'paid-plan',

@@ -579,7 +579,7 @@ export default function Home() {
                     </div>
                     <p className="text-gray-700 mb-4 sm:mb-6 text-sm sm:text-base dark:text-slate-300">
                       MailMop runs entirely in your browser, analyzing your Gmail inbox without your data ever leaving your device. 
-                      We use restricted Gmail scope's and are undergoing Google's CASA 2 Security Audit for complete privacy and security.
+                      MailMop is certified by Google's CASA 2 Security Audit.
                     </p>
                     <div className="flex flex-col gap-3">
                       <div className="flex items-start">
