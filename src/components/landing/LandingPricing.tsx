@@ -27,9 +27,9 @@ export default function LandingPricing({ signIn }: LandingPricingProps) {
             {/* Free Tier */}
             <div className="bg-white rounded-xl border border-gray-200 p-8 dark:bg-slate-800 dark:border-slate-700 flex-1">
               <div className="mb-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-2 dark:text-slate-100">Free</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2 dark:text-slate-100">Basic</h3>
                 <div className="flex items-baseline">
-                  <span className="text-4xl font-bold text-gray-900 dark:text-slate-100">$0</span>
+                  <span className="text-4xl font-bold text-gray-900 dark:text-slate-100">Free</span>
                   <span className="text-gray-500 ml-2 dark:text-slate-400">forever</span>
                 </div>
               </div>
@@ -74,7 +74,7 @@ export default function LandingPricing({ signIn }: LandingPricingProps) {
                 <h3 className="text-xl font-semibold text-gray-900 mb-2 dark:text-slate-100">Pro</h3>
                 <div className="flex items-baseline">
                   <span className="text-4xl font-bold text-gray-900 dark:text-slate-100">$1.89</span>
-                  <span className="text-gray-500 ml-2 dark:text-slate-400">/month</span>
+                  <span className="text-gray-500 ml-0 dark:text-slate-400">/month</span>
                 </div>
                 <p className="text-sm text-gray-600 mt-1 dark:text-slate-400">
                   Billed annually at $22.68/year
