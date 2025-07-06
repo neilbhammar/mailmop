@@ -1,12 +1,15 @@
 'use client'
 
 import { CheckIcon } from '@radix-ui/react-icons'
+import { useProUpgrade } from '@/hooks/useProUpgrade'
 
 interface LandingPricingProps {
   signIn: () => Promise<void>;
 }
 
 export default function LandingPricing({ signIn }: LandingPricingProps) {
+  const { initiateProUpgrade, isLoading: isUpgradeLoading } = useProUpgrade();
+
   return (
     <section id="pricing" className="py-16 md:py-20 bg-white dark:bg-slate-900">
       <div className="container mx-auto px-4">
@@ -101,8 +104,12 @@ export default function LandingPricing({ signIn }: LandingPricingProps) {
                 </li>
               </ul>
               
-              <button className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
-                Get Pro Now
+              <button 
+                onClick={initiateProUpgrade}
+                disabled={isUpgradeLoading}
+                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUpgradeLoading ? 'Setting up your upgrade...' : 'Get Pro Now'}
               </button>
             </div>
 

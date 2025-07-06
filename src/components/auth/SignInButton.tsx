@@ -16,7 +16,7 @@ export const SignInButton = () => {
     }
 
     // Proceed with normal OAuth flow if not in embedded browser
-    const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || location.origin;
+    const redirectUrl = window.location.origin;
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

@@ -143,7 +143,7 @@ export default function Home() {
     }
 
     // Proceed with normal OAuth flow if not in embedded browser
-    const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || location.origin;
+    const redirectUrl = window.location.origin;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${redirectUrl}/dashboard` }
