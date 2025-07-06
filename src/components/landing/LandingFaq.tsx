@@ -22,7 +22,7 @@ const faqs = [
   {
     id: 'paid-plan',
     question: "Why is there a paid plan?",
-    answer: "Just to cover costs! Not trying to build a business here - just a cool utility tool. The pro subscription just helps pay for hosting & Google's security audit."
+    answer: "Just to cover costs! Not trying to build a business here - just a cool utility tool. The pro subscription just helps pay for hosting and Google's annual security audit."
   },
   {
     id: 'email-limit',

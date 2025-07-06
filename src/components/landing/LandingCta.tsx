@@ -63,7 +63,7 @@ export default function LandingCta({ signIn }: LandingCtaProps) {
               onClick={signIn} 
               className="px-8 py-3 bg-white text-blue-600 font-semibold rounded-md hover:bg-blue-50 dark:bg-slate-50 dark:text-blue-600 dark:hover:bg-slate-200 transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 group flex items-center mx-auto"
             >
-              Join the Waitlist
+              Get Started Free
               <ArrowRightIcon className="ml-2 h-5 w-5 transform group-hover:translate-x-1 transition-transform" />
             </button>
           </div>

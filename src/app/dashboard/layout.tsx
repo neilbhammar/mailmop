@@ -33,6 +33,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     if (user?.email) {
+      // TODO: Remove whitelist check entirely once we're confident the transition is complete
+      // For now, we're bypassing the check in the whitelist function itself
+      console.log('[Dashboard] Checking whitelist for user:', user.email);
       checkWhitelist(user.email)
     }
   }, [user, authLoading, router, checkWhitelist])
