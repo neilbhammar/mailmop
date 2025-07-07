@@ -61,7 +61,7 @@ function BorderTrail({
         transition={{
           ...(transition ?? BASE_TRANSITION),
           delay: delay,
-        }}
+        } as any}
       />
     </div>
   );
