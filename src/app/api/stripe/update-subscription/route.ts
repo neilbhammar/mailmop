@@ -42,13 +42,64 @@ export async function POST(req: NextRequest) {
     // SECURITY: Verify the user owns this subscription
     const { data: profile } = await supabase
       .from('profiles')
-      .select('stripe_subscription_id, stripe_customer_id')
+      .select('stripe_subscription_id, stripe_customer_id, plan, plan_expires_at')
       .eq('user_id', user.id)
       .single();
 
-    if (!profile?.stripe_subscription_id || profile.stripe_subscription_id !== subscriptionId) {
-      console.warn(`[API/Update-Subscription] User ${user.id} attempted to modify subscription ${subscriptionId} they don't own`);
-      return NextResponse.json({ error: 'Forbidden - Subscription not owned by user' }, { status: 403 });
+    console.log(`[API/Update-Subscription] User ${user.id} profile:`, {
+      stored_subscription_id: profile?.stripe_subscription_id,
+      requested_subscription_id: subscriptionId,
+      plan: profile?.plan,
+      plan_expires_at: profile?.plan_expires_at,
+      customer_id: profile?.stripe_customer_id
+    });
+
+    // Enhanced ownership verification
+    if (!profile) {
+      console.warn(`[API/Update-Subscription] User ${user.id} has no profile`);
+      return NextResponse.json({ error: 'Forbidden - User profile not found' }, { status: 403 });
+    }
+
+    // Check if user has a Pro plan (basic authorization)
+    if (profile.plan !== 'pro') {
+      console.warn(`[API/Update-Subscription] User ${user.id} is not a Pro user (plan: ${profile.plan})`);
+      return NextResponse.json({ error: 'Forbidden - Pro plan required' }, { status: 403 });
+    }
+
+    // If user has stored subscription ID, verify it matches
+    if (profile.stripe_subscription_id && profile.stripe_subscription_id !== subscriptionId) {
+      console.warn(`[API/Update-Subscription] User ${user.id} subscription ID mismatch - stored: ${profile.stripe_subscription_id}, requested: ${subscriptionId}`);
+      return NextResponse.json({ error: 'Forbidden - Subscription ID mismatch' }, { status: 403 });
+    }
+
+    // If no stored subscription ID but user is Pro, verify the subscription belongs to their customer
+    if (!profile.stripe_subscription_id && profile.stripe_customer_id) {
+      console.log(`[API/Update-Subscription] No stored subscription ID for user ${user.id}, verifying against Stripe customer ${profile.stripe_customer_id}`);
+      
+      try {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        if (subscription.customer !== profile.stripe_customer_id) {
+          console.warn(`[API/Update-Subscription] User ${user.id} subscription customer mismatch - expected: ${profile.stripe_customer_id}, actual: ${subscription.customer}`);
+          return NextResponse.json({ error: 'Forbidden - Subscription does not belong to user' }, { status: 403 });
+        }
+        
+        // Update profile with the subscription ID for future use
+        console.log(`[API/Update-Subscription] Updating user ${user.id} profile with subscription ID ${subscriptionId}`);
+        await supabase
+          .from('profiles')
+          .update({ stripe_subscription_id: subscriptionId })
+          .eq('user_id', user.id);
+          
+      } catch (stripeError) {
+        console.error(`[API/Update-Subscription] Error verifying subscription ${subscriptionId}:`, stripeError);
+        return NextResponse.json({ error: 'Invalid subscription ID' }, { status: 400 });
+      }
+    }
+
+    // If user has no customer ID and no subscription ID, they shouldn't be able to modify subscriptions
+    if (!profile.stripe_customer_id && !profile.stripe_subscription_id) {
+      console.warn(`[API/Update-Subscription] User ${user.id} has no Stripe customer or subscription IDs`);
+      return NextResponse.json({ error: 'Forbidden - No Stripe account found' }, { status: 403 });
     }
 
     // Get the current subscription
