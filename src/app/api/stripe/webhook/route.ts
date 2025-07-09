@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, createRateLimitResponse, RATE_LIMITS } from '@/lib/utils/rateLimiter';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-04-10'
@@ -18,6 +19,12 @@ const supabaseAdmin = createClient(
 );
 
 export async function POST(req: Request) {
+  // SECURITY: Apply rate limiting to prevent webhook abuse
+  const rateLimit = checkRateLimit(req, RATE_LIMITS.WEBHOOK);
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit.resetTime);
+  }
+
   const body = await req.text();
   const headersList = await headers();
   const signature = headersList.get('stripe-signature');

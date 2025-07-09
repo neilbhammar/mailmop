@@ -1,6 +1,7 @@
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { supabase } from '@/supabase/client'
+import { checkRateLimit, createRateLimitResponse, RATE_LIMITS } from '@/lib/utils/rateLimiter'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-04-10'
@@ -13,6 +14,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  */
 export async function POST(req: Request) {
   try {
+    // SECURITY: Apply rate limiting to prevent checkout abuse
+    const rateLimit = checkRateLimit(req, RATE_LIMITS.USER_ACTION);
+    if (!rateLimit.allowed) {
+      return createRateLimitResponse(rateLimit.resetTime);
+    }
+
     const headersList = await headers()
     const authHeader = headersList.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {

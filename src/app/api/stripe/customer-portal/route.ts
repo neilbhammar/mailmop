@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, createRateLimitResponse, RATE_LIMITS } from '@/lib/utils/rateLimiter';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-04-10',
@@ -14,6 +15,12 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
+    // SECURITY: Apply rate limiting to prevent customer portal abuse
+    const rateLimit = checkRateLimit(req, RATE_LIMITS.USER_ACTION);
+    if (!rateLimit.allowed) {
+      return createRateLimitResponse(rateLimit.resetTime);
+    }
+
     // Get access token from Authorization header
     const authHeader = req.headers.get('authorization');
     const accessToken = authHeader?.replace('Bearer ', '');

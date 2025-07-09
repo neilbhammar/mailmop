@@ -1,7 +1,14 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { checkRateLimit, createRateLimitResponse, RATE_LIMITS } from '@/lib/utils/rateLimiter';
 
-export async function GET() {
+export async function GET(request: Request) {
+  // SECURITY: Apply rate limiting to prevent abuse
+  const rateLimit = checkRateLimit(request, RATE_LIMITS.GENERAL);
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit.resetTime);
+  }
+
   // Simply check if the refresh token cookie exists
   const cookieStore = await cookies();
   const refreshToken = cookieStore.get('mm_refresh');

@@ -3,12 +3,19 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { checkRateLimit, createRateLimitResponse, RATE_LIMITS } from '@/lib/utils/rateLimiter';
 
 // This tells Next.js this is an Edge API Route - it runs on Vercel's edge network (super fast servers close to users)
 export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Apply rate limiting to prevent auth abuse
+    const rateLimit = checkRateLimit(request, RATE_LIMITS.AUTH);
+    if (!rateLimit.allowed) {
+      return createRateLimitResponse(rateLimit.resetTime);
+    }
+
     // Get the authorization code and redirect URI from the request body
     const { code, redirectUri } = await request.json();
     

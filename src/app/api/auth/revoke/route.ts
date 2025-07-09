@@ -1,9 +1,16 @@
 // src/app/api/auth/revoke/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, createRateLimitResponse, RATE_LIMITS } from '@/lib/utils/rateLimiter';
 
 export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
+  // SECURITY: Apply rate limiting to prevent auth abuse
+  const rateLimit = checkRateLimit(req, RATE_LIMITS.AUTH);
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit.resetTime);
+  }
+
   const refresh = req.cookies.get('mm_refresh')?.value;
 
   // Best‑effort revoke with Google (optional)

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { supabase } from '@/supabase/client';
+import { checkRateLimit, createRateLimitResponse, RATE_LIMITS } from '@/lib/utils/rateLimiter';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-04-10',
@@ -7,10 +9,46 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: NextRequest) {
   try {
+    // SECURITY: Apply rate limiting first
+    const rateLimit = checkRateLimit(req, RATE_LIMITS.USER_ACTION);
+    if (!rateLimit.allowed) {
+      return createRateLimitResponse(rateLimit.resetTime);
+    }
+
+    // SECURITY: Authenticate user via Bearer token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized - Bearer token required' }, { status: 401 });
+    }
+
+    // Get user from Supabase auth
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      console.error('[API/Update-Subscription] Authentication failed:', authError?.message);
+      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+    }
+
+    console.log(`[API/Update-Subscription] Authenticated user ${user.id} attempting subscription update`);
+
     const { subscriptionId, enableAutoRenew, cancelAtPeriodEnd } = await req.json();
 
     if (!subscriptionId) {
       return NextResponse.json({ error: 'Missing subscription ID' }, { status: 400 });
+    }
+
+    // SECURITY: Verify the user owns this subscription
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('stripe_subscription_id, stripe_customer_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!profile?.stripe_subscription_id || profile.stripe_subscription_id !== subscriptionId) {
+      console.warn(`[API/Update-Subscription] User ${user.id} attempted to modify subscription ${subscriptionId} they don't own`);
+      return NextResponse.json({ error: 'Forbidden - Subscription not owned by user' }, { status: 403 });
     }
 
     // Get the current subscription
