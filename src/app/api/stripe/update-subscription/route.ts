@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { supabase } from '@/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit, createRateLimitResponse, RATE_LIMITS } from '@/lib/utils/rateLimiter';
+
+// Use server-side admin client for API operations
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-04-10',
@@ -21,8 +27,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized - Bearer token required' }, { status: 401 });
     }
 
-    // Get user from Supabase auth
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
+    // Get user from Supabase auth using admin client
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
 
@@ -32,6 +38,12 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[API/Update-Subscription] Authenticated user ${user.id} attempting subscription update`);
+    console.log(`[API/Update-Subscription] User object:`, {
+      id: user.id,
+      email: user.email,
+      aud: user.aud,
+      role: user.role
+    });
 
     const { subscriptionId, enableAutoRenew, cancelAtPeriodEnd } = await req.json();
 
@@ -40,11 +52,21 @@ export async function POST(req: NextRequest) {
     }
 
     // SECURITY: Verify the user owns this subscription
-    const { data: profile } = await supabase
+    console.log(`[API/Update-Subscription] Looking up profile for user_id: ${user.id}`);
+    
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('stripe_subscription_id, stripe_customer_id, plan, plan_expires_at')
+      .select('stripe_subscription_id, stripe_customer_id, plan, plan_expires_at, user_id, email')
       .eq('user_id', user.id)
       .single();
+
+    console.log(`[API/Update-Subscription] Profile query result:`, {
+      profile,
+      profileError,
+      hasData: !!profile,
+      errorCode: profileError?.code,
+      errorMessage: profileError?.message
+    });
 
     console.log(`[API/Update-Subscription] User ${user.id} profile:`, {
       stored_subscription_id: profile?.stripe_subscription_id,
@@ -85,7 +107,7 @@ export async function POST(req: NextRequest) {
         
         // Update profile with the subscription ID for future use
         console.log(`[API/Update-Subscription] Updating user ${user.id} profile with subscription ID ${subscriptionId}`);
-        await supabase
+        await supabaseAdmin
           .from('profiles')
           .update({ stripe_subscription_id: subscriptionId })
           .eq('user_id', user.id);
