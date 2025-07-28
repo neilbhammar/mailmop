@@ -19,7 +19,7 @@ export default function LandingPricing({ signIn }: LandingPricingProps) {
               Cheaper Than More Gmail Storage
             </h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto dark:text-slate-300">
-              Mailmop can be self hosted for frege. This pricing is for the hosted version.
+              Mailmop can be self hosted for free. This pricing is for the hosted version.
             </p>
           </div>
           
