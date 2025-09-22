@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import Script from 'next/script'
 import { Metadata } from 'next'
 import { getBlogPosts } from '@/lib/blog'
 import { Calendar, Clock } from 'lucide-react'
@@ -83,6 +84,18 @@ export default async function BlogPage({
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Umami Analytics - Blog page tracking */}
+      <Script
+        defer
+        src="https://cloud.umami.is/script.js"
+        data-website-id="99d13ac3-8c9d-4499-94d7-4aa6e5e7f56d"
+        strategy="afterInteractive"
+        {...(process.env.NEXT_PUBLIC_UMAMI_INTEGRITY && {
+          integrity: process.env.NEXT_PUBLIC_UMAMI_INTEGRITY
+        })}
+        crossOrigin="anonymous"
+      />
+      
       {/* Structured Data */}
       <script
         type="application/ld+json"

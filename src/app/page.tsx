@@ -12,7 +12,6 @@ import { cn } from '@/lib/utils'
 import { ArrowRightIcon, CheckIcon, LockClosedIcon } from '@radix-ui/react-icons'
 import { MailOpen, BellOff, Search, Lock, Trash2, Ban, Tag, FilterIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import Lenis from '@studio-freight/lenis'
 import LandingNavbar from '@/components/landing/LandingNavbar'
 import LandingFooter from '@/components/landing/LandingFooter'
 import LandingCta from '@/components/landing/LandingCta'
@@ -27,7 +26,6 @@ export default function Home() {
   const router = useRouter()
   const bubblesContainerRef = useRef<HTMLDivElement>(null)
   const heroBgCircle1Ref = useRef<HTMLDivElement>(null)
-  const lenisInstanceRef = useRef<Lenis | null>(null)
   const [videoModalOpen, setVideoModalOpen] = useState(false)
   const popSoundRef = useRef<HTMLAudioElement | null>(null);
   const { resolvedTheme, theme } = useTheme()
@@ -48,34 +46,27 @@ export default function Home() {
   // Determine current SVG pattern safely
   const currentSvgPattern = mounted ? (resolvedTheme === 'dark' ? darkSvgPattern : lightSvgPattern) : undefined;
 
-  // Lenis smooth scroll and parallax effect
+  // Lightweight parallax effect using native scroll events
   useEffect(() => {
-    const lenis = new Lenis({
-      lerp: 0.08,
-      smoothWheel: true,
-      wheelMultiplier: 0.8,
-    });
-    lenisInstanceRef.current = lenis;
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      
+      // Use requestAnimationFrame for smooth performance
+      requestAnimationFrame(() => {
+        if (bubblesContainerRef.current) {
+          bubblesContainerRef.current.style.transform = `translateY(${scrollY * 0.2}px)`;
+        }
+        if (heroBgCircle1Ref.current) {
+          heroBgCircle1Ref.current.style.transform = `translateY(${scrollY * 0.1}px)`;
+        }
+      });
+    };
 
-    lenis.on('scroll', (e: { scroll: number }) => {
-      if (bubblesContainerRef.current) {
-        bubblesContainerRef.current.style.transform = `translateY(${e.scroll * 0.2}px)`;
-      }
-      if (heroBgCircle1Ref.current) {
-        heroBgCircle1Ref.current.style.transform = `translateY(${e.scroll * 0.1}px)`;
-      }
-    });
-
-    function raf(time: number) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-
-    requestAnimationFrame(raf);
+    // Add scroll listener with passive flag for better performance
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      lenis.destroy();
-      lenisInstanceRef.current = null;
+      window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
@@ -327,11 +318,13 @@ export default function Home() {
         src="https://cloud.umami.is/script.js"
         data-website-id="99d13ac3-8c9d-4499-94d7-4aa6e5e7f56d"
         strategy="afterInteractive"
-        integrity="sha384-uxG+1wCVuQuKiP39yWjuIROyk76ZsIgy9BLOUVJUi/+7DmYPjr1h+5LLNBQZ3SxK"
+        {...(process.env.NEXT_PUBLIC_UMAMI_INTEGRITY && {
+          integrity: process.env.NEXT_PUBLIC_UMAMI_INTEGRITY
+        })}
         crossOrigin="anonymous"
       />
       
-      <LandingNavbar signIn={signIn} lenis={lenisInstanceRef.current} />
+      <LandingNavbar signIn={signIn} />
 
       {/* Bubble container - ensure it's styled to be fixed and cover the screen with a high z-index */}
       <div ref={bubblesContainerRef} className="fixed inset-0 pointer-events-none z-50 overflow-hidden" />
@@ -392,7 +385,18 @@ export default function Home() {
                   <div className="absolute inset-0 w-full scale-x-0 h-1 bg-gradient-to-r from-transparent via-blue-300 to-transparent bottom-0 group-hover:scale-x-100 transition-transform duration-700 origin-left z-0 opacity-80 dark:via-blue-400"></div>
                   <div className="absolute inset-0 w-full scale-x-0 h-1 bg-gradient-to-r from-transparent via-blue-200 to-transparent bottom-2 group-hover:scale-x-100 transition-transform duration-1000 origin-right z-0 opacity-60 delay-100 dark:via-blue-300"></div>
                 </button>
-                <a href="#how-it-works" className="text-gray-600 font-medium flex items-center hover:text-gray-800 transition-all group mt-2 sm:mt-0 sm:ml-4 py-2 dark:text-slate-400 dark:hover:text-slate-200">
+                <a 
+                  href="#how-it-works" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const targetElement = document.querySelector('#how-it-works');
+                    if (targetElement) {
+                      const offsetTop = targetElement.getBoundingClientRect().top + window.scrollY - 80;
+                      window.scrollTo({ top: offsetTop, behavior: 'smooth' });
+                    }
+                  }}
+                  className="text-gray-600 font-medium flex items-center hover:text-gray-800 transition-all group mt-2 sm:mt-0 sm:ml-4 py-2 dark:text-slate-400 dark:hover:text-slate-200"
+                >
                   <span>See how it works</span>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

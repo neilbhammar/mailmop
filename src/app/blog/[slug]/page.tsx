@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import Script from 'next/script'
 import { getBlogPost, generateBlogStaticParams } from '@/lib/blog'
 import { MDXRemote } from 'next-mdx-remote/rsc'
 import remarkGfm from 'remark-gfm'
@@ -142,6 +143,18 @@ export default async function BlogPostPage({
   return (
     <>
       <ReadingProgress />
+      
+      {/* Umami Analytics - Blog post tracking */}
+      <Script
+        defer
+        src="https://cloud.umami.is/script.js"
+        data-website-id="99d13ac3-8c9d-4499-94d7-4aa6e5e7f56d"
+        strategy="afterInteractive"
+        {...(process.env.NEXT_PUBLIC_UMAMI_INTEGRITY && {
+          integrity: process.env.NEXT_PUBLIC_UMAMI_INTEGRITY
+        })}
+        crossOrigin="anonymous"
+      />
       
       {/* Structured Data */}
       <script

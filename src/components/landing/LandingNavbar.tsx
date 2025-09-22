@@ -2,25 +2,27 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import type Lenis from '@studio-freight/lenis'
 import { useTheme } from 'next-themes'
 import { useMounted } from '@/hooks/useMounted'
 
 interface LandingNavbarProps {
   signIn: () => Promise<void>;
-  lenis: Lenis | null;
 }
 
-export default function LandingNavbar({ signIn, lenis }: LandingNavbarProps) {
+export default function LandingNavbar({ signIn }: LandingNavbarProps) {
   const { resolvedTheme } = useTheme()
   const mounted = useMounted()
 
   const handleNavLinkClick = (event: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     event.preventDefault();
-    if (lenis) {
-      lenis.scrollTo(targetId, { 
-        offset: -80,
-        duration: 1.5
+    
+    // Use native smooth scrolling with CSS scroll-behavior
+    const targetElement = document.querySelector(targetId);
+    if (targetElement) {
+      const offsetTop = targetElement.getBoundingClientRect().top + window.scrollY - 80;
+      window.scrollTo({
+        top: offsetTop,
+        behavior: 'smooth'
       });
     }
   };
