@@ -12,11 +12,11 @@ const CRISP_WEBSITE_ID = process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID
  * CrispProvider component that integrates Crisp chat with user authentication
  * 
  * Features:
- * - Automatically configures Crisp when component mounts
- * - Sets user information (email, name) when user is authenticated
+ * - Automatically loads Crisp chat for anonymous users immediately
+ * - Enhances chat with user information (email, name) when user is authenticated
  * - Implements user verification with HMAC-SHA256 signatures for security
- * - Handles user logout by resetting the chat session
- * - Provides session continuity using user ID as token
+ * - Handles user logout by resetting session but keeping chat available
+ * - Provides session continuity using user ID as token for authenticated users
  */
 export function CrispProvider({ children }: { children: React.ReactNode }) {
   const { user, profile, session } = useAuth()
@@ -33,15 +33,15 @@ export function CrispProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        // Configure Crisp with manual loading to control when it appears
+        // Configure Crisp with autoload enabled for anonymous users
         Crisp.configure(CRISP_WEBSITE_ID, {
-          autoload: false, // We'll load it manually after setting user info
+          autoload: true, // Load immediately for anonymous users
           locale: 'en', // Set default locale
           safeMode: true // Enable safe mode to prevent errors
         })
         
         crispConfigured.current = true
-        console.log('[Crisp] Configured successfully')
+        console.log('[Crisp] Configured successfully and loaded for anonymous users')
       } catch (error) {
         console.error('[Crisp] Configuration error:', error)
       }
@@ -54,13 +54,13 @@ export function CrispProvider({ children }: { children: React.ReactNode }) {
 
     const handleUserAuth = async () => {
       try {
-        // If user logged out, reset the session
+        // If user logged out, reset the session but keep Crisp available for anonymous use
         if (!user && lastUserId.current) {
-          console.log('[Crisp] User logged out, resetting session')
+          console.log('[Crisp] User logged out, resetting session but keeping chat available')
           Crisp.setTokenId() // Clear token
           Crisp.session.reset() // Reset session
           lastUserId.current = null
-          return
+          // Don't return here - Crisp stays loaded for anonymous users
         }
 
         // If user is authenticated and it's a different user than before
@@ -100,19 +100,12 @@ export function CrispProvider({ children }: { children: React.ReactNode }) {
             signup_date: user.created_at,
             last_login: profile?.last_login || user.last_sign_in_at
           })
-
-          // Load Crisp after setting user information
-          Crisp.load()
           
           lastUserId.current = user.id
         }
       } catch (error) {
         console.error('[Crisp] Error setting up user authentication:', error)
-        // Load Crisp anyway, but without verification
-        if (user?.email) {
-          Crisp.user.setEmail(user.email)
-          Crisp.load()
-        }
+        // Continue anyway - Crisp is already loaded for anonymous users
       }
     }
 
