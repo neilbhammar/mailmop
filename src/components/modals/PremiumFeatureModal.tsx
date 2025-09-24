@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button"
 import { ArrowRightIcon } from "@radix-ui/react-icons"
 import { ExternalLink, X, Trash2, BellOff, MailOpen, Ban, Tag, FilterIcon, Sparkles, Rocket, PencilOff, Loader2 } from "lucide-react"
 import { useStripeCheckout } from "@/hooks/useStripeCheckout"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ManageSubscriptionModal } from "@/components/modals/ManageSubscriptionModal"
+import { usePremiumModalTracking } from "@/hooks/usePremiumModalTracking"
 
 interface PremiumFeatureModalProps {
   /**
@@ -59,6 +60,14 @@ export function PremiumFeatureModal({
   const { redirectToCheckout, isLoading: isCheckoutLoading } = useStripeCheckout()
   const [showManageSubscriptionModal, setShowManageSubscriptionModal] = useState(false)
   const [showSubscriptionConfetti, setShowSubscriptionConfetti] = useState(false)
+  const { trackPremiumModalOpen, trackPremiumModalClose } = usePremiumModalTracking()
+
+  // Track when modal opens
+  useEffect(() => {
+    if (open) {
+      trackPremiumModalOpen(featureName)
+    }
+  }, [open, featureName, trackPremiumModalOpen])
 
   // Format feature name for display
   const formattedFeatureName = featureName
@@ -75,6 +84,7 @@ export function PremiumFeatureModal({
   
   // Handle close modal
   const handleClose = () => {
+    trackPremiumModalClose(featureName, false) // Track close without upgrade
     onOpenChange(false)
   }
 
@@ -83,6 +93,7 @@ export function PremiumFeatureModal({
     await redirectToCheckout(() => {
       // This callback runs when checkout is successful
       console.log('[PremiumFeatureModal] Checkout success received, closing this modal and showing subscription modal');
+      trackPremiumModalClose(featureName, true); // Track close with upgrade
       onOpenChange(false); // Close the premium feature modal
       setShowSubscriptionConfetti(true);
       setShowManageSubscriptionModal(true);
