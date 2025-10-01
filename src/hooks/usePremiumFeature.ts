@@ -18,7 +18,6 @@ import { ActionType, ActionStatus } from '@/types/actions'
 const featureToActionType: Record<string, ActionType> = {
   delete: 'delete',
   mark_read: 'mark_as_read', // Map to closest existing action type
-  unsubscribe: 'unsubscribe',
   apply_label: 'modify_label', // Map to closest existing action type
   delete_with_exceptions: 'delete',
   block_sender: 'modify_label',

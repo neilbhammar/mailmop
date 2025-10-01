@@ -264,10 +264,6 @@ export function RenewalModal({ open, onClose }: RenewalModalProps) {
                 </div>
                 <div className="flex items-center space-x-2">
                   <CheckCircle2 className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                  <span>Bulk Unsubscribe</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle2 className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                   <span>Mark Read</span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -277,6 +273,10 @@ export function RenewalModal({ open, onClose }: RenewalModalProps) {
                 <div className="flex items-center space-x-2">
                   <CheckCircle2 className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                   <span>Block Senders</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle2 className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                  <span>Bulk Actions</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <CheckCircle2 className="h-3 w-3 text-blue-600 dark:text-blue-400" />

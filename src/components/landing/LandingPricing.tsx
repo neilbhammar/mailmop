@@ -49,6 +49,10 @@ export default function LandingPricing({ signIn }: LandingPricingProps) {
                 </li>
                 <li className="flex items-start">
                   <CheckIcon className="h-5 w-5 text-blue-600 mr-3 flex-shrink-0 mt-0.5 dark:text-blue-400" />
+                  <span className="text-gray-700 dark:text-slate-300">Unsubscribe from senders</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckIcon className="h-5 w-5 text-blue-600 mr-3 flex-shrink-0 mt-0.5 dark:text-blue-400" />
                   <span className="text-gray-700 dark:text-slate-300">Export data</span>
                 </li>
                 <li className="flex items-start">
@@ -96,7 +100,7 @@ export default function LandingPricing({ signIn }: LandingPricingProps) {
                 </li>
                 <li className="flex items-start">
                   <CheckIcon className="h-5 w-5 text-blue-600 mr-3 flex-shrink-0 mt-0.5 dark:text-blue-400" />
-                  <span className="text-gray-700 dark:text-slate-300">Auto-unsubscribe</span>
+                  <span className="text-gray-700 dark:text-slate-300">Bulk delete</span>
                 </li>
                 <li className="flex items-start">
                   <CheckIcon className="h-5 w-5 text-blue-600 mr-3 flex-shrink-0 mt-0.5 dark:text-blue-400" />
@@ -104,7 +108,7 @@ export default function LandingPricing({ signIn }: LandingPricingProps) {
                 </li>
                 <li className="flex items-start">
                   <CheckIcon className="h-5 w-5 text-blue-600 mr-3 flex-shrink-0 mt-0.5 dark:text-blue-400" />
-                  <span className="text-gray-700 dark:text-slate-300">Bulk actions</span>
+                  <span className="text-gray-700 dark:text-slate-300">Block senders</span>
                 </li>
               </ul>
               

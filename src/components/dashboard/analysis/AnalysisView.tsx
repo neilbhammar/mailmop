@@ -798,112 +798,107 @@ export default function AnalysisView() {
 
   // Placeholder handler for Unsubscribe
   const handleUnsubscribeSingleSender = useCallback(async (email: string, isReUnsubscribe: boolean = false) => {
-    if (checkFeatureAccess('unsubscribe', 1)) {
-      // First try to find sender in current allSenders array
-      let sender = allSenders.find(s => s.email === email);
+    // First try to find sender in current allSenders array
+    let sender = allSenders.find(s => s.email === email);
+    
+    // If not found in current state, try querying IndexedDB directly
+    // This handles race conditions where UI shows data but allSenders isn't fully synchronized
+    if (!sender) {
+      console.warn(`[handleUnsubscribeSingleSender] Sender not found in allSenders array, querying IndexedDB directly for: ${email}`);
+      try {
+        const senderFromDB = await getSenderByEmail(email);
+        if (senderFromDB) {
+          // Convert the IndexedDB result to the expected format
+          sender = {
+            email: senderFromDB.senderEmail,
+            name: senderFromDB.senderName,
+            // Include multiple names support for Option 1
+            allNames: senderFromDB.senderNames,
+            hasMultipleNames: !!(senderFromDB.senderNames && senderFromDB.senderNames.length > 0),
+            count: senderFromDB.count,
+            unread_count: senderFromDB.unread_count,
+            lastEmail: senderFromDB.lastDate,
+            actionsTaken: (senderFromDB.actionsTaken || []).filter((action): action is "delete" | "unsubscribe" | "markUnread" | "block" => {
+              return ['delete', 'unsubscribe', 'markUnread', 'block'].includes(action);
+            }),
+            hasUnsubscribe: senderFromDB.hasUnsubscribe || false,
+            unsubscribe: senderFromDB.unsubscribe,
+            messageIds: senderFromDB.messageIds || [],
+            sampleSubjects: senderFromDB.sampleSubjects || []
+          };
+          console.log(`[handleUnsubscribeSingleSender] Found sender in IndexedDB: ${email}`, sender);
+        }
+      } catch (error) {
+        console.error(`[handleUnsubscribeSingleSender] Error querying IndexedDB for sender: ${email}`, error);
+      }
+    }
+    
+    // If still not found after checking both sources, show error with more context
+    if (!sender) {
+      console.error(`[handleUnsubscribeSingleSender] Sender data not found in allSenders (${allSenders.length} total) or IndexedDB for: ${email}`);
+      console.log('[handleUnsubscribeSingleSender] Available senders in allSenders:', allSenders.map(s => s.email));
       
-      // If not found in current state, try querying IndexedDB directly
-      // This handles race conditions where UI shows data but allSenders isn't fully synchronized
-      if (!sender) {
-        console.warn(`[handleUnsubscribeSingleSender] Sender not found in allSenders array, querying IndexedDB directly for: ${email}`);
+      // As a last resort, try refreshing the sender data and retry once (but only if this isn't already a re-unsubscribe)
+      if (!isReUnsubscribe) {
+        console.warn(`[handleUnsubscribeSingleSender] Attempting to refresh sender data as a final fallback for: ${email}`);
         try {
-          const senderFromDB = await getSenderByEmail(email);
-          if (senderFromDB) {
-            // Convert the IndexedDB result to the expected format
-            sender = {
-              email: senderFromDB.senderEmail,
-              name: senderFromDB.senderName,
-              // Include multiple names support for Option 1
-              allNames: senderFromDB.senderNames,
-              hasMultipleNames: !!(senderFromDB.senderNames && senderFromDB.senderNames.length > 0),
-              count: senderFromDB.count,
-              unread_count: senderFromDB.unread_count,
-              lastEmail: senderFromDB.lastDate,
-              actionsTaken: (senderFromDB.actionsTaken || []).filter((action): action is "delete" | "unsubscribe" | "markUnread" | "block" => {
-                return ['delete', 'unsubscribe', 'markUnread', 'block'].includes(action);
-              }),
-              hasUnsubscribe: senderFromDB.hasUnsubscribe || false,
-              unsubscribe: senderFromDB.unsubscribe,
-              messageIds: senderFromDB.messageIds || [],
-              sampleSubjects: senderFromDB.sampleSubjects || []
-            };
-            console.log(`[handleUnsubscribeSingleSender] Found sender in IndexedDB: ${email}`, sender);
-          }
-        } catch (error) {
-          console.error(`[handleUnsubscribeSingleSender] Error querying IndexedDB for sender: ${email}`, error);
-        }
-      }
-      
-      // If still not found after checking both sources, show error with more context
-      if (!sender) {
-        console.error(`[handleUnsubscribeSingleSender] Sender data not found in allSenders (${allSenders.length} total) or IndexedDB for: ${email}`);
-        console.log('[handleUnsubscribeSingleSender] Available senders in allSenders:', allSenders.map(s => s.email));
-        
-        // As a last resort, try refreshing the sender data and retry once (but only if this isn't already a re-unsubscribe)
-        if (!isReUnsubscribe) {
-          console.warn(`[handleUnsubscribeSingleSender] Attempting to refresh sender data as a final fallback for: ${email}`);
-          try {
-            await refreshSenderData();
-            // Give it a moment for the state to update, then try one final lookup
-            setTimeout(() => {
-              handleUnsubscribeSingleSender(email, true); // Pass true to indicate this is a retry
-            }, 100);
-            return; // Exit early to avoid showing the error immediately
-          } catch (refreshError) {
-            console.error(`[handleUnsubscribeSingleSender] Error refreshing sender data:`, refreshError);
-          }
-        } else {
-          console.error(`[handleUnsubscribeSingleSender] Sender still not found after refresh attempt: ${email}`);
-        }
-        
-        toast.error("Sender data not found for unsubscribe action.");
-        return;
-      }
-      
-      if (!sender.hasUnsubscribe || !sender.unsubscribe) {
-        toast.error(`No unsubscribe information found for ${email}.`);
-        return;
-      }
-
-      // Check if this is a re-unsubscribe request
-      if (isReUnsubscribe && sender.actionsTaken?.includes('unsubscribe')) {
-        // Show re-unsubscribe modal with options
-        setReUnsubscribeData({ senderEmail: email, unsubscribe: sender.unsubscribe });
-        setReUnsubscribeModalOpen(true);
-        return;
-      }
-
-      const methodDetails = getUnsubscribeMethod(sender.unsubscribe);
-      if (!methodDetails) {
-        toast.error(`Could not determine a valid unsubscribe method for ${email}.`);
-        return;
-      }
-
-      // Logic for modal confirmation or direct action
-      if (methodDetails.type === 'mailto' && !methodDetails.requiresPost) {
-        const skipConfirm = sessionStorage.getItem("skipUnsubConfirm") === "true";
-        if (!skipConfirm) {
-          setUnsubscribeModalData({ senderEmail: email, methodDetails });
-          setConfirmUnsubscribeModalOpen(true);
-        } else {
-          // Skip modal and directly run unsubscribe with enrichment
-          await unsubscribeHook.run(
-            { senderEmail: email, firstMessageId: sender.unsubscribe?.firstMessageId }, 
-            methodDetails
-          );
+          await refreshSenderData();
+          // Give it a moment for the state to update, then try one final lookup
+          setTimeout(() => {
+            handleUnsubscribeSingleSender(email, true); // Pass true to indicate this is a retry
+          }, 100);
+          return; // Exit early to avoid showing the error immediately
+        } catch (refreshError) {
+          console.error(`[handleUnsubscribeSingleSender] Error refreshing sender data:`, refreshError);
         }
       } else {
-        // For URL or mailto with requiresPost, run unsubscribe with enrichment
+        console.error(`[handleUnsubscribeSingleSender] Sender still not found after refresh attempt: ${email}`);
+      }
+      
+      toast.error("Sender data not found for unsubscribe action.");
+      return;
+    }
+    
+    if (!sender.hasUnsubscribe || !sender.unsubscribe) {
+      toast.error(`No unsubscribe information found for ${email}.`);
+      return;
+    }
+
+    // Check if this is a re-unsubscribe request
+    if (isReUnsubscribe && sender.actionsTaken?.includes('unsubscribe')) {
+      // Show re-unsubscribe modal with options
+      setReUnsubscribeData({ senderEmail: email, unsubscribe: sender.unsubscribe });
+      setReUnsubscribeModalOpen(true);
+      return;
+    }
+
+    const methodDetails = getUnsubscribeMethod(sender.unsubscribe);
+    if (!methodDetails) {
+      toast.error(`Could not determine a valid unsubscribe method for ${email}.`);
+      return;
+    }
+
+    // Logic for modal confirmation or direct action
+    if (methodDetails.type === 'mailto' && !methodDetails.requiresPost) {
+      const skipConfirm = sessionStorage.getItem("skipUnsubConfirm") === "true";
+      if (!skipConfirm) {
+        setUnsubscribeModalData({ senderEmail: email, methodDetails });
+        setConfirmUnsubscribeModalOpen(true);
+      } else {
+        // Skip modal and directly run unsubscribe with enrichment
         await unsubscribeHook.run(
           { senderEmail: email, firstMessageId: sender.unsubscribe?.firstMessageId }, 
           methodDetails
         );
       }
     } else {
-      // Premium modal was shown by checkFeatureAccess, store sender for potential view action
-      setActiveSingleSender(email);
+      // For URL or mailto with requiresPost, run unsubscribe with enrichment
+      await unsubscribeHook.run(
+        { senderEmail: email, firstMessageId: sender.unsubscribe?.firstMessageId }, 
+        methodDetails
+      );
     }
-  }, [checkFeatureAccess, allSenders, setActiveSingleSender, unsubscribeHook, refreshSenderData]);
+  }, [allSenders, unsubscribeHook, refreshSenderData]);
 
   // Handler for block sender (single and bulk)
   const handleBlockSenders = useCallback(() => {
