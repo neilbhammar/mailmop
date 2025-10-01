@@ -18,7 +18,7 @@ export function usePremiumModalTracking() {
   const lastResetDateRef = useRef<string>('')
   
   // Configuration
-  const MODAL_THRESHOLD = 3 // Number of modal opens before offering discount
+  const MODAL_THRESHOLD = 2 // Number of modal opens before offering discount
   const STORAGE_KEY = 'mailmop_premium_modal_tracking'
   
   /**
