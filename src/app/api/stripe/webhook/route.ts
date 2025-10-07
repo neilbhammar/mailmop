@@ -50,13 +50,19 @@ export async function POST(req: Request) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         const customerId = session.customer as string;
-        const userId = session.client_reference_id;
+        // Try multiple sources for user ID (fallback for legacy email campaigns)
+        const userId = session.client_reference_id || session.metadata?.supabase_user_id || session.metadata?.user_id;
         const sessionType = session.metadata?.type;
 
         if (!userId) {
-          console.error('[Webhook] Missing client_reference_id');
+          console.error('[Webhook] Missing user identifier (checked client_reference_id, metadata.supabase_user_id, metadata.user_id)', {
+            session_id: session.id,
+            metadata: session.metadata
+          });
           return NextResponse.json({ error: 'Missing user_id' }, { status: 400 });
         }
+
+        console.log('[Webhook] Processing checkout for user:', userId, 'session type:', sessionType || 'unknown');
 
         if (sessionType === 'subscription_extension') {
           console.log('[Webhook] Processing subscription extension for user:', userId);
@@ -145,7 +151,65 @@ export async function POST(req: Request) {
 
           console.log('[Webhook] New subscription created for user:', userId);
         } else {
-          console.log('[Webhook] Unknown session type or legacy checkout, skipping');
+          // Handle legacy checkouts or missing metadata.type
+          // If mode is 'subscription', treat it as a new subscription
+          if (session.mode === 'subscription' && session.subscription) {
+            console.log('[Webhook] Legacy/unknown session type, but mode is subscription - attempting to process as new subscription');
+            
+            const subscriptionId = session.subscription as string;
+            
+            try {
+              const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+              // Validate subscription status
+              if (subscription.status !== 'active' && subscription.status !== 'trialing') {
+                console.error('[Webhook] Invalid subscription status:', subscription.status);
+                return NextResponse.json({ error: 'Invalid subscription status' }, { status: 400 });
+              }
+
+              // Ensure we have a valid expiration date
+              const planExpiresAt = subscription.current_period_end
+                ? new Date(subscription.current_period_end * 1000).toISOString()
+                : null;
+
+              if (!planExpiresAt) {
+                console.error('[Webhook] Missing current_period_end');
+                return NextResponse.json({ error: 'Missing expiration date' }, { status: 400 });
+              }
+
+              await stripe.subscriptions.update(subscriptionId, {
+                cancel_at_period_end: true // Default to cancel at period end (no auto-renewal)
+              });
+
+              const { error: updateError } = await supabaseAdmin
+                .from('profiles')
+                .update({
+                  stripe_customer_id: customerId,
+                  stripe_subscription_id: subscriptionId,
+                  plan: 'pro',
+                  plan_expires_at: planExpiresAt,
+                  cancel_at_period_end: true,
+                  plan_updated_at: new Date().toISOString()
+                })
+                .eq('user_id', userId);
+
+              if (updateError) {
+                console.error('[Webhook] Failed to update profile (legacy flow):', updateError);
+                return NextResponse.json({ error: 'DB update failed' }, { status: 500 });
+              }
+
+              console.log('[Webhook] Legacy subscription processed successfully for user:', userId);
+            } catch (error) {
+              console.error('[Webhook] Error processing legacy subscription:', error);
+              return NextResponse.json({ error: 'Failed to process subscription' }, { status: 500 });
+            }
+          } else {
+            console.log('[Webhook] Unknown session type and not a subscription, skipping', {
+              mode: session.mode,
+              has_subscription: !!session.subscription,
+              metadata: session.metadata
+            });
+          }
         }
         break;
       }

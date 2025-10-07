@@ -56,14 +56,17 @@ Deno.serve(async (req: Request) => {
       body: new URLSearchParams({
         'mode': 'subscription',
         'customer_email': email,
+        'client_reference_id': user_id, // CRITICAL: This is required by the webhook handler
         'success_url': `${siteUrl}/dashboard?upgrade=success`,
         'cancel_url': `${siteUrl}/dashboard?upgrade=cancelled`,
         'line_items[0][price]': stripePriceId,
         'line_items[0][quantity]': '1',
         'allow_promotion_codes': 'true',
-        'metadata[user_id]': user_id,
+        'metadata[supabase_user_id]': user_id, // Match the format used in main checkout
+        'metadata[type]': 'new_subscription', // CRITICAL: Required by webhook to process the upgrade
         'metadata[upgrade_source]': 'premium_upsell_email',
         'metadata[action_type]': action_type,
+        'subscription_data[metadata][supabase_user_id]': user_id, // Also set on the subscription itself
       }).toString(),
     });
 
