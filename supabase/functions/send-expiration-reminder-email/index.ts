@@ -219,15 +219,13 @@ Deno.serve(async (req: Request) => {
     );
 
     await supabase
-      .from('user_actions')
+      .from('actions')
       .insert({
         user_id: user_id,
-        action_type: cancel_at_period_end ? 'expiration_reminder_sent' : 'renewal_reminder_sent',
-        details: {
-          email_id: emailResult.id,
-          days_until_expiration: daysUntilExpiration,
-          cancel_at_period_end: cancel_at_period_end
-        }
+        type: cancel_at_period_end ? 'expiration_reminder_sent' : 'renewal_reminder_sent',
+        status: 'completed',
+        notes: `${cancel_at_period_end ? 'Expiration' : 'Renewal'} reminder email sent. Email ID: ${emailResult.id}. Days until expiration: ${daysUntilExpiration}.`,
+        count: 1
       });
 
     // Update the last_upsell_nudge_sent timestamp in profiles
