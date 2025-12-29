@@ -159,7 +159,7 @@ export default function PrivacyPolicy() {
               <li><strong>Supabase:</strong> Our database provider with enterprise-grade security</li>
               <li><strong>Access Controls:</strong> Strict database access controls and authentication</li>
               <li><strong>Regular Security Audits:</strong> Ongoing security assessments and updates</li>
-              <li><strong>Google CASA Assessment:</strong> Undergoing Google's security review process</li>
+              <li><strong>Google CASA Certified:</strong> Passed Google's CASA Security Verification Audit</li>
             </ul>
           </section>
 

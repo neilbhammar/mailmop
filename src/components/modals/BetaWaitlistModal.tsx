@@ -125,7 +125,7 @@ export function BetaWaitlistModal() {
             </h2>
             
             <p className="text-base sm:text-lg text-gray-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-              MailMop should be out of beta soon. As soon as it passes Google's final security review and we can add more users, I'll email you to let you know!
+              MailMop has passed Google's CASA Security Verification Audit and is now publicly available. I'll email you soon to let you know you can start using it!
             </p>
           </motion.div>
           

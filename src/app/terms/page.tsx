@@ -46,10 +46,10 @@ export default function TermsOfService() {
           <section>
             <h2>2. Description of Service</h2>
             <p>
-              MailMop is a privacy-focused Gmail analysis and management tool that operates primarily in your browser. The Service helps users analyze their inbox, identify bulk senders, and perform email management actions. 
+              MailMop is a privacy-focused Gmail analysis and management tool that operates primarily in your browser. The Service helps users analyze their inbox, identify bulk senders, and perform email management actions.
             </p>
             <p>
-              <strong>Beta Status:</strong> MailMop may be provided in beta status, meaning the Service is experimental, may contain bugs, and functionality may change without notice.
+              <strong>Service Status:</strong> MailMop has passed Google's CASA Security Verification Audit and is publicly available. The Service may still contain bugs, and functionality may change as we continue to improve the product.
             </p>
           </section>
 

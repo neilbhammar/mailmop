@@ -1,6 +1,6 @@
 # MailMop 📧🧹
 
-> As of June 2025: Currently beta-testing with a few folks prior to submitting for Google's CASA 2 verification.
+> MailMop has passed Google's CASA Security Verification Audit and is now publicly available for both hosted and self-hosted use.
 
 **A privacy-first Gmail inbox decluttering tool that processes everything locally in your browser**
 
@@ -13,7 +13,7 @@ MailMop is a client-heavy, privacy-focused Gmail cleaning tool built with Next.j
 
 ## 🚀 Live Demo
 
-Visit [mailmop.com](https://mailmop.com) to see it in action (currently in beta with waitlist).
+Visit [mailmop.com](https://mailmop.com) to see it in action.
 
 ## 📖 Background & Why I Built This
 
