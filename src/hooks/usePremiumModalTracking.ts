@@ -2,17 +2,16 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import { useAuth } from '@/context/AuthProvider'
-import { useCrisp } from '@/components/crisp/CrispProvider'
+import { toast } from 'sonner'
 
 /**
  * Hook to track premium modal interactions and trigger discount offers
- * 
+ *
  * This tracks when users repeatedly open premium modals without upgrading
- * and triggers a Crisp message with a discount offer after a threshold is reached
+ * and shows a persistent toast with a discount offer after a threshold is reached
  */
 export function usePremiumModalTracking() {
   const { user, plan } = useAuth()
-  const { pushEvent } = useCrisp()
   const modalCountRef = useRef<number>(0)
   const discountOfferedRef = useRef<boolean>(false)
   const lastResetDateRef = useRef<string>('')
@@ -120,35 +119,34 @@ export function usePremiumModalTracking() {
   }, [plan, saveTrackingData])
   
   /**
-   * Trigger discount offer via Crisp
+   * Trigger discount offer via persistent toast
    */
   const triggerDiscountOffer = useCallback((featureName: string) => {
     if (discountOfferedRef.current) return
-    
+
     try {
       // Mark discount as offered to prevent spam
       discountOfferedRef.current = true
       saveTrackingData()
-      
-      // Send custom event to Crisp
-      pushEvent('premium_discount_trigger', {
-        modalCount: modalCountRef.current,
-        featureName,
-        timestamp: new Date().toISOString()
-      })
-      
-      console.log('[PremiumTracking] Triggered discount offer via Crisp:', {
+
+      // Show persistent toast with discount code
+      toast.info(
+        "Hey - I noticed you wanted to try Premium. Here's a 50% discount code you can use at checkout: EARLYBIRD50",
+        {
+          duration: Infinity, // Requires manual dismissal
+          position: 'bottom-right',
+        }
+      )
+
+      console.log('[PremiumTracking] Triggered discount offer toast:', {
         featureName,
         modalCount: modalCountRef.current
       })
-      
-      // Optional: Show a subtle notification that help is available
-      // You could add a toast here if desired
-      
+
     } catch (error) {
       console.error('[PremiumTracking] Error triggering discount offer:', error)
     }
-  }, [pushEvent, saveTrackingData])
+  }, [saveTrackingData])
   
   /**
    * Track when user closes modal without upgrading
