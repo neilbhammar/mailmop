@@ -343,7 +343,7 @@ export function AnalysisHeader({
           </div>
 
           {/* More actions menu (3-dot menu) */}
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
