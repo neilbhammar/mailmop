@@ -338,8 +338,11 @@ export function useMarkAsRead() {
       await updateActionLog(supabaseLogId!, { status: 'marking' });
 
       // Show initial toast
+      const isMarkAll = senders.length === 1 && !senders[0].email;
       toast.info('Marking emails as read...', {
-        description: `Processing ${totalToProcess.toLocaleString()} emails from ${senders.length} sender(s)`
+        description: isMarkAll
+          ? `Processing all unread emails`
+          : `Processing ${totalToProcess.toLocaleString()} emails from ${senders.length} sender(s)`
       });
 
       // Run the actual marking process (NOT in background - wait for completion)
@@ -360,20 +363,21 @@ export function useMarkAsRead() {
             break;
           }
 
-          logger.debug('Processing sender', { 
-            component: 'useMarkAsRead', 
-            senderEmail: sender.email 
+          logger.debug('Processing sender', {
+            component: 'useMarkAsRead',
+            senderEmail: sender.email
           });
           updateProgress({ currentSender: sender.email });
 
           // Build query to get only unread messages from this sender
-          const query = buildQuery({ 
-            type: 'mark', 
-            mode: 'read', 
-            senderEmail: sender.email,
+          // If sender.email is empty, mark ALL unread emails (no sender filter)
+          const query = buildQuery({
+            type: 'mark',
+            mode: 'read',
+            senderEmail: sender.email || undefined,
             additionalTerms: ['is:unread']
           });
-          logger.debug('Using query', { component: 'useMarkAsRead', query });
+          logger.debug('Using query', { component: 'useMarkAsRead', query, isMarkAll: !sender.email });
 
           let nextPageToken: string | undefined = undefined;
           let batchFetchAttempts = 0;
@@ -507,19 +511,20 @@ export function useMarkAsRead() {
           } while (nextPageToken && endType === 'success');
           
           // 📧 UPDATE UNREAD COUNT: After finishing with this sender, update their unread count to 0
-          if (senderProcessedSuccessfully && endType === 'success') {
+          // Skip this step if marking all unread (sender.email is empty)
+          if (senderProcessedSuccessfully && endType === 'success' && sender.email) {
             try {
               await updateSenderUnreadCount(sender.email, 0);
               processedSenders.push(sender.email);
-              logger.debug('Updated unread count to 0 for sender', { 
-                component: 'useMarkAsRead', 
-                senderEmail: sender.email 
+              logger.debug('Updated unread count to 0 for sender', {
+                component: 'useMarkAsRead',
+                senderEmail: sender.email
               });
             } catch (updateError: any) {
-              logger.error('Failed to update unread count for sender', { 
-                component: 'useMarkAsRead', 
-                senderEmail: sender.email, 
-                error: updateError 
+              logger.error('Failed to update unread count for sender', {
+                component: 'useMarkAsRead',
+                senderEmail: sender.email,
+                error: updateError
               });
               // Don't fail the entire operation for this, just log it
             }
@@ -556,8 +561,10 @@ export function useMarkAsRead() {
 
         if (endType === 'success') {
           if (totalMarkedAsRead === 0) {
-            toast.info('No Emails Marked as Read', { 
-              description: `No unread emails found from ${senders.length} sender(s). All emails are already read.` 
+            toast.info('No Emails Marked as Read', {
+              description: isMarkAll
+                ? `No unread emails found. All emails are already read.`
+                : `No unread emails found from ${senders.length} sender(s). All emails are already read.`
             });
           } else {
             // 🎵 Play success sound for successful mark as read
@@ -567,7 +574,9 @@ export function useMarkAsRead() {
               playSuccessMp3(); // Regular success sound for smaller operations
             }
             toast.success('Mark as Read Complete', {
-              description: `Successfully marked ${totalMarkedAsRead.toLocaleString()} emails as read from ${senders.length} sender(s).`
+              description: isMarkAll
+                ? `Successfully marked ${totalMarkedAsRead.toLocaleString()} emails as read.`
+                : `Successfully marked ${totalMarkedAsRead.toLocaleString()} emails as read from ${senders.length} sender(s).`
             });
           }
           // Refresh all stats after successful mark as read

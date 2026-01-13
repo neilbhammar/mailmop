@@ -80,11 +80,17 @@ export function MarkAsReadConfirmModal({
   // Get queue functions
   const { enqueue } = useQueue()
   
+  // Check if this is a "mark all" operation (empty sender email)
+  const isMarkAll = senders.length === 1 && senders[0] === '';
+
   // Format the title based on context
   const getTitle = () => {
-    if (senderCount === 1) {
+    if (isMarkAll) {
+      // Mark all unread emails case
+      return 'Mark all unread emails as read'
+    } else if (senderCount === 1) {
       // Single sender case
-      return unreadCount > 0 
+      return unreadCount > 0
         ? `Mark ${unreadCount.toLocaleString()} emails as read`
         : 'Mark emails from 1 sender as read'
     } else {
@@ -171,7 +177,7 @@ export function MarkAsReadConfirmModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          {senders.length > 0 && (
+          {!isMarkAll && senders.length > 0 && (
             <div className="border dark:border-slate-700 rounded-lg overflow-hidden">
               <div className="p-3 border-b dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
                 <div className="flex items-center justify-between">
@@ -184,13 +190,13 @@ export function MarkAsReadConfirmModal({
                   {sortedSenders.map(sender => {
                     const unreadCount = getUnreadCountForSender(sender)
                     return (
-                      <div 
-                        key={sender} 
+                      <div
+                        key={sender}
                         className="flex items-center justify-between py-1.5"
                       >
                         <div className="flex flex-col flex-1 min-w-0 mr-4 max-w-[300px]">
-                          <span 
-                            className="text-sm text-slate-700 dark:text-slate-300 truncate block" 
+                          <span
+                            className="text-sm text-slate-700 dark:text-slate-300 truncate block"
                             title={sender}
                           >
                             {sender}
@@ -206,6 +212,14 @@ export function MarkAsReadConfirmModal({
                   })}
                 </div>
               </div>
+            </div>
+          )}
+
+          {isMarkAll && (
+            <div className="p-3 border border-slate-200 dark:border-slate-600 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+              <p className="text-sm text-slate-700 dark:text-slate-300">
+                This will mark <strong>all unread emails</strong> in your inbox as read, regardless of sender.
+              </p>
             </div>
           )}
           

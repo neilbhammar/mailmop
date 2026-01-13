@@ -8,7 +8,7 @@ import { useSenderData } from '@/hooks/useSenderData'
 import { useExport } from '@/hooks/useExport'
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-import { Filter, Download, Mail, Link, Loader2, Users } from 'lucide-react'
+import { Filter, Download, Mail, Link, Loader2, Users, MoreHorizontal, MailOpen } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
@@ -30,6 +30,7 @@ interface AnalysisHeaderProps {
   onToggleUnreadOnly?: (enabled: boolean) => void
   onToggleHasUnsubscribe?: (enabled: boolean) => void
   onToggleGroupByDomain?: (enabled: boolean) => void
+  onMarkAllUnreadAsRead?: () => void
   // Add current state props for proper display
   showUnreadOnly?: boolean
   showHasUnsubscribe?: boolean
@@ -49,6 +50,7 @@ export function AnalysisHeader({
   onToggleUnreadOnly = () => console.log('Toggle unread only'),
   onToggleHasUnsubscribe = () => console.log('Toggle has unsubscribe'),
   onToggleGroupByDomain = () => console.log('Toggle group by domain'),
+  onMarkAllUnreadAsRead = () => console.log('Mark all unread as read'),
   // Use props for current state instead of local state
   showUnreadOnly = false,
   showHasUnsubscribe = false,
@@ -339,6 +341,30 @@ export function AnalysisHeader({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          {/* More actions menu (3-dot menu) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-9 w-9 p-0 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[220px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg dark:shadow-slate-900/50 py-2">
+              <DropdownMenuItem
+                className="flex items-center gap-2 cursor-pointer px-3 py-2 text-sm text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70"
+                onSelect={(event) => {
+                  event.preventDefault();
+                  onMarkAllUnreadAsRead();
+                }}
+              >
+                <MailOpen className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                <span className="text-sm">Mark All Unread as Read</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

@@ -769,6 +769,18 @@ export default function AnalysisView() {
     }
   }, [checkFeatureAccess, allSenders]);
 
+  // Handler for mark ALL unread emails as read (not just selected senders)
+  const handleMarkAllUnreadAsRead = useCallback(() => {
+    // Check premium access (using count of 1 as this is a single operation)
+    if (checkFeatureAccess('mark_read', 1)) {
+      // Use empty string as a marker for "mark all unread"
+      setEmailsToMark(['']);
+      setUnreadCountMap({});
+      setIsMarkAsReadModalOpen(true);
+    }
+    // If access check fails, the premium modal will be shown by the hook
+  }, [checkFeatureAccess]);
+
   // Handler for BULK Apply Label action (called from AnalysisHeader)
   const handleApplyLabelBulk = useCallback(() => {
     if (selectedEmails.size === 0) {
@@ -1008,7 +1020,7 @@ export default function AnalysisView() {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <AnalysisHeader 
+      <AnalysisHeader
         selectedCount={selectedCount}
         onViewInGmail={handleViewInGmail}
         onDelete={handleDelete}
@@ -1021,6 +1033,7 @@ export default function AnalysisView() {
         onToggleUnreadOnly={setShowUnreadOnly}
         onToggleHasUnsubscribe={setShowHasUnsubscribe}
         onToggleGroupByDomain={setGroupByDomain}
+        onMarkAllUnreadAsRead={handleMarkAllUnreadAsRead}
         showUnreadOnly={showUnreadOnly}
         showHasUnsubscribe={showHasUnsubscribe}
         showGroupByDomain={groupByDomain}
