@@ -45,4 +45,5 @@ next-env.d.ts
 vscode/
 
 .cursor/
-.cursor/mcp.json
+.cursor/mcp.jsonget-users.js
+users-export.csv

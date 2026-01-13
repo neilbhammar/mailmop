@@ -771,15 +771,31 @@ export default function AnalysisView() {
 
   // Handler for mark ALL unread emails as read (not just selected senders)
   const handleMarkAllUnreadAsRead = useCallback(() => {
-    // Check premium access (using count of 1 as this is a single operation)
-    if (checkFeatureAccess('mark_read', 1)) {
-      // Use empty string as a marker for "mark all unread"
-      setEmailsToMark(['']);
-      setUnreadCountMap({});
+    // Get all senders that have unread emails
+    const sendersWithUnread = allSenders.filter(sender => (sender.unread_count ?? 0) > 0);
+
+    if (sendersWithUnread.length === 0) {
+      toast.info('No unread emails found');
+      return;
+    }
+
+    // Check premium access based on number of senders with unread
+    if (checkFeatureAccess('mark_read', sendersWithUnread.length)) {
+      // Extract just the emails
+      const senderEmails = sendersWithUnread.map(s => s.email);
+
+      // Build unread count map
+      const unreadCounts: Record<string, number> = {};
+      sendersWithUnread.forEach(sender => {
+        unreadCounts[sender.email] = sender.unread_count || 0;
+      });
+
+      setEmailsToMark(senderEmails);
+      setUnreadCountMap(unreadCounts);
       setIsMarkAsReadModalOpen(true);
     }
     // If access check fails, the premium modal will be shown by the hook
-  }, [checkFeatureAccess]);
+  }, [checkFeatureAccess, allSenders]);
 
   // Handler for BULK Apply Label action (called from AnalysisHeader)
   const handleApplyLabelBulk = useCallback(() => {
