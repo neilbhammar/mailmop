@@ -45,5 +45,8 @@ next-env.d.ts
 vscode/
 
 .cursor/
-.cursor/mcp.jsonget-users.js
+.cursor/mcp.json
+
+# Sensitive files with API keys
+get-users.js
 users-export.csv
