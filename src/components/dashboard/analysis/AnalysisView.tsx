@@ -779,6 +779,9 @@ export default function AnalysisView() {
       return;
     }
 
+    // 🧠 SMART AUTO-CLEAR: Handle overlapping actions when opening modal
+    handleOverlappingActions();
+
     // Check premium access based on number of senders with unread
     if (checkFeatureAccess('mark_read', sendersWithUnread.length)) {
       // Extract just the emails
@@ -795,7 +798,7 @@ export default function AnalysisView() {
       setIsMarkAsReadModalOpen(true);
     }
     // If access check fails, the premium modal will be shown by the hook
-  }, [checkFeatureAccess, allSenders]);
+  }, [checkFeatureAccess, allSenders, handleOverlappingActions]);
 
   // Handler for BULK Apply Label action (called from AnalysisHeader)
   const handleApplyLabelBulk = useCallback(() => {
@@ -1189,7 +1192,10 @@ export default function AnalysisView() {
         allSenders={allSenders}
         onSuccess={() => {
           // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 3s
-          scheduleSmartAutoClear();
+          // Only call if there are actually selected emails (not for "mark all unread")
+          if (selectedEmails.size > 0) {
+            scheduleSmartAutoClear();
+          }
         }}
       />
 

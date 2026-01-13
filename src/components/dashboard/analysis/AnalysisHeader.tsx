@@ -355,8 +355,7 @@ export function AnalysisHeader({
             <DropdownMenuContent align="end" className="w-[220px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg dark:shadow-slate-900/50 py-2">
               <DropdownMenuItem
                 className="flex items-center gap-2 cursor-pointer px-3 py-2 text-sm text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70"
-                onSelect={(event) => {
-                  event.preventDefault();
+                onSelect={() => {
                   onMarkAllUnreadAsRead();
                 }}
               >
