@@ -1,0 +1,4 @@
+## 2026-02-17 — In the mailmop repo, add a subtle nudge after somebody triggers the premium acti
+- Premium modal open/close tracking and toast logic lives in `src/hooks/usePremiumModalTracking.ts`; the modal itself (`src/components/modals/PremiumFeatureModal.tsx`) imports and calls `trackPremiumModalOpen/Close` from this hook.
+- Toast system uses `sonner` (`toast` imported from `sonner`), not a custom component; other example usage in `AnalysisView.tsx`.
+- `next build` failed in this environment: first run exited with status 137 (likely OOM), and even with `NODE_OPTIONS=--max_old_space_size=4096` it hit timeout; don’t assume a full build will complete here.

@@ -131,7 +131,7 @@ export function usePremiumModalTracking() {
 
       // Show persistent toast with discount code
       toast.info(
-        "Hey - I noticed you wanted to try Premium. Here's a 50% discount code you can use at checkout: EARLYBIRD50",
+        "Hey, here's 50% off with code EARLYBIRD50",
         {
           duration: Infinity, // Requires manual dismissal
           position: 'bottom-right',
