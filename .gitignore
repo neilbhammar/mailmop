@@ -50,3 +50,6 @@ vscode/
 # Sensitive files with API keys
 get-users.js
 users-export.csv
+
+# Internal SEO / growth data-pull tooling (kept out of the public repo)
+/scripts/seo/

@@ -3,13 +3,14 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import Script from 'next/script'
-import { getBlogPost, generateBlogStaticParams } from '@/lib/blog'
+import { getBlogPost, getBlogPosts, generateBlogStaticParams } from '@/lib/blog'
 import { MDXRemote } from 'next-mdx-remote/rsc'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeSlug from 'rehype-slug'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import { ReadingProgress } from '@/components/blog/ReadingProgress'
+import { RelatedPosts, type RelatedPostLink } from '@/components/blog/RelatedPosts'
 import { ArrowLeft, Clock, Calendar } from 'lucide-react'
 
 // This is for static generation at build time
@@ -47,6 +48,7 @@ export async function generateMetadata({
       type: 'article',
       url: url,
       publishedTime: post.date,
+      modifiedTime: post.updated || post.date,
       authors: [post.author || 'MailMop Team'],
       tags: post.tags,
     },
@@ -111,33 +113,59 @@ export default async function BlogPostPage({
 
   const headings = extractHeadings(post.content)
   const publishDate = formatISODate(post.date)
+  const modifiedDate = formatISODate(post.updated || post.date)
   const formattedDate = formatDate(post.date)
   const url = `https://mailmop.com/blog/${post.slug}`
 
-  // JSON-LD structured data for Article
-  const jsonLd = {
-    '@context': 'https://schema.org',
+  // Related posts for internal linking: prefer posts that share a tag, fall back
+  // to the most recent. Distributes link equity and lifts buried pages.
+  const allPosts = await getBlogPosts()
+  const related: RelatedPostLink[] = (() => {
+    const others = allPosts.filter((p) => p.slug !== post.slug)
+    const byTag = others.filter((p) => p.tags?.some((t) => post.tags?.includes(t)))
+    const picked = [...byTag, ...others.filter((p) => !byTag.includes(p))].slice(0, 4)
+    return picked.map((p) => ({ slug: p.slug, title: p.title, description: p.description }))
+  })()
+
+  // JSON-LD: Article + Breadcrumb (+ FAQ when the post defines faqs in frontmatter).
+  const articleLd = {
     '@type': 'Article',
     headline: post.title,
     description: post.description,
-    author: {
-      '@type': 'Organization',
-      name: post.author || 'MailMop Team',
-      url: 'https://mailmop.com'
-    },
+    author: { '@type': 'Organization', name: post.author || 'MailMop Team', url: 'https://mailmop.com' },
     publisher: {
       '@type': 'Organization',
       name: 'MailMop',
       url: 'https://mailmop.com',
-      logo: {
-        '@type': 'ImageObject',
-        url: 'https://mailmop.com/logo10.png'
-      }
+      logo: { '@type': 'ImageObject', url: 'https://mailmop.com/logo10.png' },
     },
     datePublished: publishDate,
-    dateModified: publishDate,
+    dateModified: modifiedDate,
     mainEntityOfPage: url,
     keywords: post.tags?.join(', '),
+  }
+
+  const breadcrumbLd = {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://mailmop.com' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://mailmop.com/blog' },
+      { '@type': 'ListItem', position: 3, name: post.title, item: url },
+    ],
+  }
+
+  const faqLd = post.faqs && post.faqs.length > 0 ? {
+    '@type': 'FAQPage',
+    mainEntity: post.faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.question,
+      acceptedAnswer: { '@type': 'Answer', text: f.answer },
+    })),
+  } : null
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [articleLd, breadcrumbLd, ...(faqLd ? [faqLd] : [])],
   }
 
   return (
@@ -280,6 +308,26 @@ export default async function BlogPostPage({
                 </div>
               </div>
             </article>
+
+            {/* FAQ section — visible content backing the FAQPage schema */}
+            {post.faqs && post.faqs.length > 0 && (
+              <section className="mt-16 pt-12 border-t max-w-4xl" aria-labelledby="faq-heading">
+                <h2 id="faq-heading" className="text-3xl font-bold mb-8 text-foreground">
+                  Frequently asked questions
+                </h2>
+                <div className="space-y-6">
+                  {post.faqs.map((faq) => (
+                    <div key={faq.question} className="p-6 bg-card/60 rounded-xl border border-border/80">
+                      <h3 className="font-semibold text-lg text-foreground mb-2">{faq.question}</h3>
+                      <p className="text-muted-foreground leading-relaxed">{faq.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Internal linking */}
+            <RelatedPosts posts={related} />
 
             {/* Enhanced CTA */}
             <section className="mt-20 pt-12 border-t max-w-4xl">

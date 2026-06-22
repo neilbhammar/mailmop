@@ -24,14 +24,14 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://www.mailmop.com'),
+  metadataBase: new URL('https://mailmop.com'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: 'MailMop - Clean Your Gmail Inbox in Minutes',
     description: 'MailMop helps you declutter your Gmail inbox by analyzing thousands of emails and organizing them by sender. Delete unwanted emails in bulk, unsubscribe from newsletters, and reclaim your inbox in minutes.',
-    url: 'https://www.mailmop.com',
+    url: 'https://mailmop.com',
     siteName: 'MailMop',
     images: [
       {
@@ -63,9 +63,50 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  verification: {
-    google: 'PASTE_YOUR_VERIFICATION_CODE_HERE',
-  },
+}
+
+// Site-wide structured data: helps Google rich results AND gives LLM crawlers
+// (ChatGPT, Perplexity, Claude) a clean, factual description of what MailMop is.
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': 'https://mailmop.com/#organization',
+      name: 'MailMop',
+      url: 'https://mailmop.com',
+      logo: 'https://mailmop.com/logo10.png',
+      description: 'MailMop is a privacy-first Gmail cleanup tool that analyzes your inbox by sender so you can bulk delete, unsubscribe, and reclaim storage in minutes.',
+      sameAs: ['https://twitter.com/mailmop'],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': 'https://mailmop.com/#website',
+      url: 'https://mailmop.com',
+      name: 'MailMop',
+      publisher: { '@id': 'https://mailmop.com/#organization' },
+    },
+    {
+      '@type': 'SoftwareApplication',
+      name: 'MailMop',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      url: 'https://mailmop.com',
+      description: 'Clean your Gmail inbox in minutes. MailMop groups thousands of emails by sender so you can bulk delete, unsubscribe from newsletters, block senders, and free up Google storage. Your email data never leaves your browser.',
+      featureList: [
+        'Analyze your entire Gmail inbox grouped by sender',
+        'Bulk delete unwanted emails',
+        'One-click unsubscribe from newsletters',
+        'Block senders and create filters',
+        'Free up Gmail / Google storage',
+        'Privacy-first: email data is processed in your browser',
+      ],
+      offers: [
+        { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free' },
+        { '@type': 'Offer', price: '22.68', priceCurrency: 'USD', name: 'Pro (billed annually)' },
+      ],
+    },
+  ],
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -73,6 +114,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning className={nunito.className}>
       <head>
         <link rel="icon" href="/favicon.png" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
       </head>
       <body>
         <ClientProviders>

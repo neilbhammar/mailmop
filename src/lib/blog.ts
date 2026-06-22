@@ -4,11 +4,17 @@ import matter from 'gray-matter'
 import { cache } from 'react'
 
 // Type definitions for blog posts
+export interface BlogFAQ {
+  question: string
+  answer: string
+}
+
 export interface BlogPost {
   slug: string
   title: string
   description: string
   date: string
+  updated?: string
   author?: string
   tags?: string[]
   featured?: boolean
@@ -16,6 +22,7 @@ export interface BlogPost {
   imageAlt?: string
   content: string
   readingTime?: number
+  faqs?: BlogFAQ[]
 }
 
 // Cache the posts for better performance
@@ -45,6 +52,7 @@ export const getBlogPosts = cache(async (): Promise<BlogPost[]> => {
         title: data.title || '',
         description: data.description || '',
         date: data.date || '',
+        updated: data.updated || data.date || '',
         author: data.author || 'MailMop Team',
         tags: data.tags || [],
         featured: data.featured || false,
@@ -52,6 +60,7 @@ export const getBlogPosts = cache(async (): Promise<BlogPost[]> => {
         imageAlt: data.imageAlt,
         content,
         readingTime,
+        faqs: data.faqs || [],
       } as BlogPost
     })
     .sort((a, b) => {
