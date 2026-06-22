@@ -1,8 +1,18 @@
 ---
 title: "How to Use Gmail’s “Manage Subscriptions” (2025): Step-by-Step + Pros/Cons"
 date: "September 21, 2025"
+updated: "2026-06-22"
 description: Learn where to find Gmail’s new “Manage subscriptions,” how it works on web & mobile, and what it can’t do—plus when a tool like MailMop still makes sense.
 tags: ["gmail", "unsubscribe", "productivity", "how-to"]
+faqs:
+  - question: "Where is the Manage Subscriptions option in Gmail?"
+    answer: "On the web, look for 'Manage subscriptions' in Gmail's left navigation menu, where you'll see frequent bulk senders, their message counts, and an Unsubscribe button next to each. The view is also rolling out on Android and iOS in stages, with availability varying by region and Workspace tier. It surfaces recognized newsletter-type senders rather than every email in your inbox."
+  - question: "Why am I still getting emails after using Gmail's Manage Subscriptions?"
+    answer: "Gmail's unsubscribe relies on the sender's List-Unsubscribe header, and many senders wire that to a slow, broken, or non-automated process that never actually removes you. It also won't delete the old messages already in your inbox. For senders that ignore the header, a tool like MailMop parses the email body to find the real human-visible unsubscribe link so the request actually takes effect."
+  - question: "Does Gmail's Manage Subscriptions delete old emails when you unsubscribe?"
+    answer: "No. The Manage Subscriptions view stops future emails from a sender but leaves all the old messages in your inbox, so you have to search and delete that back-catalog yourself and then empty the Trash to reclaim storage. MailMop can do this in bulk with a delete-with-exceptions option, for example removing everything from a sender except receipts, all processed locally in your browser."
+  - question: "Why doesn't spam show up in Gmail's Manage Subscriptions?"
+    answer: "The dashboard intentionally prioritizes recognized legitimate bulk senders and avoids surfacing an Unsubscribe button on obvious spam, because clicking unsubscribe on spam can confirm your address is active. For shady or unrecognized senders, use Report spam or Block instead of trying to unsubscribe."
 ---
 
 Gmail quietly shipped a new **Manage subscriptions** view that pulls newsletter-type senders into one dashboard and adds a one-click **Unsubscribe** next to each sender. It's a welcome quality-of-life upgrade—especially if your inbox has become a newsletter graveyard.
