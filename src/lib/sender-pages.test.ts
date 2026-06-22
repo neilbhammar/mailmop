@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
-// @ts-expect-error - importing the ESM generator's gate function for test reuse
+// @ts-ignore - importing the ESM generator's gate function (no type declarations) for test reuse
 import { passesGate } from '../../scripts/sender-pages/generate.mjs'
 
 /**
