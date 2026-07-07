@@ -9,7 +9,26 @@ Native iOS/Android companion to the MailMop web app — same design language, pr
 - Supabase project (same as web app)
 - Google Cloud OAuth credentials with **iOS** and/or **Android** client IDs
 
-## Setup
+## Quick preview on your phone (no OAuth, mock data)
+
+No Supabase or Google setup required. In dev mode, a **Preview with demo data** button appears on the landing page.
+
+```bash
+cd mobile
+npm install
+npx expo start --tunnel
+```
+
+1. Install **Expo Go** on your iPhone or Android
+2. Scan the QR code from the terminal
+3. Tap **Preview with demo data** on the landing screen
+4. Scroll the landing for hero, stats, how-it-works, FAQ, privacy, pricing
+5. The demo dashboard shows mock senders with Pro actions visible
+
+To force demo mode in production builds: set `EXPO_PUBLIC_DEMO_MODE=true` in `.env`.
+To hide the preview button in dev: set `EXPO_PUBLIC_DEMO_MODE=false`.
+
+## Setup (real auth)
 
 1. Copy env file and fill in values:
 

@@ -9,11 +9,17 @@ interface TopBarProps {
   plan: 'free' | 'pro';
   onSignOut: () => void;
   onRevokeGmail: () => Promise<void>;
+  demoMode?: boolean;
 }
 
-export function TopBar({ plan, onSignOut, onRevokeGmail }: TopBarProps) {
+export function TopBar({ plan, onSignOut, onRevokeGmail, demoMode }: TopBarProps) {
   const { colors } = useTheme();
-  const { tokenStatus, hasRefreshToken } = useGmailPermissions();
+  const gmailPermissions = useGmailPermissions();
+
+  const hasRefreshToken = demoMode ? true : gmailPermissions.hasRefreshToken;
+  const tokenStatus = demoMode
+    ? { state: 'valid' as const }
+    : gmailPermissions.tokenStatus;
 
   const gmailStatus =
     !hasRefreshToken

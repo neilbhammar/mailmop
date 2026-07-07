@@ -7,6 +7,7 @@ import { ThemeProvider, useTheme } from '@/context/ThemeProvider';
 import { AuthProvider } from '@/context/AuthProvider';
 import { GmailPermissionsProvider } from '@/context/GmailPermissionsProvider';
 import { AnalysisProvider } from '@/context/AnalysisProvider';
+import { DemoSessionProvider } from '@/modules/demo';
 import { View, ActivityIndicator } from 'react-native';
 
 function RootNavigator() {
@@ -43,11 +44,13 @@ function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <GmailPermissionsProvider>
-          <AnalysisProvider>{children}</AnalysisProvider>
-        </GmailPermissionsProvider>
-      </AuthProvider>
+      <DemoSessionProvider>
+        <AuthProvider>
+          <GmailPermissionsProvider>
+            <AnalysisProvider>{children}</AnalysisProvider>
+          </GmailPermissionsProvider>
+        </AuthProvider>
+      </DemoSessionProvider>
     </ThemeProvider>
   );
 }
