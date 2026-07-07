@@ -1,0 +1,13 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@shared/*": ["../packages/shared/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", "../packages/shared/**/*.ts"]
+}
