@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ExternalLink, Trash2, MailOpen, MoreHorizontal, PenSquare, Tag, Ban, PencilOff } from "lucide-react"
+import { ExternalLink, Trash2, MailOpen, MoreHorizontal, PenSquare, Tag, Ban, PencilOff, BellOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Portal } from "@radix-ui/react-portal"
 import { useSenderActionMeta } from '@/hooks/useSenderActionMeta'
@@ -67,9 +67,10 @@ export function RowActions({
   }
 
   // Base styles for icon buttons
+  // On touch devices (<sm) there is no hover, so icons render at full opacity
   const iconButtonStyles = cn(
-    // Default state - low opacity, slate color
-    "inline-flex items-center justify-center h-8 w-8 rounded-md text-slate-600 dark:text-slate-400 opacity-40 dark:opacity-70",
+    // Default state - low opacity, slate color (full opacity on mobile)
+    "inline-flex items-center justify-center h-8 w-8 rounded-md text-slate-600 dark:text-slate-400 opacity-40 dark:opacity-70 max-sm:opacity-100 max-sm:dark:opacity-100",
     // Row hover state - full opacity
     "group-hover:opacity-100",
     // Button hover state - blue background
@@ -78,10 +79,11 @@ export function RowActions({
     "transition-all duration-150"
   )
 
-  // Base styles for the unsubscribe text button
+  // Base styles for the unsubscribe text button (desktop only — lives in the
+  // More menu on mobile where the text button wouldn't fit)
   const unsubscribeStyles = cn(
     // Default state - low opacity, slate color
-    "inline-flex items-center justify-center text-sm px-3 py-1.5 rounded-md text-slate-600 dark:text-slate-400 opacity-40 dark:opacity-70 font-medium",
+    "hidden sm:inline-flex items-center justify-center text-sm px-3 py-1.5 rounded-md text-slate-600 dark:text-slate-400 opacity-40 dark:opacity-70 font-medium",
     // Row hover state - full opacity, blue text
     "group-hover:opacity-100 group-hover:text-blue-600 dark:group-hover:text-blue-400",
     // Button hover state - blue background
@@ -139,14 +141,14 @@ export function RowActions({
         </TooltipProvider>
       )}
 
-      {/* View in Gmail */}
+      {/* View in Gmail (desktop only — in the More menu on mobile) */}
       <TooltipProvider delayDuration={100}>
         <Tooltip>
           <TooltipTrigger asChild>
             <div
               role="button"
               tabIndex={0}
-              className={iconButtonStyles}
+              className={cn(iconButtonStyles, "hidden sm:inline-flex")}
               onClick={() => onViewInGmail(sender.email)}
             >
               <ExternalLink className="h-4 w-4" />
@@ -190,7 +192,7 @@ export function RowActions({
         </Tooltip>
       </TooltipProvider>
 
-      {/* Mark as Read */}
+      {/* Mark as Read (desktop only — in the More menu on mobile) */}
       <TooltipProvider delayDuration={100}>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -199,6 +201,7 @@ export function RowActions({
               tabIndex={0}
               className={cn(
                 iconButtonStyles,
+                "hidden sm:inline-flex",
                 // Stay gray if no unread emails, but keep it clickable
                 sender.unread_count === 0 && "text-slate-400 dark:text-slate-500 group-hover:text-slate-400 dark:group-hover:text-slate-500"
               )}
@@ -249,14 +252,52 @@ export function RowActions({
             </Portal>
           </Tooltip>
         </TooltipProvider>
-        <DropdownMenuContent 
-          align="end" 
+        <DropdownMenuContent
+          align="end"
           className="w-56 bg-white dark:bg-slate-800 rounded-lg border border-gray-100 dark:border-slate-700 shadow-md z-50 py-1"
         >
+          {/* Mobile-only items: these actions have dedicated buttons on desktop
+              but live here on small screens where the row can't fit them */}
+          {sender.hasUnsubscribe && (
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                if (isActionTaken('unsubscribe')) {
+                  onReUnsubscribe?.(sender.email);
+                } else {
+                  onUnsubscribe(sender.email);
+                }
+              }}
+              className="sm:hidden flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer"
+            >
+              <BellOff className="h-4 w-4 mr-2 shrink-0" />
+              <span>{isActionTaken('unsubscribe') ? 'Unsubscribe Again' : 'Unsubscribe'}</span>
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              onViewInGmail(sender.email);
+            }}
+            className="sm:hidden flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer"
+          >
+            <ExternalLink className="h-4 w-4 mr-2 shrink-0" />
+            <span>View in Gmail</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              onMarkUnread(sender.email, sender.unread_count);
+            }}
+            className="sm:hidden flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer"
+          >
+            <MailOpen className="h-4 w-4 mr-2 shrink-0" />
+            <span>{sender.unread_count === 0 ? 'No Unread Emails' : `Mark ${sender.unread_count} as Read`}</span>
+          </DropdownMenuItem>
           <TooltipProvider delayDuration={100}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onSelect={(e) => {
                     e.preventDefault();
                     onDeleteWithExceptions(sender.email, sender.count);

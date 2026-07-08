@@ -2,7 +2,7 @@
 import './globals.css'
 import { Nunito } from 'next/font/google'
 import { ClientProviders } from './client-providers'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 
 // Initialize Nunito font
 const nunito = Nunito({
@@ -11,6 +11,14 @@ const nunito = Nunito({
   variable: '--font-nunito',
   display: 'swap',
 })
+
+// Explicit viewport config for mobile: proper scaling on phones, and
+// viewport-fit=cover lets the app extend into the safe area on notched iPhones.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
 
 export const metadata: Metadata = {
   title: 'MailMop - Clean Your Gmail Inbox in Minutes',

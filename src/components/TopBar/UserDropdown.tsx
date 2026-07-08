@@ -124,7 +124,8 @@ export function UserDropdown({ user }: UserDropdownProps) {
             </div>
           )}
           
-          <div className="text-left">
+          {/* Name/email hidden on mobile — avatar alone keeps the top bar compact */}
+          <div className="text-left hidden sm:block">
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {user.user_metadata?.full_name || 'User'}
             </div>

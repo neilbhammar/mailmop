@@ -32,6 +32,7 @@ import {
   clearCurrentActionLog,
 } from '@/lib/storage/actionLog';
 import { logger } from '@/lib/utils/logger';
+import { acquireWakeLock, releaseWakeLock } from '@/lib/utils/wakeLock';
 import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
 import { playSuccessMp3 } from '@/lib/utils/sounds';
 
@@ -309,6 +310,10 @@ export function useModifyLabel() {
       let currentAccessToken: string; // To store the token for the current batch
 
       try {
+        // Keep the screen awake for the duration of the run — on mobile the
+        // screen auto-locking would suspend the page and kill the operation
+        await acquireWakeLock();
+
         for (const sender of options.senders) {
           // Check both cancellation sources (critical pattern from analysis)
           if (isCancelledRef.current || cancellationRef.current || abortSignal?.aborted) {
@@ -536,10 +541,11 @@ export function useModifyLabel() {
           currentSender: undefined,
         });
         toast.error('Operation Failed', { description: errorMessage });
-        
+
         return { success: false };
       } finally {
         actionLogIdRef.current = null;
+        await releaseWakeLock();
       }
     },
     [

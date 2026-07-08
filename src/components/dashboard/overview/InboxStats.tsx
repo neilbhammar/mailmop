@@ -137,7 +137,8 @@ export default function InboxStats() {
 
   return (
     <div className="mt-4 h-[42px]">
-      <div className="flex items-center gap-8 text-sm transition-all duration-300">
+      {/* Horizontal scroll on narrow screens so stat tiles never wrap/clip */}
+      <div className="flex items-center gap-5 sm:gap-8 text-sm transition-all duration-300 overflow-x-auto whitespace-nowrap [scrollbar-width:none]">
         {/* Total Emails - Always show */}
         <div>
           <span className="text-slate-500 dark:text-slate-400">Total Emails</span>
