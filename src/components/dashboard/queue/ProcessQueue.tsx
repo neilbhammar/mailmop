@@ -339,7 +339,9 @@ export default function ProcessQueue() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex items-center gap-2 justify-end">
+      {/* On mobile the idle "Process Queue" pill is hidden to keep the header
+          compact — the widget appears only when a job is active */}
+      <div className={cn("flex items-center gap-2 justify-end", !activeJob && "hidden sm:flex")}>
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger asChild>
             <div

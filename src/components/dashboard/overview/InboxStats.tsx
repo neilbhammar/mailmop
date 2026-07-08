@@ -136,7 +136,7 @@ export default function InboxStats() {
   const showModified = actionStats?.modified > 0;
 
   return (
-    <div className="mt-4 h-[42px]">
+    <div className="mt-2 sm:mt-4 h-[42px]">
       {/* Horizontal scroll on narrow screens so stat tiles never wrap/clip */}
       <div className="flex items-center gap-5 sm:gap-8 text-sm transition-all duration-300 overflow-x-auto whitespace-nowrap [scrollbar-width:none]">
         {/* Total Emails - Always show */}
