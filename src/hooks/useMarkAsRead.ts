@@ -41,6 +41,7 @@ import {
 } from '@/lib/storage/actionLog';
 import { updateSenderUnreadCount } from '@/lib/storage/senderAnalysis';
 import { logger } from '@/lib/utils/logger';
+import { acquireWakeLock, releaseWakeLock } from '@/lib/utils/wakeLock';
 import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
 import { playSuccessMp3, playBigSuccessMp3 } from '@/lib/utils/sounds';
 
@@ -350,6 +351,10 @@ export function useMarkAsRead() {
       let processedSenders: string[] = []; // Track successfully processed senders
 
       try {
+        // Keep the screen awake for the duration of the run — on mobile the
+        // screen auto-locking would suspend the page and kill the operation
+        await acquireWakeLock();
+
         for (const sender of senders) {
           if (isCancelledRef.current) {
             logger.debug('Cancellation detected before processing sender', { 
@@ -603,10 +608,11 @@ export function useMarkAsRead() {
           currentSender: undefined,
         });
         toast.error('Operation Failed', { description: errorMessage });
-        
+
         return { success: false };
       } finally {
         actionLogIdRef.current = null;
+        await releaseWakeLock();
       }
     },
     [

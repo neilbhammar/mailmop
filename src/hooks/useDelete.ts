@@ -42,6 +42,7 @@ import {
   clearCurrentActionLog,
 } from '@/lib/storage/actionLog'; // New imports for action logging
 import { logger } from '@/lib/utils/logger';
+import { acquireWakeLock, releaseWakeLock } from '@/lib/utils/wakeLock';
 
 // --- Components ---
 import { ReauthDialog } from '@/components/modals/ReauthDialog'; // For prompting re-login
@@ -327,6 +328,10 @@ export function useDelete() {
         let currentAccessToken: string;
 
         try {
+          // Keep the screen awake for the duration of the run — on mobile the
+          // screen auto-locking would suspend the page and kill the operation
+          await acquireWakeLock();
+
           for (const sender of senders) {
             // Check both cancellation sources (critical pattern from analysis)
             if (isCancelledRef.current || cancellationRef.current || abortSignal?.aborted) {
@@ -560,6 +565,7 @@ export function useDelete() {
             toast.error('Deletion Failed', { description: errorMessage });
         } finally {
             actionLogIdRef.current = null;
+            await releaseWakeLock();
         }
       })();
 

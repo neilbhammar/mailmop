@@ -339,20 +339,24 @@ export default function ProcessQueue() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex items-center gap-2 justify-end">
+      {/* On mobile the idle "Process Queue" pill is hidden to keep the header
+          compact — the widget appears only when a job is active */}
+      <div className={cn("flex items-center gap-2 justify-end", !activeJob && "hidden sm:flex")}>
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger asChild>
             <div
               className={cn(
                 "flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 transition-all duration-300 ease-in-out cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 overflow-hidden",
-                activeJob ? "w-[400px] h-[60px]" : "w-[150px] h-[40px]"
+                // Expanded width caps to the viewport on mobile so it never
+                // overlaps the stats row
+                activeJob ? "w-[min(400px,calc(100vw-3rem))] h-[60px]" : "w-[150px] h-[40px]"
               )}
             >
               {triggerContent}
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent 
-              className="w-[400px] shadow-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800" 
+          <DropdownMenuContent
+              className="w-[min(400px,calc(100vw-2rem))] shadow-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
               align="end"
               sideOffset={5}
           >

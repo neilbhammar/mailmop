@@ -124,7 +124,8 @@ export function UserDropdown({ user }: UserDropdownProps) {
             </div>
           )}
           
-          <div className="text-left">
+          {/* Name/email hidden on mobile — avatar alone keeps the top bar compact */}
+          <div className="text-left hidden sm:block">
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {user.user_metadata?.full_name || 'User'}
             </div>
@@ -148,7 +149,7 @@ export function UserDropdown({ user }: UserDropdownProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute left-[-1rem] right-[-1rem] mt-2 bg-white border-x border-b border-gray-100 rounded-b-lg shadow-md z-50 dark:bg-slate-800 dark:border-slate-700"
+            className="absolute right-0 w-64 sm:w-auto sm:left-[-1rem] sm:right-[-1rem] mt-2 bg-white border border-gray-100 rounded-lg sm:border-t-0 sm:rounded-t-none shadow-md z-50 dark:bg-slate-800 dark:border-slate-700"
           >
             <div className="py-1">
               {/* Manage Plan / Upgrade to Pro */}

@@ -513,7 +513,7 @@ export function ApplyLabelModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg bg-white dark:bg-slate-900 shadow-lg dark:border dark:border-slate-700">
+      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-lg bg-white dark:bg-slate-900 shadow-lg dark:border dark:border-slate-700">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-blue-500/20 flex items-center justify-center">

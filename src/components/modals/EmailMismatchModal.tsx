@@ -52,7 +52,7 @@ export function EmailMismatchModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md bg-gradient-to-b from-red-50 via-white to-red-50 dark:from-slate-800 dark:via-slate-850 dark:to-slate-900 shadow-xl border-none p-0 overflow-hidden rounded-xl">
+      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-md bg-gradient-to-b from-red-50 via-white to-red-50 dark:from-slate-800 dark:via-slate-850 dark:to-slate-900 shadow-xl border-none p-0 overflow-hidden rounded-xl">
         <DialogHeader className="pt-8 px-6 md:px-8 pb-0 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full mb-5 bg-red-100 dark:bg-red-900/30">
             <AlertTriangle className="h-8 w-8 text-red-500 dark:text-red-400" />

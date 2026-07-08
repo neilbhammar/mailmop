@@ -34,6 +34,7 @@ import {
 import { updateSenderAfterPartialDeletion, markSenderActionTaken } from '@/lib/storage/senderAnalysis';
 import { refreshStatsAfterAction } from '@/lib/utils/updateStats';
 import { playSuccessMp3, playBigSuccessMp3 } from '@/lib/utils/sounds';
+import { acquireWakeLock, releaseWakeLock } from '@/lib/utils/wakeLock';
 
 // --- Types ---
 import { ActionEndType } from '@/types/actions';
@@ -279,6 +280,10 @@ export function useDeleteWithExceptions() {
         let currentAccessToken: string;
 
         try {
+          // Keep the screen awake for the duration of the run — on mobile the
+          // screen auto-locking would suspend the page and kill the operation
+          await acquireWakeLock();
+
           // Track deletions per sender for updating counts later
           const senderDeletionCounts = new Map<string, number>();
           
@@ -479,6 +484,7 @@ export function useDeleteWithExceptions() {
           toast.error('Deletion Failed', { description: errorMessage });
         } finally {
           actionLogIdRef.current = null;
+          await releaseWakeLock();
         }
       })();
 

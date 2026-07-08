@@ -222,4 +222,56 @@ export function getCurrentAnalysis(): LocalActionLog | null {
  */
 export function clearCurrentAnalysis(): void {
   localStorage.removeItem(CURRENT_ANALYSIS_KEY);
-} 
+}
+
+// ---------------------------------------------------------------------------
+// Analysis checkpoint (additive only — nothing consumes this yet)
+//
+// A snapshot of an in-flight analysis's Gmail pagination cursor, saved after
+// every batch. Today an interrupted run cannot be continued because this
+// cursor was never persisted; recording it costs one localStorage write per
+// batch and keeps the door open for a future resume feature without changing
+// any current behavior.
+// ---------------------------------------------------------------------------
+
+const ANALYSIS_CHECKPOINT_KEY = 'mailmop_analysis_checkpoint';
+
+export interface AnalysisCheckpoint {
+  analysisId: string;
+  supabaseLogId: string;
+  analysisType: 'full' | 'quick';
+  query: string;
+  nextPageToken: string;
+  totalProcessed: number;
+  batchIndex: number;
+  effectiveEmailCount: number;
+  updatedAt: string; // ISO timestamp
+}
+
+/** Persists the analysis checkpoint. Called after each completed batch. */
+export function saveAnalysisCheckpoint(checkpoint: Omit<AnalysisCheckpoint, 'updatedAt'>): void {
+  try {
+    localStorage.setItem(
+      ANALYSIS_CHECKPOINT_KEY,
+      JSON.stringify({ ...checkpoint, updatedAt: new Date().toISOString() })
+    );
+  } catch {
+    // Non-critical bookkeeping — never let it affect the running analysis
+  }
+}
+
+/** Returns the stored checkpoint, if any. */
+export function getAnalysisCheckpoint(): AnalysisCheckpoint | null {
+  const stored = localStorage.getItem(ANALYSIS_CHECKPOINT_KEY);
+  if (!stored) return null;
+  try {
+    return JSON.parse(stored) as AnalysisCheckpoint;
+  } catch {
+    return null;
+  }
+}
+
+/** Clears the checkpoint (analysis finished or was cancelled). */
+export function clearAnalysisCheckpoint(): void {
+  localStorage.removeItem(ANALYSIS_CHECKPOINT_KEY);
+}

@@ -51,7 +51,7 @@ export function ReauthDialog({
 
   return (
     <Dialog open={open} onOpenChange={isLoading ? undefined : onOpenChange} modal>
-      <DialogContent className="max-w-lg bg-gradient-to-b from-blue-50 to-white dark:from-slate-800 dark:to-slate-900 shadow-xl border-none p-0 overflow-hidden rounded-xl">
+      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-lg bg-gradient-to-b from-blue-50 to-white dark:from-slate-800 dark:to-slate-900 shadow-xl border-none p-0 overflow-hidden rounded-xl">
         <DialogHeader className="pt-8 px-8 pb-0">
           <DialogTitle className="sr-only">
             {isExpired 

@@ -198,9 +198,9 @@ export function AnalysisHeader({
 
   return (
     <div className="px-4 pt-4 pb-4 flex flex-col gap-3 shrink-0">
-      {/* Header and bulk actions row */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-8">
+      {/* Header and bulk actions row — wraps on mobile so search gets its own line */}
+      <div className="flex flex-wrap justify-between items-center gap-3">
+        <div className="flex items-center gap-4 sm:gap-8">
           <h1 className="text-xl font-bold dark:text-slate-100">Sender Analysis</h1>
           
           {hasSelection && (
@@ -217,8 +217,8 @@ export function AnalysisHeader({
           )}
         </div>
 
-        <div className="flex gap-3">
-          <div className="relative">
+        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-none">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="15"
@@ -234,9 +234,9 @@ export function AnalysisHeader({
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.3-4.3" />
             </svg>
-            <Input 
-              placeholder="Search senders..." 
-              className="w-[240px] h-9 text-sm bg-white dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:ring-slate-100 dark:focus-visible:ring-slate-600 dark:text-slate-200 pl-9"
+            <Input
+              placeholder="Search senders..."
+              className="w-full sm:w-[240px] h-9 text-base sm:text-sm bg-white dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:ring-slate-100 dark:focus-visible:ring-slate-600 dark:text-slate-200 pl-9"
               value={searchTerm}
               onChange={handleSearchChange}
             />

@@ -14,13 +14,15 @@ const ROW_HEIGHT = 56
 const OVERSCAN_COUNT = 5
 const MAX_SELECTED_ROWS = 25
 
+// Mobile (<sm): email + lastEmail columns are hidden (name cell stacks the
+// email underneath); widths re-balance to sum to 100%. Matches SenderTable.
 const COLUMN_WIDTHS = {
-  checkbox: 'w-[3%]',
-  name: 'w-[20%]',
-  email: 'w-[30%]',
-  lastEmail: 'w-[13%]',
-  count: 'w-[10%]',
-  actions: 'w-[24%]'
+  checkbox: 'w-[11%] sm:w-[3%]',
+  name: 'w-[48%] sm:w-[20%]',
+  email: 'hidden sm:table-cell sm:w-[30%]',
+  lastEmail: 'hidden sm:table-cell sm:w-[13%]',
+  count: 'w-[14%] sm:w-[10%]',
+  actions: 'w-[27%] sm:w-[24%]'
 } as const
 
 // Utility functions
@@ -247,7 +249,7 @@ export function VirtualizedDomainTable({
         <table className="w-full text-sm table-fixed">
           <thead className="bg-white dark:bg-slate-800">
             <tr className="h-11">
-              <th className={cn("px-4 py-4 font-semibold bg-white dark:bg-slate-800", COLUMN_WIDTHS.checkbox)}>
+              <th className={cn("px-2 sm:px-4 py-4 font-semibold bg-white dark:bg-slate-800", COLUMN_WIDTHS.checkbox)}>
                 <div className="flex items-center">
                   {selectedEmails.size > 0 && (
                     <button
@@ -259,7 +261,7 @@ export function VirtualizedDomainTable({
                   )}
                 </div>
               </th>
-              <th className={cn("text-left px-4 py-4 font-semibold bg-white dark:bg-slate-800", COLUMN_WIDTHS.name)}>
+              <th className={cn("text-left px-2 sm:px-4 py-4 font-semibold bg-white dark:bg-slate-800", COLUMN_WIDTHS.name)}>
                 <button
                   onClick={() => handleDomainSortChange('domain')}
                   className="w-full text-left group"
@@ -269,7 +271,7 @@ export function VirtualizedDomainTable({
                   </span>
                 </button>
               </th>
-              <th className={cn("text-left px-4 py-4 font-semibold bg-white dark:bg-slate-800", COLUMN_WIDTHS.email)}>
+              <th className={cn("text-left px-2 sm:px-4 py-4 font-semibold bg-white dark:bg-slate-800", COLUMN_WIDTHS.email)}>
                 <button
                   onClick={() => handleDomainSortChange('senderCount')}
                   className="w-full text-left group"
@@ -279,7 +281,7 @@ export function VirtualizedDomainTable({
                   </span>
                 </button>
               </th>
-              <th className={cn("text-left px-4 py-4 font-semibold bg-white dark:bg-slate-800", COLUMN_WIDTHS.lastEmail)}>
+              <th className={cn("text-left px-2 sm:px-4 py-4 font-semibold bg-white dark:bg-slate-800", COLUMN_WIDTHS.lastEmail)}>
                 <button
                   onClick={() => handleDomainSortChange('lastEmail')}
                   className="w-full text-left group"
@@ -289,7 +291,7 @@ export function VirtualizedDomainTable({
                   </span>
                 </button>
               </th>
-              <th className={cn("text-right px-4 py-4 font-semibold bg-white dark:bg-slate-800", COLUMN_WIDTHS.count)}>
+              <th className={cn("text-right px-2 sm:px-4 py-4 font-semibold bg-white dark:bg-slate-800", COLUMN_WIDTHS.count)}>
                 <button
                   onClick={() => handleDomainSortChange('count')}
                   className="w-full text-right group"
@@ -300,7 +302,7 @@ export function VirtualizedDomainTable({
                   </span>
                 </button>
               </th>
-              <th className={cn("text-center px-4 py-4 font-semibold bg-white dark:bg-slate-800", COLUMN_WIDTHS.actions)}>
+              <th className={cn("text-center px-2 sm:px-4 py-4 font-semibold bg-white dark:bg-slate-800", COLUMN_WIDTHS.actions)}>
                 
               </th>
             </tr>
@@ -399,7 +401,7 @@ function DomainRow({
       className="bg-slate-100/80 dark:bg-slate-800/80 border-b-2 border-slate-300 dark:border-slate-600 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 h-14 cursor-pointer"
       onClick={() => toggleDomainExpansion(domainData.domain)}
     >
-      <td className={cn("px-4", COLUMN_WIDTHS.checkbox)}>
+      <td className={cn("px-2 sm:px-4", COLUMN_WIDTHS.checkbox)}>
         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
           <Checkbox 
             checked={isDomainChecked}
@@ -436,7 +438,7 @@ function DomainRow({
           />
         </div>
       </td>
-      <td className={cn("px-4 font-semibold text-slate-900 dark:text-slate-50", COLUMN_WIDTHS.name)}>
+      <td className={cn("px-2 sm:px-4 font-semibold text-slate-900 dark:text-slate-50", COLUMN_WIDTHS.name)}>
         <div className="flex items-center gap-2">
           <span>{domainData.domain}</span>
           <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
@@ -448,16 +450,16 @@ function DomainRow({
           </div>
         </div>
       </td>
-      <td className={cn("px-4 text-slate-600 dark:text-slate-300 text-sm font-medium", COLUMN_WIDTHS.email)}>
+      <td className={cn("px-2 sm:px-4 text-slate-600 dark:text-slate-300 text-sm font-medium", COLUMN_WIDTHS.email)}>
         {senderCount} sender{senderCount !== 1 ? 's' : ''}
       </td>
-      <td className={cn("px-4 text-slate-600 dark:text-slate-300 text-sm", COLUMN_WIDTHS.lastEmail)}>
+      <td className={cn("px-2 sm:px-4 text-slate-600 dark:text-slate-300 text-sm", COLUMN_WIDTHS.lastEmail)}>
         {formatRelativeTime(domainData.lastEmail)}
       </td>
-      <td className={cn("px-4 text-right text-blue-700 dark:text-blue-400 font-medium", COLUMN_WIDTHS.count)}>
+      <td className={cn("px-2 sm:px-4 text-right text-blue-700 dark:text-blue-400 font-medium", COLUMN_WIDTHS.count)}>
         {countValue.toLocaleString()}
       </td>
-      <td className={cn("px-4", COLUMN_WIDTHS.actions)}>
+      <td className={cn("px-2 sm:px-4", COLUMN_WIDTHS.actions)}>
         {/* Empty actions column for domain rows */}
       </td>
     </tr>
@@ -511,7 +513,7 @@ function SenderRow({
         toggleEmailSelection(sender.email, !isSelected, e.shiftKey)
       }}
     >
-      <td className={cn("px-4", COLUMN_WIDTHS.checkbox)}>
+      <td className={cn("px-2 sm:px-4", COLUMN_WIDTHS.checkbox)}>
         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
           <Checkbox 
             checked={isSelected}
@@ -519,31 +521,40 @@ function SenderRow({
           />
         </div>
       </td>
-      <td className={cn("px-4 truncate", COLUMN_WIDTHS.name)}>
-        <SenderNameCell 
-          name={sender.name} 
-          allNames={sender.allNames}
-          hasMultipleNames={sender.hasMultipleNames}
-          className="dark:text-slate-200" 
-          strikethrough={sender.count === 0 || isTrashed}
-        />
+      <td className={cn("px-2 sm:px-4 truncate", COLUMN_WIDTHS.name)}>
+        <div className="min-w-0">
+          <SenderNameCell
+            name={sender.name}
+            allNames={sender.allNames}
+            hasMultipleNames={sender.hasMultipleNames}
+            className="dark:text-slate-200"
+            strikethrough={sender.count === 0 || isTrashed}
+          />
+          {/* Mobile only: email shown under the name since its column is hidden */}
+          <div className={cn(
+            "sm:hidden text-xs text-slate-500 dark:text-slate-400 truncate",
+            (sender.count === 0 || isTrashed) && "line-through opacity-60"
+          )}>
+            {sender.email}
+          </div>
+        </div>
       </td>
-      <td className={cn("px-4 truncate", COLUMN_WIDTHS.email)}>
+      <td className={cn("px-2 sm:px-4 truncate", COLUMN_WIDTHS.email)}>
         <TruncatedCell 
           content={sender.email} 
           className="text-slate-800 opacity-80 dark:text-slate-300 dark:opacity-70"
           strikethrough={sender.count === 0 || isTrashed}
         />
       </td>
-      <td className={cn("px-4", COLUMN_WIDTHS.lastEmail)}>
+      <td className={cn("px-2 sm:px-4", COLUMN_WIDTHS.lastEmail)}>
         <LastEmailCell date={sender.lastEmail} strikethrough={sender.count === 0 || isTrashed} />
       </td>
-      <td className={cn("px-4 text-right", COLUMN_WIDTHS.count)}>
+      <td className={cn("px-2 sm:px-4 text-right", COLUMN_WIDTHS.count)}>
         <span className="text-blue-700 dark:text-blue-400">
           {senderCountValue.toLocaleString()}
         </span>
       </td>
-      <td className={cn("px-4 actions-container", COLUMN_WIDTHS.actions)}>
+      <td className={cn("px-2 sm:px-4 actions-container", COLUMN_WIDTHS.actions)}>
         <RowActions
           onBlock={onBlockSingleSender}
           onApplyLabel={onApplyLabelSingle || (() => {})}

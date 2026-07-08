@@ -31,14 +31,16 @@ import { useViewInGmail } from '@/hooks/useViewInGmail'
 import { ApplyLabelModal } from '@/components/modals/ApplyLabelModal'
 import { useSenderActionMeta } from '@/hooks/useSenderActionMeta'
 
-// Define column widths for consistent layout
+// Define column widths for consistent layout.
+// Mobile (<sm): email + lastEmail columns are hidden and the name cell shows a
+// stacked name/email layout instead; widths re-balance to sum to 100%.
 const COLUMN_WIDTHS = {
-  checkbox: "w-[3%]",
-  name: "w-[20%]",
-  email: "w-[30%]",
-  lastEmail: "w-[13%]",
-  count: "w-[10%]",
-  actions: "w-[24%]"
+  checkbox: "w-[11%] sm:w-[3%]",
+  name: "w-[48%] sm:w-[20%]",
+  email: "hidden sm:table-cell sm:w-[30%]",
+  lastEmail: "hidden sm:table-cell sm:w-[13%]",
+  count: "w-[14%] sm:w-[10%]",
+  actions: "w-[27%] sm:w-[24%]"
 } as const
 
 // Maximum number of rows that can be selected at once
@@ -93,10 +95,10 @@ const SenderRow = memo(({
       {cells.map(cell => {
         const width = columnWidths[cell.column.id as keyof typeof columnWidths]
         return (
-          <td 
-            key={cell.id} 
+          <td
+            key={cell.id}
             className={cn(
-              "px-4 border-b border-slate-200/80 dark:border-slate-700/80",
+              "px-2 sm:px-4 border-b border-slate-200/80 dark:border-slate-700/80",
               width,
               cell.column.id === 'actions' && 'actions-container'
             )}
@@ -692,13 +694,22 @@ export function SenderTable({
         // Check if sender has been moved to trash
         const { isTrashed } = useSenderActionMeta(row.original.email)
         return (
-          <SenderNameCell 
-            name={row.getValue("name")} 
-            allNames={row.original.allNames}
-            hasMultipleNames={row.original.hasMultipleNames}
-            className="dark:text-slate-200" 
-            strikethrough={row.original.count === 0 || isTrashed}
-          />
+          <div className="min-w-0">
+            <SenderNameCell
+              name={row.getValue("name")}
+              allNames={row.original.allNames}
+              hasMultipleNames={row.original.hasMultipleNames}
+              className="dark:text-slate-200"
+              strikethrough={row.original.count === 0 || isTrashed}
+            />
+            {/* Mobile only: email shown under the name since its column is hidden */}
+            <div className={cn(
+              "sm:hidden text-xs text-slate-500 dark:text-slate-400 truncate",
+              (row.original.count === 0 || isTrashed) && "line-through opacity-60"
+            )}>
+              {row.original.email}
+            </div>
+          </div>
         )
       }
     },
@@ -1084,10 +1095,10 @@ export function SenderTable({
                   {headerGroup.headers.map(header => {
                     const width = COLUMN_WIDTHS[header.column.id as keyof typeof COLUMN_WIDTHS]
                     return (
-                      <th 
-                        key={header.id} 
+                      <th
+                        key={header.id}
                         className={cn(
-                          "text-left px-4 py-4 font-semibold bg-white dark:bg-slate-800",
+                          "text-left px-2 sm:px-4 py-4 font-semibold bg-white dark:bg-slate-800",
                           width,
                           "overflow-hidden"
                         )}

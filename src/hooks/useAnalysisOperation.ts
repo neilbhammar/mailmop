@@ -15,13 +15,15 @@ import { toast } from 'sonner';
 import { ReauthDialog } from '@/components/modals/ReauthDialog';
 import { useAuth } from '@/context/AuthProvider';
 import { createActionLog, updateActionLog, completeActionLog } from '@/supabase/actions/logAction';
-import { 
-  createLocalActionLog, 
-  updateAnalysisId, 
-  updateAnalysisProgress, 
-  completeAnalysis, 
+import {
+  createLocalActionLog,
+  updateAnalysisId,
+  updateAnalysisProgress,
+  completeAnalysis,
   clearCurrentAnalysis,
-  getCurrentAnalysis 
+  getCurrentAnalysis,
+  saveAnalysisCheckpoint,
+  clearAnalysisCheckpoint
 } from '@/lib/storage/actionLog';
 import { ActionEndType } from '@/types/actions';
 import { fetchMessageIds } from '@/lib/gmail/fetchMessageIds';
@@ -29,6 +31,8 @@ import { fetchMetadata } from '@/lib/gmail/fetchMetadata';
 import { parseMetadataBatch } from '@/lib/gmail/parseHeaders';
 import { logger } from '@/lib/utils/logger';
 import { playSuccessMp3 } from '@/lib/utils/sounds';
+import { acquireWakeLock, releaseWakeLock } from '@/lib/utils/wakeLock';
+import { primeKeepAliveAudio, startKeepAliveAudio, stopKeepAliveAudio } from '@/lib/utils/keepAliveAudio';
 
 // --- Queue System Integration ---
 import { AnalysisJobPayload, ProgressCallback, ExecutorResult } from '@/types/queue';
@@ -122,8 +126,7 @@ export function useAnalysisOperations() {
     status: 'idle',
     progress: 0
   });
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null); // Ref for Wake Lock
+  const wakeLockHeldRef = useRef<boolean>(false); // Whether this hook currently holds the shared wake lock
   const cancellationRef = useRef<boolean>(false); // Track cancellation state with ref to avoid closure issues
   const progressRef = useRef<AnalysisProgress>({ status: 'idle', progress: 0 }); // Track current progress state
 
@@ -175,14 +178,12 @@ export function useAnalysisOperations() {
     setReauthModal(prev => ({ ...prev, isOpen: false }));
   }, []);
 
-  const stopSilentAudio = useCallback(() => {
-    if (audioRef.current) {
-      logger.debug('Stopping silent audio', { component: 'analysis' });
-      audioRef.current.pause();
-      // Release the audio file and abort network activity
-      audioRef.current.src = ''; 
-      audioRef.current.load(); 
-      audioRef.current = null;
+  // Releases the shared wake lock if (and only if) this hook holds it —
+  // guards against double-release from the cancel + finally paths.
+  const releaseHeldWakeLock = useCallback(async () => {
+    if (wakeLockHeldRef.current) {
+      wakeLockHeldRef.current = false;
+      await releaseWakeLock();
     }
   }, []);
 
@@ -327,37 +328,15 @@ export function useAnalysisOperations() {
       try {
         logger.debug('Pre-flight checks passed, proceeding with background analysis', { component: 'analysis' });
 
-        // Create and play silent audio to keep the page active
-        try {
-          logger.debug('Creating and playing silent audio for anti-throttling', { component: 'analysis' });
-          audioRef.current = new Audio('/sample.mp3'); // Path to your silent audio file
-          audioRef.current.loop = true;
-          audioRef.current.volume = 0.2; // Ensure it's truly silent
-          await audioRef.current.play();
-        } catch (error) {
-          logger.warn('Silent audio playback failed. Analysis will continue, but background throttling might occur', { 
-            component: 'analysis', 
-            error: error instanceof Error ? error.message : 'Unknown error' 
-          });
-        }
+        // Play the keep-alive audio so the page stays active — on mobile this is
+        // also what keeps the analysis running when Safari is backgrounded or
+        // the screen is locked (gesture-unlocked singleton; see keepAliveAudio.ts)
+        await startKeepAliveAudio();
 
-        // Acquire Screen Wake Lock if supported
-        try {
-          if ('wakeLock' in navigator) {
-            wakeLockRef.current = await navigator.wakeLock.request('screen');
-            logger.debug('Screen Wake Lock Acquired', { component: 'analysis' });
-            wakeLockRef.current.addEventListener('release', () => {
-              logger.debug('Screen Wake Lock was released externally (e.g., page hidden)', { component: 'analysis' });
-            });
-          } else {
-            logger.debug('Screen Wake Lock API not supported by this browser', { component: 'analysis' });
-          }
-        } catch (err: any) {
-          logger.error('Screen Wake Lock API error', { 
-            component: 'analysis', 
-            error: `${err.name}, ${err.message}` 
-          });
-        }
+        // Keep the screen awake while we work (shared manager re-acquires the
+        // lock automatically when the page becomes visible again)
+        wakeLockHeldRef.current = true;
+        await acquireWakeLock();
 
         // Batch processing
         const senderMap = new Map<string, SenderResult>();
@@ -506,13 +485,32 @@ export function useAnalysisOperations() {
           if (queueProgressCallback) {
             queueProgressCallback(totalProcessed, effectiveEmailCount);
           }
-          
+
           batchIndex++;
+
+          // Additive bookkeeping: persist the pagination cursor so a future
+          // resume feature could continue an interrupted run. Nothing reads
+          // this yet — zero impact on current behavior.
+          if (nextPageToken) {
+            saveAnalysisCheckpoint({
+              analysisId,
+              supabaseLogId,
+              analysisType: options.type,
+              query,
+              nextPageToken,
+              totalProcessed,
+              batchIndex,
+              effectiveEmailCount
+            });
+          } else {
+            clearAnalysisCheckpoint();
+          }
 
         } while (nextPageToken && !cancellationRef.current && !(abortSignal && abortSignal.aborted));
 
         if (cancellationRef.current || (abortSignal && abortSignal.aborted)) {
            logger.debug('Analysis was cancelled by the user', { component: 'analysis' });
+           clearAnalysisCheckpoint();
            await completeActionLog(supabaseLogId, 'user_stopped', totalProcessed);
            completeAnalysis('user_stopped');
            updateProgress({ status: 'cancelled', progress: progress.progress }); // Keep current progress on cancel
@@ -521,6 +519,7 @@ export function useAnalysisOperations() {
            });
         } else {
           logger.info('Analysis successfully completed', { component: 'analysis', totalProcessed });
+          clearAnalysisCheckpoint();
           await completeActionLog(supabaseLogId, 'success', totalProcessed);
           completeAnalysis('success');
           updateProgress({ status: 'completed', progress: 100 });
@@ -547,22 +546,10 @@ export function useAnalysisOperations() {
           body: `An error occurred: ${errorMessage}. Please try again or contact support.`,
         });
       } finally {
-        // Ensure silent audio is stopped regardless of how the async operation concludes
-        stopSilentAudio();
-        // Release Wake Lock
-        if (wakeLockRef.current) {
-          try {
-            await wakeLockRef.current.release();
-            logger.debug('Screen Wake Lock Released in finally block', { component: 'analysis' });
-          } catch (err: any) {
-            logger.error('Error releasing Screen Wake Lock', { 
-              component: 'analysis', 
-              error: `${err.name}, ${err.message}` 
-            });
-          } finally {
-            wakeLockRef.current = null; // Ensure it's null even if release throws
-          }
-        }
+        // Ensure keep-alive audio is stopped regardless of how the async operation concludes
+        stopKeepAliveAudio();
+        // Release the shared Wake Lock (no-op if the cancel path already did)
+        await releaseHeldWakeLock();
       }
     })();
 
@@ -577,7 +564,7 @@ export function useAnalysisOperations() {
     tokenTimeRemaining, 
     isGmailConnected,
     updateProgress,
-    stopSilentAudio
+    releaseHeldWakeLock
   ]);
 
   const cancelAnalysis = useCallback(async () => {
@@ -586,23 +573,11 @@ export function useAnalysisOperations() {
     setReauthModal({ isOpen: false, type: 'expired' }); // Close reauth modal if open
     // Logging of cancellation will be handled in the batch loop when it terminates.
     logger.debug('Cancellation signal sent', { component: 'analysis' });
-    // Stop silent audio on explicit cancellation
-    stopSilentAudio();
-    // Release Wake Lock on cancellation
-    if (wakeLockRef.current) {
-      try {
-        await wakeLockRef.current.release();
-        logger.debug('Screen Wake Lock Released due to cancellation', { component: 'analysis' });
-      } catch (err: any) {
-        logger.error('Error releasing Screen Wake Lock on cancellation', { 
-          component: 'analysis', 
-          error: `${err.name}, ${err.message}` 
-        });
-      } finally {
-        wakeLockRef.current = null;
-      }
-    }
-  }, [updateProgress, stopSilentAudio]);
+    // Stop keep-alive audio on explicit cancellation
+    stopKeepAliveAudio();
+    // Release the shared Wake Lock on cancellation
+    await releaseHeldWakeLock();
+  }, [updateProgress, releaseHeldWakeLock]);
 
   /**
    * 🔌 QUEUE SYSTEM INTEGRATION
@@ -704,6 +679,12 @@ export function useAnalysisOperations() {
       abortSignal.removeEventListener('abort', handleAbort);
     }
   }, [startAnalysis, cancelAnalysis]); // 🔧 FIX: Removed progressRef from dependencies
+
+  // Unlock the keep-alive audio on the user's first gesture so that later
+  // programmatic playback (from the queue executor) works on iOS/mobile.
+  useEffect(() => {
+    primeKeepAliveAudio();
+  }, []);
 
   // Register the executor when the hook mounts
   useEffect(() => {

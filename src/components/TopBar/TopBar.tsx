@@ -25,7 +25,7 @@ export function TopBar() {
               alt="MailMop Logo"
               width={140}
               height={30}
-              className="h-auto w-[140px] object-contain"
+              className="h-auto w-[110px] sm:w-[140px] object-contain"
             />
           )}
           {!mounted && (
@@ -34,13 +34,13 @@ export function TopBar() {
               alt="MailMop Logo"
               width={140}
               height={30}
-              className="h-auto w-[140px] object-contain"
+              className="h-auto w-[110px] sm:w-[140px] object-contain"
             />
           )}
         </Link>
 
         {/* Right Section with Gmail status and user dropdown */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 sm:gap-6">
           <GmailConnectionStatus />
           {user && <UserDropdown user={user} />}
         </div>
