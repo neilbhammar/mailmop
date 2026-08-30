@@ -77,8 +77,16 @@ export default function ReanalyzeButton() {
       className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 dark:text-white font-medium h-9 px-3 sm:h-10 sm:px-6 sm:py-4 text-sm rounded-sm shadow-sm transition-colors"
       size="lg"
     >
-      <RefreshCw className="mr-0 h-4 w-4 sm:h-5 sm:w-5" />
-      Reanalyze<span className="hidden sm:inline">&nbsp;Inbox</span>
+      <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
+      {/*
+        Both words live in ONE span so they form a single flex item. Button is
+        `inline-flex gap-2`, so a bare "Reanalyze" text node next to a separate
+        <span> would be two flex items and pick up the 8px gap on top of the
+        nbsp, rendering as a double space.
+      */}
+      <span>
+        Reanalyze<span className="hidden sm:inline">&nbsp;Inbox</span>
+      </span>
     </Button>
   )
 } 
