@@ -11,6 +11,14 @@ export type Profile = {
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
   cancel_at_period_end: boolean | null
+  /** Discount A/B/C experiment bucket. See src/lib/discountExperiment.ts */
+  discount_variant?: 'control' | 'none' | 'early25' | null
+  discount_variant_assigned_at?: string | null
+  /** Free-delete experiment. Non-null used_at means the one freebie is spent. */
+  free_delete_used_at?: string | null
+  free_delete_sender?: string | null
+  free_delete_count?: number | null
+  free_delete_variant?: 'control' | 'free_delete' | null
   last_login: string | null
   created_at: string
   updated_at: string

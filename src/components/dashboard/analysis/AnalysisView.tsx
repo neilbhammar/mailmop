@@ -14,6 +14,8 @@ import { useDeleteWithExceptions } from "@/hooks/useDeleteWithExceptions"
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
 import { DeleteWithExceptionsModal } from "@/components/modals/DeleteWithExceptionsModal"
 import { PremiumFeatureModal } from "@/components/modals/PremiumFeatureModal"
+import { useFreeDelete } from "@/hooks/useFreeDelete"
+import { freeDeleteSuccessMessage } from "@/lib/freeDeleteExperiment"
 import { ReauthDialog } from "@/components/modals/ReauthDialog"
 import { useSenderData, TableSender } from '@/hooks/useSenderData'
 import { RuleGroup } from '@/lib/gmail/buildQuery'
@@ -103,6 +105,8 @@ export default function AnalysisView() {
   
   // Get sender data (needed for totalEmailCount calculation)
   const { senders: allSenders, refresh: refreshSenderData } = useSenderData()
+  // Free-delete experiment. Gate logic is pure and tested in src/lib/freeDeleteExperiment.ts
+  const { evaluate: evaluateFreeDelete, consume: consumeFreeDelete, recordExposure: recordFreeDeleteExposure } = useFreeDelete()
   
   // Total number of emails to delete
   const totalEmailCount = useMemo(() => {
@@ -699,7 +703,7 @@ export default function AnalysisView() {
   }, [selectedEmails, checkFeatureAccess, handleOverlappingActions]);
 
   // Handler for row-level delete action
-  const handleDeleteSingleSender = useCallback((email: string, emailCount?: number) => {
+  const handleDeleteSingleSender = useCallback(async (email: string, emailCount?: number) => {
     // Use provided count, then emailCountMap, then actual sender count, fallback to 0
     const currentCount = emailCount || emailCountMap[email] || (() => {
       const sender = allSenders.find(s => s.email === email);
@@ -707,6 +711,34 @@ export default function AnalysisView() {
     })();
     
     setEmailCountMap(prev => ({ ...prev, [email]: currentCount }));
+
+    /*
+     * Free-delete experiment. Checked BEFORE checkFeatureAccess on purpose:
+     * calling the paywall gate first would log a premium_attempt and open the
+     * upgrade modal, and we would then be granting a free delete behind a modal
+     * that just told the user they cannot delete.
+     *
+     * The quota is spent here, atomically, before anything destructive opens. A
+     * user who then cancels the confirm dialog has spent their freebie; that is
+     * the documented trade for making this race-safe against multiple tabs.
+     */
+    const freeDecision = evaluateFreeDelete([email], currentCount);
+    if (freeDecision.allowed) {
+      const won = await consumeFreeDelete(freeDecision.senderEmail, freeDecision.emailCount);
+      if (won) {
+        const senderName = allSenders.find(s => s.email === email)?.name || email;
+        void recordFreeDeleteExposure('granted');
+        setPaywallTarget([email]);
+        setEmailsToDelete([email]);
+        setIsDeleteModalOpen(true);
+        toast.success(freeDeleteSuccessMessage(freeDecision.emailCount, senderName));
+        return;
+      }
+      // Lost the race or the write failed: fall through to the normal paywall.
+      void recordFreeDeleteExposure('consume_failed');
+    } else if (freeDecision.variant === 'free_delete') {
+      void recordFreeDeleteExposure(`denied_${freeDecision.reason}`);
+    }
 
     // checkFeatureAccess will open premium modal if needed
     setPaywallTarget([email]);
@@ -718,7 +750,7 @@ export default function AnalysisView() {
       // Access denied, hook opened modal. Store sender for potential view action.
       setActiveSingleSender(email); 
     }
-  }, [checkFeatureAccess, emailCountMap, allSenders]);
+  }, [checkFeatureAccess, emailCountMap, allSenders, evaluateFreeDelete, consumeFreeDelete, recordFreeDeleteExposure]);
 
   // Handler for delete with exceptions
   const handleDeleteWithExceptions = useCallback(() => {

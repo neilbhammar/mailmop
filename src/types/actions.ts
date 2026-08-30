@@ -13,6 +13,7 @@ export type ActionType =
   | 'preview'
   | 'premium_attempt'
   | 'discount_experiment_exposure'
+  | 'free_delete_exposure'
   | 'other'
   | 'unsubscribe';
 
