@@ -9,6 +9,7 @@ import {
   InfoIcon
 } from 'lucide-react';
 import { Job, isDeleteJob, isDeleteWithExceptionsJob, isMarkReadJob } from '@/types/queue';
+import { queueJobTitle, resolveDeleteMethod } from '@/lib/deleteMethod';
 import { ActionType } from '@/types/actions';
 import { cn } from '@/lib/utils';
 import {
@@ -108,7 +109,9 @@ const getActionDisplayTitle = (job: Job): string => {
       case 'delete':
         return `Delete ${senderText}`;
       case 'deleteWithExceptions':
-        return `Delete with exceptions for ${senderText}`;
+        // Resolved the same fail-safe way the executor resolves it, so the queue
+        // never labels a run "Delete" while the executor is about to trash it.
+        return queueJobTitle(resolveDeleteMethod(job.payload?.deleteMethod), senderText);
       case 'markRead':
         return `Mark ${senderText} as Read`;
       case 'unsubscribe':

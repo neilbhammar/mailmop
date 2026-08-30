@@ -6,6 +6,7 @@
  */
 
 import { RuleGroup } from '@/lib/gmail/buildQuery';
+import { DeleteMethod } from '@/lib/deleteMethod';
 
 // Job types that can be queued
 export type JobType =
@@ -55,6 +56,7 @@ export interface DeleteWithExceptionsJobPayload {
   }[];
   filterRules: RuleGroup[];      // Filter rules for partial deletion
   initialEtaMs: number;          // Pre-calculated ETA for stable initial display
+  deleteMethod: DeleteMethod;    // Permanently delete, or move to trash
 }
 
 export interface MarkReadJobPayload {

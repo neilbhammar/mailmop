@@ -21,6 +21,13 @@ import { estimateRuntimeMs, formatDuration } from '@/lib/utils/estimateRuntime';
 import { buildQuery, RuleGroup } from '@/lib/gmail/buildQuery';
 import { fetchMessageIds } from '@/lib/gmail/fetchMessageIds';
 import { batchDeleteMessages } from '@/lib/gmail/batchDeleteMessages';
+import { batchTrashMessages } from '@/lib/gmail/batchTrashMessages';
+import {
+  DeleteMethod,
+  resolveDeleteMethod,
+  deleteMethodCopy,
+  completionToast,
+} from '@/lib/deleteMethod';
 
 // --- Storage & Logging ---
 import { createActionLog, updateActionLog, completeActionLog } from '@/supabase/actions/logAction';
@@ -158,13 +165,20 @@ export function useDeleteWithExceptions() {
     async (
       senders: SenderToDelete[],
       filterRules: RuleGroup[],
+      requestedDeleteMethod?: DeleteMethod,
       queueProgressCallback?: ProgressCallback,
       abortSignal?: AbortSignal
     ): Promise<{ success: boolean }> => {
+      // Anything other than an explicit 'permanent' resolves to trash. See
+      // resolveDeleteMethod: a mangled payload must not reach batchDelete.
+      const deleteMethod = resolveDeleteMethod(requestedDeleteMethod);
+      const copy = deleteMethodCopy(deleteMethod);
+
       console.log('[DeleteWithExceptions] Starting filtered deletion for senders:', senders);
       console.log('[DeleteWithExceptions] Using filter rules:', filterRules);
+      console.log('[DeleteWithExceptions] Delete method:', deleteMethod);
       console.log('[DeleteWithExceptions] Queue mode:', !!queueProgressCallback);
-      
+
       // Reset cancellation flags
       isCancelledRef.current = false;
       cancellationRef.current = false;
@@ -243,7 +257,7 @@ export function useDeleteWithExceptions() {
         estimatedRuntimeMs,
         totalEmails: totalEmailsEstimate,
         totalEstimatedBatches: Math.ceil(totalEmailsEstimate / DELETION_BATCH_SIZE),
-        query: `Filtered deletion from ${senders.length} senders`,
+        query: `Filtered ${deleteMethod === 'trash' ? 'trash' : 'deletion'} from ${senders.length} senders`,
       });
 
       let supabaseLogId: string | undefined;
@@ -252,10 +266,13 @@ export function useDeleteWithExceptions() {
           user_id: user.id,
           type: 'delete_with_exceptions',
           status: 'started',
-          filters: { 
-            senderCount: senders.length, 
+          filters: {
+            senderCount: senders.length,
             ruleGroupCount: filterRules.length,
-            estimatedCount: totalEmailsEstimate 
+            estimatedCount: totalEmailsEstimate,
+            // Both methods log under the existing 'delete_with_exceptions' type so
+            // the deletion_count views keep working; this is what tells them apart.
+            deleteMethod,
           },
           estimated_emails: totalEmailsEstimate,
         });
@@ -352,8 +369,14 @@ export function useDeleteWithExceptions() {
                   break;
                 }
 
-                console.log(`[DeleteWithExceptions] Found ${messageIds.length} IDs. Attempting batch delete...`);
-                await batchDeleteMessages(currentAccessToken, messageIds);
+                console.log(`[DeleteWithExceptions] Found ${messageIds.length} IDs. Attempting batch ${deleteMethod}...`);
+                // Both helpers throw on failure, so a batch is only counted below
+                // once the mail has genuinely moved.
+                if (deleteMethod === 'trash') {
+                  await batchTrashMessages(currentAccessToken, messageIds);
+                } else {
+                  await batchDeleteMessages(currentAccessToken, messageIds);
+                }
 
                 senderDeletedCount += messageIds.length;
                 totalSuccessfullyDeleted += messageIds.length;
@@ -381,7 +404,7 @@ export function useDeleteWithExceptions() {
                 console.error(`[DeleteWithExceptions] Error during batch:`, fetchOrDeleteError);
                 errorMessage = `Failed during batch operation: ${fetchOrDeleteError.message || 'Unknown error'}`;
                 endType = 'runtime_error';
-                toast.error('Deletion error', { description: errorMessage });
+                toast.error(`Could not ${copy.verb.toLowerCase()} emails`, { description: errorMessage });
                 senderProcessedSuccessfully = false;
                 break;
               }
@@ -447,10 +470,13 @@ export function useDeleteWithExceptions() {
           });
 
           if (endType === 'success') {
+            const { title, description } = completionToast(deleteMethod, {
+              emailsProcessed: totalSuccessfullyDeleted,
+              senderCount: senders.length,
+            });
+
             if (totalSuccessfullyDeleted === 0) {
-              toast.info('No Emails Deleted', { 
-                description: `No emails found that match your criteria. All emails from ${senders.length} sender(s) remain in your inbox.` 
-              });
+              toast.info(title, { description });
             } else {
               // 🎵 Play success sound for successful deletions
               if (totalSuccessfullyDeleted > 100) {
@@ -458,12 +484,14 @@ export function useDeleteWithExceptions() {
               } else {
                 playSuccessMp3(); // Regular success sound for smaller deletions
               }
-              toast.success('Filtered Deletion Complete', { description: `Successfully deleted ${totalSuccessfullyDeleted.toLocaleString()} matching emails from ${senders.length} sender(s).` });
+              toast.success(title, { description });
             }
             // Refresh all stats after successful deletion with exceptions
             await refreshStatsAfterAction('delete_with_exceptions');
           } else if (endType === 'user_stopped') {
-            toast.info('Deletion Cancelled', { description: `Deletion stopped after ${totalSuccessfullyDeleted.toLocaleString()} emails.` });
+            toast.info(`${copy.verb} Cancelled`, {
+              description: `Stopped after ${totalSuccessfullyDeleted.toLocaleString()} emails.`,
+            });
           }
 
         } catch (processError: any) {
@@ -481,7 +509,7 @@ export function useDeleteWithExceptions() {
           }
 
           updateProgress({ status: 'error', error: errorMessage, currentSender: undefined });
-          toast.error('Deletion Failed', { description: errorMessage });
+          toast.error(`Could not ${copy.verb.toLowerCase()} emails`, { description: errorMessage });
         } finally {
           actionLogIdRef.current = null;
           await releaseWakeLock();
@@ -511,10 +539,11 @@ export function useDeleteWithExceptions() {
   ): Promise<ExecutorResult> => {
     console.log('[DeleteWithExceptions] Queue executor called with payload:', payload);
     
-    // Convert queue payload to hook format  
+    // Convert queue payload to hook format
     const senders: SenderToDelete[] = payload.senders;
     const filterRules: RuleGroup[] = payload.filterRules;
-    
+    const deleteMethod = payload.deleteMethod;
+
     // Set up cancellation handling
     const handleAbort = () => {
       console.log('[DeleteWithExceptions] Queue abort signal received');
@@ -524,7 +553,7 @@ export function useDeleteWithExceptions() {
     
     try {
       // Call existing function with progress callback
-      const result = await startDeleteWithExceptions(senders, filterRules, onProgress, abortSignal);
+      const result = await startDeleteWithExceptions(senders, filterRules, deleteMethod, onProgress, abortSignal);
       
       // Wait for completion and determine final result
       return new Promise((resolve) => {
