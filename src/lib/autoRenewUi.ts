@@ -41,6 +41,38 @@ export function isRowClickable(state: AutoRenewState): boolean {
   return state === 'disabled'
 }
 
+/**
+ * Whether to render the bordered callout box.
+ *
+ * Only in the OFF state, where we want the setting noticed and turned back on.
+ * In the ON state a callout box plus a heading plus a link is three separate
+ * elements all drawing the eye to a setting the user is unlikely to have come
+ * looking for, which invites them to change something they were happy with.
+ * The ON state gets one quiet line instead.
+ */
+export function showsCallout(state: AutoRenewState): boolean {
+  return state === 'disabled'
+}
+
+/**
+ * Whether to render the "Auto-Renewal Enabled/Disabled" section heading.
+ * Same reasoning as showsCallout: redundant once the ON state is a single line
+ * that already says what it is.
+ */
+export function showsSectionHeading(state: AutoRenewState): boolean {
+  return state === 'disabled'
+}
+
+/**
+ * The one-line renewal summary for the ON state. Split so the date can be
+ * emphasised without the caller hardcoding the sentence.
+ */
+export function renewalSummary(expiryLabel: string | null): { lead: string; date: string | null } {
+  return expiryLabel
+    ? { lead: 'Renews automatically on', date: expiryLabel }
+    : { lead: 'Renews automatically each year', date: null }
+}
+
 /** Advances the disable flow. The first click only arms the confirm. */
 export function nextStageOnDisableClick(stage: DisableStage): DisableStage {
   return stage === 'idle' ? 'confirming' : 'confirming'

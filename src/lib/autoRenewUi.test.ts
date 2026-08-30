@@ -7,6 +7,9 @@ import {
   resetStage,
   disableLinkLabel,
   disableConfirmHelp,
+  showsCallout,
+  showsSectionHeading,
+  renewalSummary,
   type DisableStage,
 } from './autoRenewUi'
 
@@ -104,5 +107,44 @@ describe('copy', () => {
     for (const label of ['June 16, 2027', null]) {
       expect(disableConfirmHelp(label).toLowerCase()).not.toContain('immediately')
     }
+  })
+})
+
+describe('visual weight is asymmetric by state', () => {
+  it('shows the callout box only when auto-renew is OFF', () => {
+    expect(showsCallout('disabled')).toBe(true)
+    // Three stacked elements pointing at a setting the user did not come looking
+    // for is what makes them reach for it. ON state stays quiet.
+    expect(showsCallout('enabled')).toBe(false)
+  })
+
+  it('shows the section heading only when auto-renew is OFF', () => {
+    expect(showsSectionHeading('disabled')).toBe(true)
+    expect(showsSectionHeading('enabled')).toBe(false)
+  })
+
+  it('never renders callout and heading in the ON state', () => {
+    const chrome = [showsCallout('enabled'), showsSectionHeading('enabled'), isRowClickable('enabled')]
+    expect(chrome.every((v) => v === false)).toBe(true)
+  })
+
+  it('keeps the full treatment in the OFF state', () => {
+    const chrome = [showsCallout('disabled'), showsSectionHeading('disabled'), isRowClickable('disabled')]
+    expect(chrome.every((v) => v === true)).toBe(true)
+  })
+})
+
+describe('renewalSummary', () => {
+  it('leads with the date when known', () => {
+    const { lead, date } = renewalSummary('August 30, 2027')
+    expect(lead).toBe('Renews automatically on')
+    expect(date).toBe('August 30, 2027')
+  })
+
+  it('falls back without a dangling preposition when the date is unknown', () => {
+    const { lead, date } = renewalSummary(null)
+    expect(date).toBeNull()
+    expect(lead).not.toMatch(/\bon$/)
+    expect(lead).toBe('Renews automatically each year')
   })
 })
