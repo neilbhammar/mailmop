@@ -47,7 +47,8 @@ import {
   Plus,
   SlashIcon,
   SlidersHorizontal,
-  Zap
+  Zap,
+  Trash
 } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -63,6 +64,18 @@ import { buildQuery } from "@/lib/gmail/buildQuery"
 import { validateFilterConditionValue, validateDateInput } from '@/lib/utils/inputValidation'
 import { toast } from "sonner"
 import { escapeGmailSearchValue } from "@/lib/gmail/buildQuery"
+import {
+  DELETE_METHOD_PREF_KEY,
+  readDeleteMethodPreference,
+  deleteMethodCopy,
+  confirmWarningHeadline,
+  type DeleteMethod,
+} from "@/lib/deleteMethod"
+import {
+  DeleteMethodSelect,
+  DeleteMethodCallout,
+  deleteMethodButtonClass,
+} from "@/components/modals/DeleteMethodPicker"
 
 // Operator types
 type Operator = 'and' | 'or';
@@ -237,6 +250,23 @@ export function DeleteWithExceptionsModal({
   
   // Is deleting state
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Where the matching emails should end up. Shares its stored preference with
+  // DeleteConfirmModal so a user who picks "Move to Trash" once gets it in both.
+  const [deleteMethod, setDeleteMethod] = useState<DeleteMethod>(() =>
+    readDeleteMethodPreference(
+      typeof window !== 'undefined' ? localStorage.getItem(DELETE_METHOD_PREF_KEY) : null
+    )
+  );
+  const copy = deleteMethodCopy(deleteMethod);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(DELETE_METHOD_PREF_KEY, deleteMethod);
+    } catch (_) {
+      /* ignore quota / SSR errors */
+    }
+  }, [deleteMethod]);
   
   // Format sender info
   const senderDisplay = senderCount === 1 
@@ -669,7 +699,8 @@ export function DeleteWithExceptionsModal({
         enqueue('deleteWithExceptions', {
           senders: sendersForQueue,
           filterRules: finalRules,
-          initialEtaMs
+          initialEtaMs,
+          deleteMethod
         });
         
         // Call success callback before closing modal
@@ -917,11 +948,20 @@ export function DeleteWithExceptionsModal({
       <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white dark:bg-slate-900 dark:border dark:border-slate-700 max-h-[90vh] flex flex-col">
         <DialogHeader className="pb-1">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
-              <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center",
+              copy.tone === 'orange'
+                ? "bg-orange-100 dark:bg-orange-500/20"
+                : "bg-red-100 dark:bg-red-500/20"
+            )}>
+              {copy.tone === 'orange' ? (
+                <Trash className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              ) : (
+                <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+              )}
             </div>
             <DialogTitle className="text-xl font-semibold dark:text-slate-100">
-              Delete from {senderDisplay}
+              {copy.verb} from {senderDisplay}
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -931,7 +971,7 @@ export function DeleteWithExceptionsModal({
           <div className="flex-1 overflow-auto min-h-0 pt-3 px-0.5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-gray-700 dark:text-slate-300">
-                Delete emails that match these criteria:
+                {copy.criteriaHeading}
               </h3>
               <Button
                 type="button"
@@ -1161,59 +1201,60 @@ export function DeleteWithExceptionsModal({
           )}
         </div>
         
-        {/* Action warning - always visible */}
-        <div className="bg-red-50 border border-red-100 dark:bg-red-500/10 dark:border-red-500/20 rounded-md p-3 mt-3">
-          <div className="flex items-start">
-            <Trash2 className="h-4 w-4 mr-2 flex-shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
-            <div className="w-full">
-              <p className="font-medium text-red-700 dark:text-red-300 text-sm">
-                {hasValidFilters 
-                  ? `About to delete ${getFilterSummary()}`
-                  : `About to delete all ${emailCount} emails`}
-              </p>
-              <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
-                This action is permanent and cannot be undone.{" "}
+        {/* What this run will touch, and how to eyeball it first */}
+        <div className="space-y-4 mt-3">
+          <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/40 p-3">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 mt-0.5 flex-shrink-0 text-slate-500 dark:text-slate-400" />
+              <p className="text-sm text-slate-700 dark:text-slate-300">
+                {confirmWarningHeadline(
+                  deleteMethod,
+                  hasValidFilters ? getFilterSummary() : `all ${emailCount} emails`
+                )}
+                .{" "}
                 <button
                   type="button"
-                  className="underline hover:text-red-800 dark:hover:text-red-200"
+                  className="border-b border-dotted border-slate-500 dark:border-slate-500 hover:border-slate-900 dark:hover:border-slate-300"
                   onClick={() => {
                     handlePreview();
                   }}
                 >
-                  Preview impacted emails.
+                  Preview impacted emails
                 </button>
               </p>
             </div>
           </div>
+
+          <DeleteMethodSelect value={deleteMethod} onChange={setDeleteMethod} />
+
+          <DeleteMethodCallout method={deleteMethod} />
         </div>
 
-        <DialogFooter className="flex justify-end gap-2 pt-3">
+        <DialogFooter className="sm:justify-end mt-2">
           <DialogClose asChild>
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              size="sm"
-              className="dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-600"
+              className="mr-2 bg-white dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-600"
             >
               Cancel
             </Button>
           </DialogClose>
-          
+
           <Button
             type="button"
-            className="bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-600 dark:text-red-100"
+            className={deleteMethodButtonClass(deleteMethod)}
             disabled={isDeleting || (!hasValidFilters && emailCount > 100)}
             onClick={handleConfirm}
-            size="sm"
           >
             {isDeleting ? (
-              <span className="flex items-center">
-                <span className="animate-pulse">{onConfirm ? 'Deleting' : 'Adding to Queue'}</span>
-                <span className="animate-pulse">...</span>
-              </span>
+              <>
+                <span className="animate-pulse">{onConfirm ? copy.progressVerb : 'Adding to Queue'}</span>
+                <span className="animate-pulse ml-1">...</span>
+              </>
             ) : (
-              <>Delete {hasValidFilters ? 'Selected' : 'All'}</>
+              copy.methodLabel
             )}
           </Button>
         </DialogFooter>
