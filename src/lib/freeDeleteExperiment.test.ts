@@ -1,8 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   assignFreeDeleteVariant,
   evaluateFreeDelete,
   freeDeleteSuccessMessage,
+  markLocallyConsumed,
+  wasLocallyConsumed,
+  __resetLocalConsumption,
   type FreeDeleteInput,
 } from './freeDeleteExperiment'
 
@@ -255,5 +258,50 @@ describe('freeDeleteSuccessMessage', () => {
   it('handles the singular', () => {
     expect(freeDeleteSuccessMessage(1, 'Grailed')).toContain('1 email from')
     expect(freeDeleteSuccessMessage(1, 'Grailed')).not.toContain('1 emails')
+  })
+})
+
+describe('in-session consumption tracking', () => {
+  beforeEach(() => __resetLocalConsumption())
+
+  it('starts empty', () => {
+    expect(wasLocallyConsumed(TREATMENT_ID)).toBe(false)
+  })
+
+  it('records and reports a spent quota', () => {
+    markLocallyConsumed(TREATMENT_ID)
+    expect(wasLocallyConsumed(TREATMENT_ID)).toBe(true)
+  })
+
+  it('is per user, not global', () => {
+    markLocallyConsumed(TREATMENT_ID)
+    expect(wasLocallyConsumed('someone-else')).toBe(false)
+  })
+
+  it('handles null and empty ids without recording them', () => {
+    markLocallyConsumed('')
+    expect(wasLocallyConsumed(null)).toBe(false)
+    expect(wasLocallyConsumed(undefined)).toBe(false)
+    expect(wasLocallyConsumed('')).toBe(false)
+  })
+
+  it('closes the stale-profile hole: gate denies at the action button', () => {
+    // The profile is never refetched after a consume, so profile.free_delete_used_at
+    // stays null for the rest of the session. Simulate that exact situation.
+    const staleProfileValue: string | null = null
+
+    // Before consuming: allowed.
+    expect(
+      evaluateFreeDelete(input({ freeDeleteUsedAt: staleProfileValue })).allowed
+    ).toBe(true)
+
+    markLocallyConsumed(TREATMENT_ID)
+
+    // After consuming, with the SAME stale profile value, the hook substitutes
+    // the in-session marker and the gate must now deny.
+    const substituted = wasLocallyConsumed(TREATMENT_ID) ? 'consumed-this-session' : staleProfileValue
+    const d = evaluateFreeDelete(input({ freeDeleteUsedAt: substituted }))
+    expect(d.allowed).toBe(false)
+    if (!d.allowed) expect(d.reason).toBe('quota_used')
   })
 })

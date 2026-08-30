@@ -53,6 +53,36 @@ export type FreeDeleteVariant = 'control' | 'free_delete'
  * The business call is Neil's: one sender's worth is an acceptable giveaway.
  */
 
+/*
+ * In-memory record of quotas spent during this page session.
+ *
+ * Needed because AuthProvider never refetches the profile after the quota is
+ * consumed, so `profile.free_delete_used_at` stays null in memory for the rest of
+ * the session. Without this, a second delete would re-evaluate as ALLOWED, open
+ * the confirmation dialog, and only fail at the atomic consume, which is a worse
+ * experience than being cleanly gated at the action button like every other
+ * premium feature.
+ *
+ * The database stays the source of truth. This only closes the window between
+ * consuming the quota and the next profile fetch (page reload, re-login).
+ */
+const locallyConsumed = new Set<string>()
+
+/** Record that this user spent their quota in this page session. */
+export function markLocallyConsumed(userId: string): void {
+  if (userId) locallyConsumed.add(userId)
+}
+
+/** Has this user spent their quota during this page session? */
+export function wasLocallyConsumed(userId: string | null | undefined): boolean {
+  return !!userId && locallyConsumed.has(userId)
+}
+
+/** Test-only. Clears the in-memory record. */
+export function __resetLocalConsumption(): void {
+  locallyConsumed.clear()
+}
+
 /** Salt is part of the experiment's identity. Changing it reshuffles every user. */
 const EXPERIMENT_SALT = 'free-delete-2026-08'
 

@@ -7,6 +7,8 @@ import { createActionLog } from '@/supabase/actions/logAction'
 import {
   evaluateFreeDelete,
   assignFreeDeleteVariant,
+  markLocallyConsumed,
+  wasLocallyConsumed,
   type FreeDeleteDecision,
 } from '@/lib/freeDeleteExperiment'
 
@@ -36,7 +38,14 @@ export function useFreeDelete() {
       evaluateFreeDelete({
         userId: user?.id,
         plan: profile?.plan,
-        freeDeleteUsedAt: profile?.free_delete_used_at,
+        /*
+         * The profile is not refetched after a consume, so treat a quota spent
+         * during this page session as spent. Otherwise the next delete would
+         * evaluate as allowed against a stale profile and the user would reach
+         * the confirmation dialog before being told no.
+         */
+        freeDeleteUsedAt:
+          profile?.free_delete_used_at ?? (wasLocallyConsumed(user?.id) ? 'consumed-this-session' : null),
         targetSenders,
         emailCount,
       }),
@@ -69,10 +78,16 @@ export function useFreeDelete() {
         // The RPC returns a boolean. Anything other than an explicit true is a
         // denial: fail closed rather than assume success on an unexpected shape.
         if (data !== true) {
+          // The server refused, which for this RPC means the quota was already
+          // spent. Record that locally too so we gate at the button next time.
           console.warn('[FreeDelete] quota already spent or refused by server')
+          markLocallyConsumed(user.id)
           return false
         }
 
+        // Record it immediately so the gate denies from here on, without waiting
+        // for a profile refetch that never comes.
+        markLocallyConsumed(user.id)
         return true
       } catch (err) {
         console.error('[FreeDelete] consume threw:', (err as Error).message)
