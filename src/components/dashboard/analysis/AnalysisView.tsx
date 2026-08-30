@@ -142,6 +142,15 @@ export default function AnalysisView() {
    * pick up a stale activeSingleSender and name the wrong sender in the paywall).
    */
   const [paywallTarget, setPaywallTarget] = useState<string[]>([])
+  /*
+   * Free-delete experiment. The grant is DECIDED when the user clicks the action,
+   * but the quota is SPENT in onBeforeConfirm, and the toast only fires in
+   * onSuccess once the mail is actually gone. Keeping those three moments apart is
+   * what stops us claiming "Deleted N emails" over an unopened confirm dialog, and
+   * stops a cancel from costing the user their one freebie.
+   */
+  const [pendingFreeDelete, setPendingFreeDelete] = useState<{ senderEmail: string; emailCount: number; senderName: string } | null>(null)
+  const freeDeleteToastRef = useRef<{ emailCount: number; senderName: string } | null>(null)
 
   /*
    * Real numbers for the delete paywall headline. Falls back to nulls whenever we
@@ -724,19 +733,16 @@ export default function AnalysisView() {
      */
     const freeDecision = evaluateFreeDelete([email], currentCount);
     if (freeDecision.allowed) {
-      const won = await consumeFreeDelete(freeDecision.senderEmail, freeDecision.emailCount);
-      if (won) {
-        const senderName = allSenders.find(s => s.email === email)?.name || email;
-        void recordFreeDeleteExposure('granted');
-        setPaywallTarget([email]);
-        setEmailsToDelete([email]);
-        setIsDeleteModalOpen(true);
-        toast.success(freeDeleteSuccessMessage(freeDecision.emailCount, senderName));
-        return;
-      }
-      // Lost the race or the write failed: fall through to the normal paywall.
-      void recordFreeDeleteExposure('consume_failed');
-    } else if (freeDecision.variant === 'free_delete') {
+      // Decide now, spend later. The quota is consumed in handleBeforeDeleteConfirm
+      // once the user actually commits in the confirmation dialog.
+      const senderName = allSenders.find(s => s.email === email)?.name || email;
+      setPendingFreeDelete({ senderEmail: freeDecision.senderEmail, emailCount: freeDecision.emailCount, senderName });
+      setPaywallTarget([email]);
+      setEmailsToDelete([email]);
+      setIsDeleteModalOpen(true);
+      return;
+    }
+    if (freeDecision.variant === 'free_delete') {
       void recordFreeDeleteExposure(`denied_${freeDecision.reason}`);
     }
 
@@ -750,7 +756,34 @@ export default function AnalysisView() {
       // Access denied, hook opened modal. Store sender for potential view action.
       setActiveSingleSender(email); 
     }
-  }, [checkFeatureAccess, emailCountMap, allSenders, evaluateFreeDelete, consumeFreeDelete, recordFreeDeleteExposure]);
+  }, [checkFeatureAccess, emailCountMap, allSenders, evaluateFreeDelete, recordFreeDeleteExposure]);
+
+  /**
+   * Runs after the user confirms, immediately before any mail is touched.
+   * Returning false aborts the delete.
+   *
+   * For a pending free delete this is where the quota is actually spent. The
+   * server-side consume is atomic, so if another tab won the race we abort rather
+   * than hand out a second freebie.
+   */
+  const handleBeforeDeleteConfirm = useCallback(async (): Promise<boolean> => {
+    if (!pendingFreeDelete) return true // normal paid path
+
+    const won = await consumeFreeDelete(pendingFreeDelete.senderEmail, pendingFreeDelete.emailCount)
+
+    if (!won) {
+      void recordFreeDeleteExposure('consume_failed')
+      setPendingFreeDelete(null)
+      toast.error('That free delete has already been used. Upgrade to Pro to keep cleaning up.')
+      return false
+    }
+
+    void recordFreeDeleteExposure('granted')
+    // Hand the toast to onSuccess so it only fires once the mail is really gone.
+    freeDeleteToastRef.current = { emailCount: pendingFreeDelete.emailCount, senderName: pendingFreeDelete.senderName }
+    setPendingFreeDelete(null)
+    return true
+  }, [pendingFreeDelete, consumeFreeDelete, recordFreeDeleteExposure])
 
   // Handler for delete with exceptions
   const handleDeleteWithExceptions = useCallback(() => {
@@ -1177,6 +1210,10 @@ export default function AnalysisView() {
           setIsDeleteModalOpen(isOpen);
           // Clear emailCountMap when modal closes to prevent stale data
           if (!isOpen) {
+            // Drop any undecided free-delete grant. If the user cancelled, the
+            // quota was never spent, and a stale grant must not leak into the
+            // next delete.
+            setPendingFreeDelete(null);
             console.log('[DEBUG] Modal closing, clearing emailCountMap for senders:', emailsToDelete);
             setEmailCountMap(prev => {
               const updated = { ...prev };
@@ -1190,8 +1227,15 @@ export default function AnalysisView() {
         senders={emailsToDelete}
         emailCountMap={emailCountMap}
         onDeleteWithExceptions={handleDeleteWithExceptions}
+        onBeforeConfirm={handleBeforeDeleteConfirm}
         onSuccess={() => {
           console.log('[DEBUG] Delete modal success callback triggered');
+          // Free-delete toast fires here, after the mail is actually gone.
+          const freebie = freeDeleteToastRef.current;
+          if (freebie) {
+            freeDeleteToastRef.current = null;
+            toast.success(freeDeleteSuccessMessage(freebie.emailCount, freebie.senderName));
+          }
           // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 3s
           scheduleSmartAutoClear();
         }}

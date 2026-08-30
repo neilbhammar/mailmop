@@ -60,6 +60,15 @@ interface DeleteConfirmModalProps {
    * Optional callback when action is successfully confirmed (not cancelled)
    */
   onSuccess?: () => void
+  /**
+   * Optional gate run immediately before the delete starts, after the user has
+   * confirmed. Resolving false ABORTS the delete and closes the modal.
+   *
+   * Used by the free-delete experiment to spend the one-off quota at the moment
+   * the user actually commits, so that cancelling costs them nothing and the
+   * atomic server-side consume is the last word on whether the delete proceeds.
+   */
+  onBeforeConfirm?: () => Promise<boolean>
 }
 
 /**
@@ -79,7 +88,8 @@ export function DeleteConfirmModal({
   senders = [],
   emailCountMap = {},
   onDeleteWithExceptions,
-  onSuccess
+  onSuccess,
+  onBeforeConfirm
 }: DeleteConfirmModalProps) {
   // Track loading state during deletion process
   const [isDeleting, setIsDeleting] = useState(false)
@@ -117,6 +127,27 @@ export function DeleteConfirmModal({
   
   // Handle the confirmation click
   const handleConfirm = async () => {
+    // Pre-confirm gate. Runs before either delete path. A false result means the
+    // delete must not happen (for example the free-delete quota was already spent
+    // by another tab), so bail out without touching the user's mail.
+    if (onBeforeConfirm) {
+      let mayProceed = false
+      try {
+        setIsDeleting(true)
+        mayProceed = await onBeforeConfirm()
+      } catch (error) {
+        console.error('[DeleteConfirmModal] onBeforeConfirm threw, aborting delete:', error)
+        mayProceed = false
+      } finally {
+        setIsDeleting(false)
+      }
+
+      if (!mayProceed) {
+        onOpenChange(false)
+        return
+      }
+    }
+
     if (onConfirm) {
       // Legacy path - use provided onConfirm function
       try {
