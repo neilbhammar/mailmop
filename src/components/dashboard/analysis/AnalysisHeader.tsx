@@ -200,8 +200,11 @@ export function AnalysisHeader({
     <div className="px-4 pt-4 pb-4 flex flex-col gap-3 shrink-0">
       {/* Header and bulk actions row — wraps on mobile so search gets its own line */}
       <div className="flex flex-wrap justify-between items-center gap-3">
-        <div className="flex items-center gap-4 sm:gap-8">
-          <h1 className="text-xl font-bold dark:text-slate-100">Sender Analysis</h1>
+        {/* On mobile the title just repeats context the user already has, and the
+            whole wrapper collapses when there is no selection so it does not leave
+            a gap-3 sized empty row above the search field. */}
+        <div className={cn("items-center gap-4 sm:gap-8", hasSelection ? "flex" : "hidden sm:flex")}>
+          <h1 className="hidden sm:block text-xl font-bold dark:text-slate-100">Sender Analysis</h1>
           
           {hasSelection && (
             <BulkActionsBar
@@ -367,10 +370,13 @@ export function AnalysisHeader({
         </div>
       </div>
 
-      {/* Analysis info row - always present */}
-      <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+      {/* Analysis info row - always present.
+          Forced onto one line: at text-sm the full string overflows a 390px
+          viewport and wrapped to two. Smaller type on mobile plus nowrap keeps it
+          to a single line, and truncate is the safety net for very narrow screens. */}
+      <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap min-w-0">
         <AnalysisTooltip />
-        <span className="pb-[2px]">| {getStatusMessage()}</span>
+        <span className="pb-[2px] truncate">| {getStatusMessage()}</span>
       </div>
     </div>
   )

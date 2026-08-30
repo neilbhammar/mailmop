@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { RefreshCw } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { logger } from '@/lib/utils/logger'
+import { cn } from '@/lib/utils'
 
 export default function ReanalyzeButton() {
   const { hasAnalysis, isAnalyzing, checkAnalysisState } = useAnalysis()
@@ -74,7 +75,18 @@ export default function ReanalyzeButton() {
   return (
     <Button
       onClick={handleReanalyze}
-      className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 dark:text-white font-medium h-9 px-3 sm:h-10 sm:px-6 sm:py-4 text-sm rounded-sm shadow-sm transition-colors"
+      className={cn(
+        "font-medium text-sm transition-colors",
+        // Mobile: a quiet text action. The solid block competed with the page
+        // title for attention on a screen where the sender table is the point.
+        "bg-transparent shadow-none h-8 px-2 rounded-md",
+        "text-blue-600 dark:text-blue-400",
+        "hover:bg-blue-50 dark:hover:bg-blue-950/40",
+        // Desktop: unchanged solid button.
+        "sm:bg-blue-600 sm:hover:bg-blue-700 sm:text-white",
+        "sm:dark:bg-blue-500 sm:dark:hover:bg-blue-600 sm:dark:text-white",
+        "sm:h-10 sm:px-6 sm:py-4 sm:rounded-sm sm:shadow-sm"
+      )}
       size="lg"
     >
       <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />

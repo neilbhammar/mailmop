@@ -130,7 +130,16 @@ export function AnalysisTooltip() {
             {isIncomplete && (
               <AlertCircle className="h-3 w-3 text-amber-500" />
             )}
-            {isAnalyzing ? `${status}` : `Last Analyzed: ${status}`}
+            {isAnalyzing ? (
+              status
+            ) : (
+              <>
+                {/* Prefix is desktop-only: on mobile it is the difference between
+                    one line and two, and the tooltip explains the rest anyway. */}
+                <span className="hidden sm:inline">Last Analyzed:&nbsp;</span>
+                {status}
+              </>
+            )}
           </span>
         </TooltipTrigger>
         <TooltipContent 
