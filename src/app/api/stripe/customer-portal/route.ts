@@ -52,7 +52,10 @@ export async function POST(req: NextRequest) {
     // Create customer portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
-      return_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mailmop.com'}/dashboard`,
+      // Non-www is the canonical host: www 308-redirects to it. Keeping a www
+      // fallback here risks bouncing users through a redirect on return from
+      // Stripe, and www URLs in third-party config are what broke the webhook.
+      return_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://mailmop.com'}/dashboard`,
     });
 
     return NextResponse.json({ url: session.url });
