@@ -1,7 +1,7 @@
 -- "One free delete" experiment: server-side quota.
 --
--- Lets a free user in the treatment arm delete one sender, once, up to a capped
--- number of emails. See docs/experiments/2026-08-free-delete-ab-test.md
+-- Lets a free user in the treatment arm delete one sender, once, however many
+-- emails that sender has. See docs/experiments/2026-08-free-delete-ab-test.md
 --
 -- The quota deliberately lives here rather than in localStorage (as the discount
 -- experiment's state does). Leaking a discount code costs a few dollars; leaking
@@ -44,8 +44,9 @@ BEGIN
     RETURN false;
   END IF;
 
-  -- Reject implausible input rather than recording it.
-  IF p_count IS NULL OR p_count <= 0 OR p_count > 500 THEN
+  -- Sanity check on the value we record. There is no upper bound: the free
+  -- delete covers one sender's worth, however large that sender is.
+  IF p_count IS NULL OR p_count <= 0 THEN
     RETURN false;
   END IF;
 

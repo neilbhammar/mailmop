@@ -3,7 +3,6 @@ import {
   assignFreeDeleteVariant,
   evaluateFreeDelete,
   freeDeleteSuccessMessage,
-  FREE_DELETE_EMAIL_CAP,
   type FreeDeleteInput,
 } from './freeDeleteExperiment'
 
@@ -73,7 +72,7 @@ describe('assignFreeDeleteVariant', () => {
 })
 
 describe('evaluateFreeDelete - the allow path', () => {
-  it('allows exactly one sender, under the cap, unused quota, treatment arm', () => {
+  it('allows exactly one sender, unused quota, treatment arm', () => {
     const d = evaluateFreeDelete(input())
     expect(d.allowed).toBe(true)
     if (d.allowed) {
@@ -83,9 +82,12 @@ describe('evaluateFreeDelete - the allow path', () => {
     }
   })
 
-  it('allows exactly at the cap boundary', () => {
-    const d = evaluateFreeDelete(input({ emailCount: FREE_DELETE_EMAIL_CAP }))
-    expect(d.allowed).toBe(true)
+  it('allows a very large single sender, since there is no cap', () => {
+    // The largest real delete operation on record is 69,294 emails. One sender's
+    // worth is an accepted giveaway; "exactly one sender" is the binding limit.
+    for (const n of [500, 5_000, 69_294, 250_000]) {
+      expect(evaluateFreeDelete(input({ emailCount: n })).allowed).toBe(true)
+    }
   })
 
   it('allows a single email', () => {
@@ -145,10 +147,6 @@ describe('evaluateFreeDelete - denials', () => {
     }
   })
 
-  it('denies one email over the cap', () => {
-    denied({ emailCount: FREE_DELETE_EMAIL_CAP + 1 }, 'over_cap')
-    denied({ emailCount: 69_294 }, 'over_cap')
-  })
 })
 
 describe('evaluateFreeDelete - precedence', () => {
@@ -235,11 +233,10 @@ describe('evaluateFreeDelete - fails closed under garbage', () => {
               expect(freeDeleteUsedAt).toBeNull()
               expect(targetSenders).toHaveLength(1)
               expect(emailCount as number).toBeGreaterThan(0)
-              expect(emailCount as number).toBeLessThanOrEqual(FREE_DELETE_EMAIL_CAP)
             }
           }
-    // 3 valid counts (1, 58, 500) x 1 quota x 1 target x 1 plan
-    expect(allowed).toBe(3)
+    // 4 valid counts (1, 58, 500, 501) x 1 quota x 1 target x 1 plan
+    expect(allowed).toBe(4)
   })
 })
 

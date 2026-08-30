@@ -9,7 +9,7 @@
  *
  * Arms (50/50, deterministic on user_id):
  *   control     - current behaviour, delete is fully gated
- *   free_delete - one delete, one sender, once, up to FREE_DELETE_EMAIL_CAP emails
+ *   free_delete - one delete, one sender, once, however many emails that sender has
  *
  * ------------------------------------------------------------------------
  * SAFETY NOTES. Read before changing anything in this file.
@@ -42,15 +42,16 @@
 
 export type FreeDeleteVariant = 'control' | 'free_delete'
 
-/**
- * Maximum emails a single free delete may remove.
+/*
+ * There is deliberately NO cap on the number of emails.
  *
- * Chosen from the real distribution of completed delete operations: median 58,
- * p75 226, p90 870. A 500 cap covers 84% of real operations, so most people get
- * the delete they actually intended, while bounding the giveaway well below the
- * ~22,000-email average inbox. It proves the product without doing the job.
+ * A cap would have been close to theatre: emailCount is supplied by the client
+ * and is only ever RECORDED, never enforced against the delete that actually
+ * runs. The delete removes whatever that sender has either way. The constraint
+ * that genuinely binds is "exactly one sender", and that IS enforced below.
+ *
+ * The business call is Neil's: one sender's worth is an acceptable giveaway.
  */
-export const FREE_DELETE_EMAIL_CAP = 500
 
 /** Salt is part of the experiment's identity. Changing it reshuffles every user. */
 const EXPERIMENT_SALT = 'free-delete-2026-08'
@@ -70,8 +71,6 @@ export type FreeDeleteDenialReason =
   | 'multiple_senders'
   /** We do not have a trustworthy email count, so we will not delete. */
   | 'unknown_count'
-  /** Sender has more emails than the cap allows. */
-  | 'over_cap'
 
 export type FreeDeleteDecision =
   | { allowed: true; variant: 'free_delete'; senderEmail: string; emailCount: number }
@@ -107,7 +106,7 @@ export function assignFreeDeleteVariant(userId: string): FreeDeleteVariant {
  * The single decision point for whether a free delete may proceed.
  *
  * Order matters and is defensive on purpose:
- *   profile -> pro -> arm -> quota -> target -> count -> cap
+ *   profile -> pro -> arm -> quota -> target -> count
  *
  * `already_pro` is checked before the arm so a Pro user never consumes quota and
  * never appears in experiment results. `quota_used` is checked before anything
@@ -137,6 +136,7 @@ export function evaluateFreeDelete(input: FreeDeleteInput): FreeDeleteDecision {
   const senderEmail = (senders[0] ?? '').trim()
   if (!senderEmail) return { allowed: false, variant, reason: 'no_target' }
 
+  // Still required, but as a sanity check on the value we record, not as a limit.
   if (
     typeof emailCount !== 'number' ||
     !Number.isFinite(emailCount) ||
@@ -144,10 +144,6 @@ export function evaluateFreeDelete(input: FreeDeleteInput): FreeDeleteDecision {
     emailCount <= 0
   ) {
     return { allowed: false, variant, reason: 'unknown_count' }
-  }
-
-  if (emailCount > FREE_DELETE_EMAIL_CAP) {
-    return { allowed: false, variant, reason: 'over_cap' }
   }
 
   return { allowed: true, variant: 'free_delete', senderEmail, emailCount }
