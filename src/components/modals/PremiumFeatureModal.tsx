@@ -13,6 +13,7 @@ import { ExternalLink, X, Trash2, BellOff, MailOpen, Ban, Tag, FilterIcon, Spark
 import { useStripeCheckout } from "@/hooks/useStripeCheckout"
 import { useState, useEffect } from "react"
 import { ManageSubscriptionModal } from "@/components/modals/ManageSubscriptionModal"
+import { buildPaywallCopy } from '@/lib/paywallCopy'
 import { usePremiumModalTracking } from "@/hooks/usePremiumModalTracking"
 
 interface PremiumFeatureModalProps {
@@ -44,6 +45,16 @@ interface PremiumFeatureModalProps {
    * Number of selected senders (for messaging)
    */
   senderCount: number
+  /**
+   * Total emails across the targeted senders, when known. Enables the quantified
+   * delete headline. Omit and the modal falls back to generic copy.
+   */
+  emailCount?: number | null
+  /**
+   * Display name of the sender, when the action targets exactly one. Ignored for
+   * multi-sender actions so a stale value cannot name the wrong sender.
+   */
+  senderName?: string | null
 }
 
 /**
@@ -55,7 +66,9 @@ export function PremiumFeatureModal({
   onOpenChange,
   featureName,
   onViewInGmail,
-  senderCount
+  senderCount,
+  emailCount,
+  senderName
 }: PremiumFeatureModalProps) {
   const { redirectToCheckout, isLoading: isCheckoutLoading } = useStripeCheckout()
   const [showManageSubscriptionModal, setShowManageSubscriptionModal] = useState(false)
@@ -68,6 +81,13 @@ export function PremiumFeatureModal({
       trackPremiumModalOpen(featureName)
     }
   }, [open, featureName, trackPremiumModalOpen])
+
+  /*
+   * Headline and subtitle. Quantified for delete when we have real numbers
+   * (85% of paywall impressions and 100% of converters are delete), generic
+   * everywhere else. See src/lib/paywallCopy.ts.
+   */
+  const copy = buildPaywallCopy({ feature: featureName, senderCount, emailCount, senderName })
 
   // Format feature name for display
   const formattedFeatureName = featureName
@@ -126,12 +146,12 @@ export function PremiumFeatureModal({
           
           {/* Main Title - Icon removed, "Use" capitalized */}
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2 mt-4 sm:mt-6 flex items-center justify-center">
-            Upgrade to Use {formattedFeatureName}
+            {copy.title}
           </h2>
 
           {/* Subtitle/Description - Wider max-width */}
           <p className="text-gray-600 dark:text-slate-400 text-sm sm:text-base md:text-lg mb-5 sm:mb-8 max-w-lg">
-            Instantly unlock <strong>{formattedFeatureName}</strong> and our full suite of one-click actions to save hundreds of hours. Cheaper than a donut.
+            {copy.subtitle}
           </p>
 
           {/* Visual Showcase: Removed 'group' from here */}

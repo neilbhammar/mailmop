@@ -131,6 +131,34 @@ export default function AnalysisView() {
   
   // Store the currently active single sender email for view in Gmail from premium modal
   const [activeSingleSender, setActiveSingleSender] = useState<string | null>(null)
+  /*
+   * Senders the pending gated action targets, captured at the call site.
+   * Derived rather than inferred from selectedEmails/activeSingleSender because
+   * those can disagree (a bulk action over exactly one selection would otherwise
+   * pick up a stale activeSingleSender and name the wrong sender in the paywall).
+   */
+  const [paywallTarget, setPaywallTarget] = useState<string[]>([])
+
+  /*
+   * Real numbers for the delete paywall headline. Falls back to nulls whenever we
+   * cannot trust them, and paywallCopy then renders the generic copy.
+   */
+  const paywallNumbers = useMemo(() => {
+    if (paywallTarget.length === 0) return { emailCount: null as number | null, senderName: null as string | null }
+
+    const emailCount = paywallTarget.reduce((total, email) => {
+      const cached = emailCountMap[email]
+      if (cached !== undefined) return total + cached
+      return total + (allSenders.find(s => s.email === email)?.count ?? 0)
+    }, 0)
+
+    const senderName =
+      paywallTarget.length === 1
+        ? (allSenders.find(s => s.email === paywallTarget[0])?.name || paywallTarget[0] || null)
+        : null
+
+    return { emailCount: emailCount > 0 ? emailCount : null, senderName }
+  }, [paywallTarget, emailCountMap, allSenders])
 
   // Add state for mark as read functionality
   const [isMarkAsReadModalOpen, setIsMarkAsReadModalOpen] = useState(false)
@@ -661,6 +689,7 @@ export default function AnalysisView() {
     handleOverlappingActions();
     
     // checkFeatureAccess will open the premium modal if needed and set internal state
+    setPaywallTarget(Array.from(selectedEmails));
     if (checkFeatureAccess('delete', selectedEmails.size)) {
       // Store emails for confirmation modal
       setEmailsToDelete(Array.from(selectedEmails));
@@ -680,6 +709,7 @@ export default function AnalysisView() {
     setEmailCountMap(prev => ({ ...prev, [email]: currentCount }));
 
     // checkFeatureAccess will open premium modal if needed
+    setPaywallTarget([email]);
     if (checkFeatureAccess('delete', 1)) {
       // Access granted, open delete confirmation modal
       setEmailsToDelete([email]);
@@ -1165,6 +1195,8 @@ export default function AnalysisView() {
         onOpenChange={setIsPremiumModalOpen}
         featureName={currentFeature || 'action'}
         senderCount={itemCount}
+        emailCount={paywallNumbers.emailCount}
+        senderName={paywallNumbers.senderName}
         onViewInGmail={handleViewInGmail}
       />
       
