@@ -12,6 +12,7 @@ export type ActionType =
   | 'view'
   | 'preview'
   | 'premium_attempt'
+  | 'discount_experiment_exposure'
   | 'other'
   | 'unsubscribe';
 

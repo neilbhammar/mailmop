@@ -14,6 +14,16 @@ import { useState, useEffect } from "react"
 import { toast } from 'sonner'
 import Confetti from 'react-confetti'
 import { useWindowSize } from '@react-hook/window-size'
+import {
+  autoRenewStateOf,
+  isRowClickable,
+  nextStageOnDisableClick,
+  shouldCallDisable,
+  resetStage,
+  disableLinkLabel,
+  disableConfirmHelp,
+  type DisableStage,
+} from '@/lib/autoRenewUi'
 
 interface ManageSubscriptionModalProps {
   open: boolean
@@ -29,6 +39,8 @@ export function ManageSubscriptionModal({
   const { profile, session } = useAuth()
   const { redirectToCheckout, isLoading: isCheckoutLoading } = useStripeCheckout()
   const [isUpdating, setIsUpdating] = useState(false)
+  // Two-step guard on turning auto-renewal OFF. See src/lib/autoRenewUi.ts for why.
+  const [disableStage, setDisableStage] = useState<DisableStage>(resetStage())
   const [showConfetti, setShowConfetti] = useState(showConfettiOnMount)
   const [windowWidth, windowHeight] = useWindowSize()
   const [isOpeningPortal, setIsOpeningPortal] = useState(false)
@@ -40,6 +52,12 @@ export function ManageSubscriptionModal({
       setShowConfetti(true);
     }
   }, [showConfettiOnMount]);
+
+  // Disarm the "turn off auto-renewal" confirm whenever the modal opens or closes,
+  // so a confirm armed in one session can never fire in the next one.
+  useEffect(() => {
+    setDisableStage(resetStage())
+  }, [open])
 
   // Debug logging for profile changes
   useEffect(() => {
@@ -243,56 +261,113 @@ export function ManageSubscriptionModal({
               </div>
 
               {/* Auto-Renewal Section */}
-              {isPro && !isExpired && (
-                <div className="border border-none rounded-lg p-0">
-                  <div className="flex items-center space-x-3 mb-3">
-                    <RotateCcw className="h-4 w-4 text-slate-400" />
-                    <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                      Auto-Renewal {profile?.cancel_at_period_end === false ? 'Enabled' : profile?.plan_expires_at ? `Disabled | Expires on ${planExpiryDate}` : 'Disabled'}
-                    </span>
-                  </div>
-        
-        <button 
-                    onClick={() => handleAutoRenewToggle(profile?.cancel_at_period_end !== false)}
-                    disabled={isUpdating}
-                    className="w-full text-left group disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-600 group-hover:border-slate-300 dark:group-hover:border-slate-500 transition-all duration-200 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 group-disabled:hover:border-slate-200 dark:group-disabled:hover:border-slate-600 group-disabled:hover:bg-transparent">
-                      <div className="flex-1">
-                        <p className="text-sm text-slate-900 dark:text-slate-100 mb-1">
-                          {isUpdating ? (
-                            profile?.cancel_at_period_end !== false 
-                              ? 'Enabling auto-renewal...'
-                              : 'Disabling auto-renewal...'
-                          ) : (
-                            profile?.cancel_at_period_end === false 
-                              ? 'Auto-renewal is enabled'
-                              : 'Click to enable auto-renewal'
-                          )}
-                        </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {isUpdating ? (
-                            'Please wait while we update your subscription...'
-                          ) : (
-                            profile?.cancel_at_period_end === false 
-                              ? 'Your subscription will automatically renew each year'
-                              : 'Never worry about your subscription expiring again'
-                          )}
-                        </p>
-                      </div>
-                      <div className="ml-3">
-                        {isUpdating ? (
-                          <RotateCcw className="h-5 w-5 text-slate-400 animate-spin" />
-                        ) : profile?.cancel_at_period_end === false ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500" />
-                        ) : (
-                          <div className="w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-600" />
-                        )}
-                      </div>
+              {isPro && !isExpired && (() => {
+                const autoRenewState = autoRenewStateOf(profile?.cancel_at_period_end)
+                const rowClickable = isRowClickable(autoRenewState)
+
+                return (
+                  <div className="border border-none rounded-lg p-0">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <RotateCcw className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                        Auto-Renewal {autoRenewState === 'enabled' ? 'Enabled' : profile?.plan_expires_at ? `Disabled | Expires on ${planExpiryDate}` : 'Disabled'}
+                      </span>
                     </div>
-                  </button>
-                </div>
-              )}
+
+                    {rowClickable ? (
+                      /* OFF -> ON stays a single friendly click. */
+                      <button
+                        onClick={() => handleAutoRenewToggle(true)}
+                        disabled={isUpdating}
+                        className="w-full text-left group disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-600 group-hover:border-slate-300 dark:group-hover:border-slate-500 transition-all duration-200 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 group-disabled:hover:border-slate-200 dark:group-disabled:hover:border-slate-600 group-disabled:hover:bg-transparent">
+                          <div className="flex-1">
+                            <p className="text-sm text-slate-900 dark:text-slate-100 mb-1">
+                              {isUpdating ? 'Enabling auto-renewal...' : 'Click to enable auto-renewal'}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              {isUpdating
+                                ? 'Please wait while we update your subscription...'
+                                : 'Never worry about your subscription expiring again'}
+                            </p>
+                          </div>
+                          <div className="ml-3">
+                            {isUpdating ? (
+                              <RotateCcw className="h-5 w-5 text-slate-400 animate-spin" />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-600" />
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ) : (
+                      /*
+                       * ON -> OFF is deliberately NOT a big button. This row is a status
+                       * display; turning renewal off lives in the small link underneath and
+                       * takes a second, explicit click.
+                       */
+                      <div>
+                        <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-600">
+                          <div className="flex-1">
+                            <p className="text-sm text-slate-900 dark:text-slate-100 mb-1">
+                              Auto-renewal is on
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              {planExpiryDate
+                                ? `Renews automatically on ${planExpiryDate}`
+                                : 'Your subscription renews automatically each year'}
+                            </p>
+                          </div>
+                          <div className="ml-3">
+                            {isUpdating ? (
+                              <RotateCcw className="h-5 w-5 text-slate-400 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500" />
+                            )}
+                          </div>
+                        </div>
+
+                        {disableStage === 'confirming' && (
+                          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                            {disableConfirmHelp(planExpiryDate || null)}
+                          </p>
+                        )}
+
+                        <div className="mt-2 flex items-center gap-3">
+                          <button
+                            onClick={() => {
+                              if (shouldCallDisable(disableStage)) {
+                                handleAutoRenewToggle(false)
+                                setDisableStage(resetStage())
+                                return
+                              }
+                              setDisableStage(nextStageOnDisableClick(disableStage))
+                            }}
+                            disabled={isUpdating}
+                            className={`text-xs underline underline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                              disableStage === 'confirming'
+                                ? 'text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300'
+                                : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+                            }`}
+                          >
+                            {isUpdating ? 'Updating...' : disableLinkLabel(disableStage)}
+                          </button>
+
+                          {disableStage === 'confirming' && !isUpdating && (
+                            <button
+                              onClick={() => setDisableStage(resetStage())}
+                              className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                            >
+                              Never mind
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
 
               {/* Status Messages */}
               {!isPro && (

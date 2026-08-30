@@ -21,3 +21,10 @@ verify_jwt = false
 [functions.nightly-plan-check]
 # Disable JWT verification for internal scheduled calls
 verify_jwt = false 
+[functions.send-activation-nudge-email]
+# Disable JWT verification for internal pg_cron calls
+verify_jwt = false
+
+[functions.send-paywall-nudge-email]
+# Disable JWT verification for internal pg_cron calls
+verify_jwt = false
