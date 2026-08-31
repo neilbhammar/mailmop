@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthProvider';
 import { toast } from 'sonner';
 import { createActionLog } from '@/supabase/actions/logAction';
 import { ActionType } from '@/types/actions';
+import { buildGmailSearchUrl, senderQuery, multiSenderQuery } from '@/lib/gmailUrl';
 
 /**
  * Hook to handle the "View in Gmail" and "Preview Filtered Emails" functionality
@@ -26,7 +27,9 @@ export function useViewInGmail() {
       return user.email;
     }
     console.error("[ViewInGmail] Critical: User email is not available. Cannot construct Gmail link.");
-    return ''; // Fallback to empty string, which likely defaults to /u/0/
+    // Empty string is never used to build a link — every caller below bails out
+    // on a falsy value rather than opening an unscoped Gmail tab.
+    return '';
   }, [user?.email]); // Dependency is the user's email
   
   /**
@@ -65,8 +68,7 @@ export function useViewInGmail() {
     }
     
     await logGmailAction('view', 1);
-    const searchQuery = `from:${encodeURIComponent(email)}`;
-    window.open(`https://mail.google.com/mail/u/${userEmailForLink}/#search/${searchQuery}`, '_blank');
+    window.open(buildGmailSearchUrl(userEmailForLink, senderQuery(email)), '_blank');
   }, [determineUserEmailForGmailLink, logGmailAction]);
   
   /**
@@ -87,8 +89,7 @@ export function useViewInGmail() {
     }
         
     await logGmailAction('view', emails.length);
-    const searchQuery = emails.map(senderEmail => `from:${encodeURIComponent(senderEmail)}`).join(' OR ');
-    window.open(`https://mail.google.com/mail/u/${userEmailForLink}/#search/${searchQuery}`, '_blank');
+    window.open(buildGmailSearchUrl(userEmailForLink, multiSenderQuery(emails)), '_blank');
   }, [determineUserEmailForGmailLink, logGmailAction]);
   
   /**
@@ -109,9 +110,7 @@ export function useViewInGmail() {
     }
     
     await logGmailAction('preview', 1);
-    // Properly encode the entire filter query for URL usage
-    const encodedQuery = encodeURIComponent(filterQuery);
-    window.open(`https://mail.google.com/mail/u/${userEmailForLink}/#search/${encodedQuery}`, '_blank');
+    window.open(buildGmailSearchUrl(userEmailForLink, filterQuery), '_blank');
   }, [determineUserEmailForGmailLink, logGmailAction]);
   
   return {
