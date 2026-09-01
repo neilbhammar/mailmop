@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import {
   assignFreeDeleteVariant,
   evaluateFreeDelete,
+  shouldRecordDenial,
   freeDeleteSuccessMessage,
   markLocallyConsumed,
   wasLocallyConsumed,
@@ -240,6 +241,54 @@ describe('evaluateFreeDelete - fails closed under garbage', () => {
           }
     // 4 valid counts (1, 58, 500, 501) x 1 quota x 1 target x 1 plan
     expect(allowed).toBe(4)
+  })
+})
+
+describe('shouldRecordDenial - the control arm must have a denominator', () => {
+  it('records a control-arm denial, or the experiment has no denominator', () => {
+    const decision = evaluateFreeDelete(input({ userId: CONTROL_ID }))
+    expect(decision.allowed).toBe(false)
+    expect(shouldRecordDenial(decision)).toBe(true)
+  })
+
+  it('records every treatment denial', () => {
+    const denials: FreeDeleteInput[] = [
+      { freeDeleteUsedAt: '2026-08-30T00:00:00Z' },
+      { targetSenders: [] },
+      { targetSenders: ['a@b.com', 'c@d.com'] },
+      { emailCount: 0 },
+    ].map((over) => input(over))
+
+    for (const i of denials) {
+      const decision = evaluateFreeDelete(i)
+      expect(decision.allowed).toBe(false)
+      expect(shouldRecordDenial(decision)).toBe(true)
+    }
+  })
+
+  it('never records a Pro user, who is outside the experiment', () => {
+    for (const userId of [TREATMENT_ID, CONTROL_ID]) {
+      const decision = evaluateFreeDelete(input({ userId, plan: 'pro' }))
+      expect(shouldRecordDenial(decision)).toBe(false)
+    }
+  })
+
+  it('never records without a user id, since there is nothing to attribute', () => {
+    expect(shouldRecordDenial(evaluateFreeDelete(input({ userId: null })))).toBe(false)
+  })
+
+  it('records nothing on the allow path, where the grant is logged at consume', () => {
+    const decision = evaluateFreeDelete(input())
+    expect(decision.allowed).toBe(true)
+    expect(shouldRecordDenial(decision)).toBe(false)
+  })
+
+  it('records both arms at the same rate for the same denial', () => {
+    // The property that makes the comparison valid: whether a denial is recorded
+    // depends on being in the population, never on which arm the user landed in.
+    const treatment = evaluateFreeDelete(input({ userId: TREATMENT_ID, targetSenders: [] }))
+    const control = evaluateFreeDelete(input({ userId: CONTROL_ID, targetSenders: [] }))
+    expect(shouldRecordDenial(treatment)).toBe(shouldRecordDenial(control))
   })
 })
 

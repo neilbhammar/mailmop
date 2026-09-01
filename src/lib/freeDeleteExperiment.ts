@@ -180,6 +180,25 @@ export function evaluateFreeDelete(input: FreeDeleteInput): FreeDeleteDecision {
 }
 
 /**
+ * Should a denied decision be recorded as an experiment exposure?
+ *
+ * BOTH ARMS MUST BE RECORDED. A control user who is turned away at the delete
+ * button is the denominator the treatment arm is measured against; without them
+ * the results read as "100% of exposed users were treatment", which is what the
+ * first version of this experiment actually produced.
+ *
+ * A null variant means the decision never reached the arm check: either there is
+ * no user id, or the user is Pro. Neither is in the experiment population, and a
+ * Pro user in particular must never appear in results, so those record nothing.
+ *
+ * Grants are recorded separately, at the moment the quota is actually spent, so
+ * an allowed decision records nothing here.
+ */
+export function shouldRecordDenial(decision: FreeDeleteDecision): boolean {
+  return !decision.allowed && decision.variant !== null
+}
+
+/**
  * Copy shown after a successful free delete. Honest about what happened and what
  * it costs to keep going, without pretending the freebie was a permanent feature.
  */
