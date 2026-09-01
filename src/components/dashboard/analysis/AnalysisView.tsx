@@ -15,7 +15,7 @@ import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
 import { DeleteWithExceptionsModal } from "@/components/modals/DeleteWithExceptionsModal"
 import { PremiumFeatureModal } from "@/components/modals/PremiumFeatureModal"
 import { useFreeDelete } from "@/hooks/useFreeDelete"
-import { freeDeleteSuccessMessage } from "@/lib/freeDeleteExperiment"
+import { freeDeleteSuccessMessage, shouldRecordDenial } from "@/lib/freeDeleteExperiment"
 import { ReauthDialog } from "@/components/modals/ReauthDialog"
 import { useSenderData, TableSender } from '@/hooks/useSenderData'
 import { RuleGroup } from '@/lib/gmail/buildQuery'
@@ -742,7 +742,13 @@ export default function AnalysisView() {
       setIsDeleteModalOpen(true);
       return;
     }
-    if (freeDecision.variant === 'free_delete') {
+    /*
+     * Record the denial in BOTH arms. A control user turned away here is the
+     * denominator the treatment arm is measured against; logging only treatment
+     * (which this did until 2026-09-01) makes the experiment unreadable.
+     * shouldRecordDenial keeps Pro users out of the results.
+     */
+    if (shouldRecordDenial(freeDecision)) {
       void recordFreeDeleteExposure(`denied_${freeDecision.reason}`);
     }
 
