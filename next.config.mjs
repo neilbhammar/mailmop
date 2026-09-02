@@ -21,6 +21,22 @@ const nextConfig = {
     ],
   },
   
+
+  // Consolidate near-duplicate posts so link equity and crawl budget go to one URL
+  // per topic. The old slugs 301 to the surviving guide.
+  async redirects() {
+    const merged = {
+      '/blog/privacy-focused-gmail-cleanup-tools-2025': '/blog/privacy-focused-gmail-cleanup-tools-2026',
+      '/blog/how-to-unsubscribe-gmail-2025': '/blog/how-to-unsubscribe-gmail-2026',
+      '/blog/how-to-unsubscribe-from-gmail': '/blog/how-to-unsubscribe-gmail-2026',
+      '/blog/best-gmail-cleaning-tools-2025': '/blog/best-gmail-cleaning-tools-2026',
+      '/blog/free-up-gmail-storage-2025': '/blog/gmail-storage-full',
+      '/blog/how-to-delete-all-emails-gmail-2025': '/blog/how-to-mass-delete-emails-gmail-2026',
+      '/blog/unroll-me-vs-mailmop-2025': '/blog/unroll-me-alternative',
+    }
+    return Object.entries(merged).map(([source, destination]) => ({ source, destination, permanent: true }))
+  },
+
   async headers() {
     // Determine allowed origins based on environment
     const allowedOrigins = process.env.NODE_ENV === 'production' 

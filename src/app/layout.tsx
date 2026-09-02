@@ -21,8 +21,8 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'MailMop - Clean Your Gmail Inbox in Minutes',
-  description: 'MailMop helps you declutter your Gmail inbox by analyzing thousands of emails and organizing them by sender. Delete unwanted emails in bulk, unsubscribe from newsletters, and reclaim your inbox in minutes.',
+  title: 'MailMop: Gmail Cleaner. Bulk Delete and Unsubscribe by Sender',
+  description: 'MailMop is a privacy-first Gmail cleanup tool. It analyzes your inbox in your browser, ranks every sender by email count, and lets you bulk delete, unsubscribe, and block in one click. Open source, CASA verified, free to start.',
   keywords: ['Gmail', 'email management', 'inbox cleanup', 'email organization', 'unsubscribe', 'bulk delete'],
   authors: [{ name: 'MailMop Team' }],
   creator: 'MailMop',
@@ -37,8 +37,8 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: 'MailMop - Clean Your Gmail Inbox in Minutes',
-    description: 'MailMop helps you declutter your Gmail inbox by analyzing thousands of emails and organizing them by sender. Delete unwanted emails in bulk, unsubscribe from newsletters, and reclaim your inbox in minutes.',
+    title: 'MailMop: Gmail Cleaner. Bulk Delete and Unsubscribe by Sender',
+    description: 'MailMop is a privacy-first Gmail cleanup tool. It analyzes your inbox in your browser, ranks every sender by email count, and lets you bulk delete, unsubscribe, and block in one click. Open source, CASA verified, free to start.',
     url: 'https://mailmop.com',
     siteName: 'MailMop',
     images: [
@@ -54,8 +54,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MailMop - Clean Your Gmail Inbox in Minutes',
-    description: 'MailMop helps you declutter your Gmail inbox by analyzing thousands of emails and organizing them by sender. Delete unwanted emails in bulk, unsubscribe from newsletters, and reclaim your inbox in minutes.',
+    title: 'MailMop: Gmail Cleaner. Bulk Delete and Unsubscribe by Sender',
+    description: 'MailMop is a privacy-first Gmail cleanup tool. It analyzes your inbox in your browser, ranks every sender by email count, and lets you bulk delete, unsubscribe, and block in one click. Open source, CASA verified, free to start.',
     images: ['/social-share.png?v=2'],
     creator: '@mailmop',
     site: '@mailmop',

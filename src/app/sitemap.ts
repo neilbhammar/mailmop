@@ -8,7 +8,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Create sitemap entries for blog posts
   const blogEntries = blogPosts.map((post) => ({
     url: `https://mailmop.com/blog/${post.slug}`,
-    lastModified: new Date(post.date),
+    lastModified: new Date(post.updated || post.date),
     changeFrequency: 'monthly' as const,
     priority: post.featured ? 0.8 : 0.6,
   }))

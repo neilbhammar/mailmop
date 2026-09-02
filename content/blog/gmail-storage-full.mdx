@@ -1,129 +1,185 @@
 ---
-title: "Gmail Storage Full? Here's How to Free Up Space in 2026"
-description: "Gmail storage full? Here's exactly how to free up space fast. Find large attachments, bulk-delete promotions, empty Trash, and stop your 15GB filling up again."
+title: "Gmail Storage Full? How to Free Up Space in 2026 (Step by Step)"
+description: "Gmail storage full? Here is exactly how to free up space: the searches that find your biggest emails, how to delete thousands at once, why Trash matters, and how to stop the 15GB from filling up again."
 date: "2025-05-20"
-updated: "2026-06-22"
-author: "MailMop"
+updated: "2026-09-02"
+author: "Neil Bhammar"
 tags: ["gmail-storage", "email-cleanup", "storage-management"]
 featured: false
 faqs:
   - question: "Why is my Gmail storage full?"
-    answer: "Your 15GB of free Google storage is shared across Gmail, Google Drive, and Google Photos. It usually fills because of large email attachments, years of promotional emails with embedded images, Google Photos backups, and files others have shared with you (which count against your quota). Large attachments are almost always the biggest single cause."
-  - question: "How do I free up Gmail storage immediately?"
-    answer: "Search has:attachment larger:10M to find big attachments, delete the ones you don't need, then empty Trash to reclaim the space. Next, delete old promotions with category:promotions older_than:1m. Emptying Trash is the step most people miss: until you do, deleted email still counts against your storage."
+    answer: "Your free 15GB is shared across Gmail, Google Drive, and Google Photos, so any of the three can fill it. Inside Gmail, attachments are almost always the cause. A plain text email is usually under 100KB, so even 10,000 of them is well under 1GB, while a single video or presentation can be 20MB or more. Check the breakdown at one.google.com/storage to see which product is using the space."
   - question: "Does deleting emails free up Gmail storage?"
-    answer: "Only after you empty Trash. Deleted emails stay in Trash for 30 days and continue to count against your 15GB quota until they're permanently removed. Delete, then empty Trash, to actually free space."
-  - question: "How do I stop Gmail storage from filling up again?"
-    answer: "Unsubscribe from newsletters you never read so they stop arriving, set up filters to auto-archive or delete low-value mail, and do a quick monthly pass on large attachments. A tool like MailMop can rank senders by how much storage they use so you can clear the worst offenders in minutes."
+    answer: "Only after you empty Trash. Deleting moves an email to Trash, where it keeps counting against your storage for up to 30 days. Open Trash and click Empty Trash now to reclaim the space. The storage meter can take up to 24 hours to update after that."
+  - question: "Does archiving emails free up storage?"
+    answer: "No. Archiving removes an email from your inbox view but keeps it in All Mail, and it still counts toward your 15GB. Archive things you want to keep. Delete things you want to stop paying for in storage."
+  - question: "What happens when Gmail storage is completely full?"
+    answer: "You stop being able to send or receive email. Senders get a bounce message saying your mailbox is full. Google Drive uploads and Google Photos backups also stop. If an account stays over its limit for two years, Google's policy allows it to delete content across Gmail, Drive, and Photos, so it is worth fixing before it gets to that point."
+  - question: "How do I find the biggest emails in Gmail?"
+    answer: "Type larger:10M into the Gmail search bar. That returns every email over 10MB, which is where most of the space usually is. Start higher with larger:25M to see the very largest first, then work down to larger:5M. Add has:attachment to limit results to emails with files attached."
+  - question: "Do Spam and Trash count toward Gmail storage?"
+    answer: "Yes. Emails sitting in Spam and Trash count until they are permanently deleted. Both folders empty themselves automatically after 30 days, but you can clear them immediately from the Spam and Trash pages."
+  - question: "Can I free up Gmail storage from my phone?"
+    answer: "Partly. The Gmail app lets you search and delete, but it has no select all matching conversations option, so you can only clear one screen of emails at a time. For a big cleanup, use Gmail in a desktop browser, or use a tool like MailMop in your phone's browser to delete by sender in bulk."
 ---
 
-# Gmail Storage Full? Here's How to Free Up Space in 2026
+# Gmail Storage Full? How to Free Up Space in 2026
 
-That dreaded "Gmail storage full" notification just popped up, and now you can't send or receive anything. Sound familiar?
+The "storage full" warning tends to show up at the worst time: someone is trying to send you something, or you are waiting on a password reset, and Gmail has quietly stopped accepting mail. The fix is not complicated, but most people do it in the slowest possible order (deleting recent emails one at a time) and then wonder why the number barely moves.
 
-You're definitely not alone. Gmail's 15GB limit is shared across Google Drive, Photos, and Gmail, and millions of people hit the wall every year. The average person racks up about 8,000 emails a year, and promotional emails with embedded images chew through space fast.
+Here is the short version, then the full walkthrough.
 
-Here's the good part: **you can free up real space in under 30 minutes** without losing anything you actually need. I'll walk you through it.
+**Quick answer: how to free up Gmail storage**
 
-## Why Gmail Storage Fills Up So Fast
+1. **Empty Spam and Trash.** Both count against your quota.
+2. Search **`larger:10M`** and delete the big attachments you do not need. This is where the space is.
+3. Search **`category:promotions older_than:1m`**, select all matching conversations, delete.
+4. Find your highest volume senders and delete them in bulk (by sender, not by email).
+5. **Empty Trash again.** Nothing is freed until you do.
 
-Your 15GB vanishes quicker than you'd think, thanks to:
+Most inboxes recover several gigabytes in under 20 minutes with just steps 1, 2, and 5.
 
-**Large attachments.** That presentation from 2019 is still sitting in your inbox at 25MB.
-**Promotional emails.** Marketing emails with embedded images run 2-5MB each.
-**Google Photos backups.** High-res photos sync to your Google account automatically.
-**Shared Drive files.** Files other people share with you count against YOUR quota (yes, really).
+## What "storage full" actually means
 
-The biggest reason? Most people never delete anything, so it all just piles up year after year.
+Every free Google account gets **15GB**, shared across three products: Gmail, Google Drive, and Google Photos. If any one of them balloons, all three run out of room at the same time. So the first thing to check is which product is using the space.
 
-## The Fastest Ways to Free Up Space
+Go to [one.google.com/storage](https://one.google.com/storage). You will see a bar broken down by Gmail, Drive, and Photos. If Gmail is the biggest slice, keep reading. If Photos is (very common since 2021, when new photo uploads started counting toward the quota), jump to the Drive and Photos section near the end.
 
-### 1. Hunt Down Large Attachments (Biggest Impact)
+When the account is full:
 
-This one search will probably free up 2-5GB in minutes:
+- You **cannot receive** new email. Senders get a bounce saying your mailbox is over quota.
+- You **cannot send** email either, in most cases.
+- Drive uploads and Photos backups stop.
+- If the account stays over its limit for **two years**, Google's policy allows it to delete your content across Gmail, Drive, and Photos.
 
-**Search:** `has:attachment larger:10M`
+That last point is the reason to fix this properly rather than deleting just enough to get under the line.
 
-This pulls up emails with attachments over 10MB. You'll be surprised what's hiding in there: old presentations, videos people sent you, massive PDFs you downloaded once and forgot.
+## Where the space really goes
 
-**Pro tip:** Start with `larger:25M` to grab the biggest space hogs first, then work your way down.
+Two facts that change how you should clean up:
 
-**Don't forget:** Empty your Trash afterward, or those emails still count against your storage.
+**Email count is not the problem. Attachments are.** A normal email without attachments is usually 20KB to 100KB. Ten thousand of them is under 1GB. Meanwhile a single video someone sent you, a PowerPoint deck, or a scanned PDF can be 10MB to 25MB (Gmail's attachment limit). A few dozen of those are worth more than every newsletter you have ever received.
 
-### 2. Nuke Promotional Emails
+**A handful of senders account for most of the volume.** In MailMop's own usage data across 16 million analyzed emails, the median inbox holds about 12,000 messages, and roughly 1 in 7 of the senders people choose to delete has more than 1,000 emails on its own. You do not have a clutter problem spread evenly across your contacts. You have a few senders that have been quietly piling up for years.
 
-Daily deals and newsletters add up fast. Here's the nuclear option:
+So the fastest order is: big attachments first, then bulk delete by category and sender, then everything else.
 
-**Search:** `category:promotions older_than:30d`
+## Step 1: Empty Spam and Trash
 
-This finds promotional emails older than 30 days. Unless you're planning to revisit a month-old sale announcement (you're not), delete them all.
+Start here because it is free space you already decided you do not want.
 
-**Even faster:** Select all and delete. Gmail's promotions filter is pretty accurate.
+- Open **Spam** in the left sidebar, click **Delete all spam messages now**.
+- Open **Trash**, click **Empty Trash now**.
 
-### 3. Clear Out Ancient Emails
+Both folders auto-clear after 30 days, but the stuff sitting in them right now is still counted. If you have been deleting emails for the last few days trying to fix this, Trash might be holding everything you thought you got rid of.
 
-**Search:** `older_than:2y`
+## Step 2: Delete the largest emails
 
-Be honest. When did you last need an email from 2022? Archive anything important, then delete the rest. Those old Slack notifications and meeting reminders are just taking up room.
+This is the single highest impact step. Paste these into the Gmail search bar, one at a time, from the top down:
 
-## Advanced Gmail Storage Management
+| Search | What it finds |
+|---|---|
+| `larger:25M` | Emails at or near Gmail's attachment limit. The worst offenders. |
+| `larger:10M` | The next tier. Usually a few dozen to a few hundred results. |
+| `larger:5M has:attachment` | Big attachments below the 10MB line. |
+| `filename:mp4 OR filename:mov OR filename:zip` | Videos and archives regardless of size. |
+| `in:sent larger:5M` | Things you sent. People forget that Sent counts too. |
+| `has:attachment older_than:2y larger:2M` | Old files you have almost certainly saved elsewhere or no longer need. |
 
-### Use Gmail's Storage Management Tool
+For each search:
 
-Google has a built-in storage tool:
+1. Skim the list. Anything you need, open it and download the attachment first (or save it to Drive, which usually costs the same storage, so download to your computer if the goal is freeing space).
+2. Click the **checkbox** at the top left of the list to select everything on the page.
+3. If a banner appears saying **"Select all conversations that match this search"**, click it. Without this, Gmail only selects the 50 or 100 emails on the current page.
+4. Click the **trash icon**.
 
-1. Go to [Google One Storage](https://one.google.com/storage)
-2. Click "Free up account storage"
-3. Review the suggested items to delete
-4. Bulk delete what you don't need
+You will usually find old project files, someone's vacation video, installers, and PDFs you opened once. This step alone often recovers 2GB to 5GB.
 
-### Organize with Labels and Filters
+## Step 3: Bulk delete by category and age
 
-Instead of deleting everything:
+Gmail already sorts incoming mail into categories, and those categories double as search filters. These clear thousands of low value emails in one action each:
 
-- Create labels for important emails
-- Set up filters to sort incoming mail automatically
-- Archive emails instead of leaving them in your inbox
+```
+category:promotions older_than:1m
+category:social older_than:3m
+category:updates older_than:1y
+category:forums older_than:6m
+```
 
-## When to Consider Paid Storage
+Same routine: search, checkbox, "Select all conversations that match," delete.
 
-If you're regularly over 15GB:
+Two refinements worth knowing:
 
-- **Google One:** starts at $1.99/month for 100GB
-- **Business accounts:** Google Workspace for unlimited storage
-- **Alternative email providers:** some offer more free storage
+- Add `-is:starred` to any search to protect anything you starred. Example: `category:promotions older_than:1m -is:starred`.
+- Add `-from:` to exclude a sender you want to keep. Example: `category:updates older_than:1y -from:mybank.com`.
 
-## Prevent Future Storage Issues
+If you would rather go by date than category, `older_than:2y` and `before:2023/01/01` both work. Be honest about whether you will ever open those.
 
-### Set Up Automatic Cleanup
+## Step 4: Delete by sender
 
-1. **Enable auto-delete:** set Trash to clear after 30 days
-2. **Unsubscribe regularly:** use tools like MailMop to bulk unsubscribe
-3. **Download attachments:** save important files to local storage
+Categories catch a lot, but the biggest single wins usually come from individual senders: a job board that emailed you daily for four years, a retailer you bought from once, a notification address from an app you no longer use.
 
-### Regular Maintenance Schedule
+To do this manually, search `from:` followed by the address, select all matching conversations, and delete. Gmail's search bar will suggest addresses as you type. The problem is knowing *which* senders to search for. Gmail gives you no list of who emails you most.
 
-- **Weekly:** delete promotional emails and clear Trash
-- **Monthly:** review and delete large attachments
-- **Quarterly:** organize with labels and archive old emails
+That is the part [MailMop](/) automates. It scans your inbox in your browser and returns a single list of every sender, ranked by how many emails they have sent you, with a delete button next to each. You work down the list and clear the giants. There is a fuller walkthrough in [how to delete all emails from one sender in Gmail](/blog/delete-emails-from-one-sender-gmail).
 
-## The MailMop Solution
+## Step 5: Empty Trash again, then verify
 
-Manual cleanup works, but it eats your time. MailMop scans your whole inbox and flags:
+Everything you deleted in steps 2 through 4 is now sitting in Trash and still counted. Open **Trash** and click **Empty Trash now**.
 
-- Emails taking up the most space
-- Subscription emails you can safely drop
-- Duplicate and near-duplicate emails
-- Old emails worth archiving or deleting
+Then check [one.google.com/storage](https://one.google.com/storage). If the number has not moved, do not panic. Google says the storage meter can take **up to 24 hours** to update after a large deletion. Check back tomorrow before deleting anything else.
 
-With MailMop you free up Gmail storage in minutes instead of hours. For a full inbox-cleanup walkthrough, see our [complete guide to cleaning up Gmail](/blog/clean-up-gmail), and to keep storage from filling up again, learn [how to unsubscribe from Gmail emails in bulk](/blog/how-to-unsubscribe-gmail-2026).
+## Use Google's built-in storage manager
 
-## Key Takeaways
+Google also has a cleanup tool of its own at [one.google.com/storage/management](https://one.google.com/storage/management). It groups things into cards like "Emails with large attachments," "Spam emails," "Large files in Drive," and "Blurry photos."
 
-- Hunt large attachments first (`has:attachment larger:10M`)
-- Bulk-delete promotional and old emails
-- Empty your Trash regularly
-- Upgrade storage if you're consistently over 15GB
-- Use a tool like MailMop for fast, automated cleanup
+It is a decent second pass. It will not find high volume senders, and its "large attachments" card is essentially the `larger:10M` search from step 2 with a nicer interface, but it does cover Drive and Photos in the same place, which the Gmail search bar cannot.
 
-Don't let a full Gmail mailbox stall your day. Start with these quick fixes, then keep a light maintenance routine so your account stays in shape.
+## If the space is in Drive or Photos
+
+If the storage breakdown showed Drive or Photos as the main user, Gmail cleanup will not solve it.
+
+**Google Drive**
+
+- Open [drive.google.com/drive/quota](https://drive.google.com/drive/quota). It lists your files sorted largest first. Delete what you do not need, then empty Drive's own Trash (it has a separate one from Gmail).
+- Files that other people shared with you do **not** count against your storage. Only files you own do.
+
+**Google Photos**
+
+- In Photos, go to **Settings**, then **Backup**, and switch upload quality from **Original** to **Storage saver**. You can also apply this to existing photos with **Recover storage**, which compresses everything already uploaded.
+- The storage manager linked above has cards for screenshots, blurry photos, and large videos.
+
+## What not to do
+
+- **Do not archive to save space.** Archiving hides an email from your inbox but it stays in All Mail and still counts.
+- **Do not delete from All Mail without a search.** You will lose things you wanted. Always search first, then select all matching.
+- **Do not do a big cleanup in the phone app.** It has no "select all matching conversations" option, so you are limited to one screen of emails at a time. Use a desktop browser, or a tool that works by sender.
+- **Do not skip Trash.** This is the mistake behind almost every "I deleted thousands of emails and nothing changed" complaint.
+
+## Keep it from filling up again
+
+A one-time cleanup buys you a year or two. These keep the number from creeping back:
+
+**Unsubscribe from what you never read.** Deleting a newsletter today does nothing about the one arriving tomorrow. Gmail shows an Unsubscribe link next to the sender name on most marketing email, and our guide to [unsubscribing from emails in Gmail](/blog/how-to-unsubscribe-gmail-2026) covers the faster ways to do it across dozens of senders at once.
+
+**Set a filter that deletes on arrival.** Settings, then **Filters and Blocked Addresses**, then **Create a new filter**. Put a sender or a term like `unsubscribe` in the criteria, choose **Delete it** as the action. Anything matching skips your inbox and your storage.
+
+**Repeat one search a month.** `category:promotions older_than:1m` once a month, select all, delete, empty Trash. It takes about a minute.
+
+**Save attachments outside Google.** If a file matters, download it to your computer or an external drive and delete the email. Moving it to Drive just shifts the same bytes to a different slice of the same 15GB.
+
+## Should you just pay for more storage?
+
+Sometimes, yes. Google One is **$1.99 a month for 100GB** in the US, which is cheap if the alternative is an hour of cleanup every year. It makes sense if you genuinely need to keep everything (business records, legal, an archive you search often), or if Photos is the real consumer and you do not want to compress anything.
+
+It makes less sense if the 15GB is being eaten by promotional email and attachments you will never open again. Paying to store junk is still storing junk, and the inbox itself stays just as cluttered.
+
+## The fast path with MailMop
+
+Everything above works with nothing but Gmail's search bar. If you would rather not spend the afternoon on it, [MailMop](/) does the sender part in a few minutes:
+
+- It analyzes your inbox in your browser (your email is never uploaded to a server) and lists every sender ranked by email count.
+- You bulk delete, unsubscribe, or block any sender in one click, and can delete a sender's mail while keeping specific exceptions.
+- The code is [open source](https://github.com/neilbhammar/mailmop) and the app passed Google's CASA security assessment.
+
+There is a free tier, and it takes about ten minutes to analyze a 25,000 email inbox. Pair it with the `larger:10M` search from step 2 and you will have covered both of the places the space actually goes. For a full inbox cleanup beyond storage, see the [complete guide to cleaning up Gmail](/blog/clean-up-gmail).
