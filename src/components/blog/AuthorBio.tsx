@@ -26,7 +26,7 @@ export function AuthorBio() {
         Neil built MailMop to clean out his own Gmail without handing his email to a third-party
         server. It runs in your browser, the{' '}
         <a href="https://github.com/neilbhammar/mailmop" rel="noopener noreferrer" target="_blank" className="text-primary hover:underline">
-          code is public
+          code is open source
         </a>
         , and it passed Google&apos;s CASA security assessment. Everything in these guides comes from
         cleaning real inboxes, including the data in the{' '}

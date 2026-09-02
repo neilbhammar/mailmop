@@ -19,6 +19,8 @@ faqs:
     answer: "Type larger:10M into the Gmail search bar. That returns every email over 10MB, which is where most of the space usually is. Start higher with larger:25M to see the very largest first, then work down to larger:5M. Add has:attachment to limit results to emails with files attached."
   - question: "Do Spam and Trash count toward Gmail storage?"
     answer: "Yes. Emails sitting in Spam and Trash count until they are permanently deleted. Both folders empty themselves automatically after 30 days, but you can clear them immediately from the Spam and Trash pages."
+  - question: "How do I delete 10,000 emails at once in Gmail?"
+    answer: "Run a search that matches them, such as category:promotions or older_than:2y, click the select-all checkbox at the top of the list, then click the 'Select all conversations that match this search' link that appears. That selects every result, not just the visible page. Click the trash icon and Gmail deletes all of them, then empty Trash to reclaim the storage."
   - question: "Can I free up Gmail storage from my phone?"
     answer: "Partly. The Gmail app lets you search and delete, but it has no select all matching conversations option, so you can only clear one screen of emails at a time. For a big cleanup, use Gmail in a desktop browser, or use a tool like MailMop in your phone's browser to delete by sender in bulk."
 ---
@@ -128,6 +130,17 @@ That is the part [MailMop](/) automates. It scans your inbox in your browser and
 Everything you deleted in steps 2 through 4 is now sitting in Trash and still counted. Open **Trash** and click **Empty Trash now**.
 
 Then check [one.google.com/storage](https://one.google.com/storage). If the number has not moved, do not panic. Google says the storage meter can take **up to 24 hours** to update after a large deletion. Check back tomorrow before deleting anything else.
+
+## Why is Gmail still full after deleting?
+
+This is the most common follow-up question, and it almost always has one of four answers:
+
+1. **Trash is not empty.** Deleted mail sits in Trash for 30 days and counts the whole time. Open Trash, click **Empty Trash now**.
+2. **The meter has not caught up.** Google says storage can take up to 24 hours to update after a large deletion. Check again tomorrow.
+3. **The space was never in Gmail.** Open [one.google.com/storage](https://one.google.com/storage) and look at the breakdown. If Drive or Photos is the big slice, deleting email will not move the number much.
+4. **You deleted a lot of small emails.** Ten thousand newsletters is a few hundred megabytes. One forgotten video attachment is more. Run `larger:10M` and delete what it finds.
+
+If all four check out and the number still has not moved after a day, sign out and back in, or check the storage page from a different browser. The meter is cached per session more often than people expect.
 
 ## Use Google's built-in storage manager
 

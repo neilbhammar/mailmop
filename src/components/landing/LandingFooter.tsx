@@ -70,6 +70,7 @@ export default function LandingFooter() {
                   <li><Link href="/blog/delete-emails-from-one-sender-gmail" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Delete all emails from one sender</Link></li>
                   <li><Link href="/blog/how-to-unsubscribe-gmail-2026" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Unsubscribe in bulk</Link></li>
                   <li><Link href="/blog/gmail-manage-subscriptions" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Gmail's Manage subscriptions</Link></li>
+                  <li><Link href="/blog/gmail-manage-subscriptions-not-showing" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Manage subscriptions not showing?</Link></li>
                   <li><Link href="/blog/how-to-stop-unwanted-emails" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Stop unwanted emails</Link></li>
                   <li><Link href="/blog/state-of-the-inbox-2026" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">State of the Inbox 2026</Link></li>
                   <li><Link href="/blog" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">All guides</Link></li>
@@ -81,6 +82,7 @@ export default function LandingFooter() {
                 <ul className="space-y-3">
                   <li><Link href="/blog/best-gmail-cleaning-tools-2026" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Best Gmail cleanup tools</Link></li>
                   <li><Link href="/blog/best-unsubscribe-tools" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Best unsubscribe tools</Link></li>
+                  <li><Link href="/blog/clean-email-alternatives" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Clean Email alternatives</Link></li>
                   <li><Link href="/blog/clean-email-vs-mailmop-2025" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Clean Email vs MailMop</Link></li>
                   <li><Link href="/blog/unroll-me-alternative" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Unroll.Me alternative</Link></li>
                   <li><Link href="/blog/mailstrom-vs-mailmop" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Mailstrom vs MailMop</Link></li>

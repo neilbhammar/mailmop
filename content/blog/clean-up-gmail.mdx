@@ -19,6 +19,12 @@ faqs:
     answer: "It depends on the tool. Many cleanup services copy your email to their servers, and some have sold data (Unroll.Me's 2017 Uber incident is the well known case). Check where processing happens, what Google permissions the tool asks for, and whether the code is public. MailMop processes your inbox in your browser, never stores message contents, is open source, and passed Google's CASA security assessment."
   - question: "Can I clean up Gmail on my phone?"
     answer: "Partly. The Gmail app can search and delete, but it has no 'select all matching' option, so you clear one screen at a time. For a real cleanup use Gmail in a desktop browser, or a browser-based tool like MailMop on your phone, which works by sender instead of by screen."
+  - question: "Does Gmail have a built-in cleanup tool?"
+    answer: "Partly. Gmail has search operators for bulk deletion, category tabs, filters, a Manage subscriptions view for unsubscribing from recent senders, and Google One's storage manager for large attachments. What it lacks is a view of which senders fill your inbox, which is why most cleanups stall. Third-party tools like MailMop add that sender-ranked view on top of Gmail's own features."
+  - question: "Is there a free Gmail cleaner?"
+    answer: "Yes. Gmail's own search and filters are free and cover most of a cleanup if you know the operators. MailMop has a free tier that analyzes your inbox by sender in your browser. Be careful with free tools that process email on their own servers; several have funded themselves by selling inbox data."
+  - question: "Can ChatGPT clean up my Gmail?"
+    answer: "Not directly. ChatGPT can write you the right Gmail search operators and a cleanup plan, but it cannot select and delete email in your account. For that you still need Gmail itself or a tool with Gmail API access, and it is worth checking where any such tool processes your data before connecting it."
   - question: "Should I delete or archive old emails?"
     answer: "Archive what you might need again (receipts, account emails, anything with a reference number) and delete what you will never open (promotions, notifications, expired offers). Archiving does not free storage; deleting does, once Trash is emptied."
 ---
@@ -190,6 +196,6 @@ Every newsletter you unsubscribe from is clutter that never comes back. When you
 - **The "Select all conversations that match this search" link** is what makes bulk deletion work.
 - **Attachments, not email count,** are where storage goes. `larger:10M` finds them.
 - **Unsubscribe** from what you never read, and **filter** what you keep for reference, so the inbox stays clean.
-- The manual method is free and takes an afternoon. [MailMop](/) does the sender part in minutes, in your browser, with public code.
+- The manual method is free and takes an afternoon. [MailMop](/) does the sender part in minutes, in your browser, with open-source code.
 
 Ready to skip the guessing? [Try MailMop free](/), connect your Gmail, and see every sender in your inbox ranked by how much they have sent you.
