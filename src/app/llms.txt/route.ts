@@ -19,12 +19,13 @@ export async function GET() {
 > MailMop is a privacy-first Gmail cleanup tool. It analyzes your entire inbox and groups thousands of emails by sender, so you can bulk delete, unsubscribe from newsletters, block senders, and free up Google storage in minutes. Email content is processed in your browser and is never stored on MailMop's servers.
 
 ## What MailMop does
-- Analyzes your whole Gmail inbox and ranks senders by volume and storage used
+- Analyzes your whole Gmail inbox and ranks every sender by email count
 - Bulk-deletes unwanted emails by sender in a few clicks
 - One-click unsubscribe from newsletters and marketing lists
 - Blocks senders and creates Gmail filters automatically
+- Delete with exceptions (clear a sender but keep chosen emails), mark as read, apply labels
 - Frees up Gmail / Google account storage (the shared 15GB across Gmail, Drive, Photos)
-- Works directly with Gmail via Google OAuth — no forwarding, no inbox access on a server
+- Works directly with Gmail via Google OAuth. No forwarding, no inbox access on a server. Open source (github.com/neilbhammar/mailmop) and passed Google's CASA security assessment
 
 ## Who it's for
 People with cluttered Gmail inboxes who want to clean up fast without manually deleting emails one by one, and who care about privacy (data stays in the browser).

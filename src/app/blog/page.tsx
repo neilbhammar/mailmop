@@ -72,10 +72,11 @@ export default async function BlogPage({
       headline: post.title,
       description: post.description,
       datePublished: formatISODate(post.date),
-      dateModified: formatISODate(post.date),
+      dateModified: formatISODate(post.updated || post.date),
       author: {
-        '@type': 'Organization',
-        name: post.author || 'MailMop Team',
+        '@type': 'Person',
+        name: 'Neil Bhammar',
+        url: 'https://github.com/neilbhammar',
       },
       url: `https://mailmop.com/blog/${post.slug}`,
       keywords: post.tags?.join(', ')

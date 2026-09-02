@@ -50,8 +50,8 @@ export default function LandingFooter() {
               </div>
             </div>
             
-            {/* Navigation Links - Now 4 columns including Blog */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 flex-1 lg:max-w-2xl">
+            {/* Navigation Links - 5 columns; Guides + Compare give the blog crawlable links from the homepage */}
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 flex-1 lg:max-w-3xl">
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-200 uppercase tracking-wider mb-4">Product</h3>
                 <ul className="space-y-3">
@@ -62,11 +62,34 @@ export default function LandingFooter() {
               </div>
               
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-200 uppercase tracking-wider mb-4">Resources</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-200 uppercase tracking-wider mb-4">Guides</h3>
                 <ul className="space-y-3">
-                  <li><Link href="/blog" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Gmail Tips</Link></li>
-                  <li><Link href="/blog/gmail-storage-full" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Storage Full?</Link></li>
-                  <li><Link href="/blog/clean-up-gmail" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Cleanup Guide</Link></li>
+                  <li><Link href="/blog/clean-up-gmail" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">How to clean up Gmail</Link></li>
+                  <li><Link href="/blog/gmail-storage-full" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Gmail storage full</Link></li>
+                  <li><Link href="/blog/how-to-mass-delete-emails-gmail-2026" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Mass delete Gmail emails</Link></li>
+                  <li><Link href="/blog/delete-emails-from-one-sender-gmail" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Delete all emails from one sender</Link></li>
+                  <li><Link href="/blog/how-to-unsubscribe-gmail-2026" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Unsubscribe in bulk</Link></li>
+                  <li><Link href="/blog/gmail-manage-subscriptions" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Gmail's Manage subscriptions</Link></li>
+                  <li><Link href="/blog/gmail-manage-subscriptions-not-showing" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Manage subscriptions not showing?</Link></li>
+                  <li><Link href="/blog/how-to-stop-unwanted-emails" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Stop unwanted emails</Link></li>
+                  <li><Link href="/blog/state-of-the-inbox-2026" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">State of the Inbox 2026</Link></li>
+                  <li><Link href="/blog" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">All guides</Link></li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-200 uppercase tracking-wider mb-4">Compare</h3>
+                <ul className="space-y-3">
+                  <li><Link href="/blog/best-gmail-cleaning-tools-2026" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Best Gmail cleanup tools</Link></li>
+                  <li><Link href="/blog/best-unsubscribe-tools" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Best unsubscribe tools</Link></li>
+                  <li><Link href="/blog/clean-email-alternatives" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Clean Email alternatives</Link></li>
+                  <li><Link href="/blog/clean-email-vs-mailmop-2025" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Clean Email vs MailMop</Link></li>
+                  <li><Link href="/blog/unroll-me-alternative" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Unroll.Me alternative</Link></li>
+                  <li><Link href="/blog/mailstrom-vs-mailmop" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Mailstrom vs MailMop</Link></li>
+                  <li><Link href="/blog/trimbox-vs-mailmop" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Trimbox vs MailMop</Link></li>
+                  <li><Link href="/blog/leave-me-alone-vs-mailmop" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Leave Me Alone vs MailMop</Link></li>
+                  <li><Link href="/blog/cleanfox-alternative" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Cleanfox alternative</Link></li>
+                  <li><Link href="/blog/privacy-focused-gmail-cleanup-tools-2026" className="text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm">Privacy-first cleanup tools</Link></li>
                 </ul>
               </div>
               

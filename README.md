@@ -286,6 +286,21 @@ This project is source available under a custom license. You're free to:
 
 Please see the LICENSE file for full terms.
 
+## 📚 Guides
+
+Written from cleaning real inboxes, with numbers from MailMop's own usage data:
+
+- [How to clean up Gmail (complete guide)](https://mailmop.com/blog/clean-up-gmail)
+- [Gmail storage full? How to free up space](https://mailmop.com/blog/gmail-storage-full)
+- [How to mass delete emails in Gmail](https://mailmop.com/blog/how-to-mass-delete-emails-gmail-2026)
+- [Delete all emails from one sender](https://mailmop.com/blog/delete-emails-from-one-sender-gmail)
+- [How to unsubscribe from emails in Gmail](https://mailmop.com/blog/how-to-unsubscribe-gmail-2026)
+- [Gmail's "Manage subscriptions" explained](https://mailmop.com/blog/gmail-manage-subscriptions)
+- [The State of the Inbox 2026 (data report)](https://mailmop.com/blog/state-of-the-inbox-2026)
+- [Best Gmail cleanup tools compared](https://mailmop.com/blog/best-gmail-cleaning-tools-2026)
+- [Privacy-focused Gmail cleanup tools: local vs server-based](https://mailmop.com/blog/privacy-focused-gmail-cleanup-tools-2026)
+- [Stop unwanted emails from common senders](https://mailmop.com/blog/how-to-stop-unwanted-emails)
+
 ## 🙏 Acknowledgments
 
 - Built with [Next.js](https://nextjs.org/)

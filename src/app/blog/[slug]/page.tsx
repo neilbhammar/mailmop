@@ -11,6 +11,7 @@ import rehypeSlug from 'rehype-slug'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import { ReadingProgress } from '@/components/blog/ReadingProgress'
 import { RelatedPosts, type RelatedPostLink } from '@/components/blog/RelatedPosts'
+import { AuthorBio, AUTHOR } from '@/components/blog/AuthorBio'
 import { ArrowLeft, Clock, Calendar } from 'lucide-react'
 
 // This is for static generation at build time
@@ -49,7 +50,7 @@ export async function generateMetadata({
       url: url,
       publishedTime: post.date,
       modifiedTime: post.updated || post.date,
-      authors: [post.author || 'MailMop Team'],
+      authors: [AUTHOR.name],
       tags: post.tags,
     },
     twitter: {
@@ -132,7 +133,7 @@ export default async function BlogPostPage({
     '@type': 'Article',
     headline: post.title,
     description: post.description,
-    author: { '@type': 'Organization', name: post.author || 'MailMop Team', url: 'https://mailmop.com' },
+    author: { '@type': 'Person', name: AUTHOR.name, url: AUTHOR.url, sameAs: AUTHOR.sameAs, jobTitle: AUTHOR.role, worksFor: { '@type': 'Organization', name: 'MailMop', url: 'https://mailmop.com' } },
     publisher: {
       '@type': 'Organization',
       name: 'MailMop',
@@ -223,7 +224,7 @@ export default async function BlogPostPage({
               <meta itemProp="headline" content={post.title} />
               <meta itemProp="description" content={post.description} />
               <meta itemProp="datePublished" content={publishDate} />
-              <meta itemProp="dateModified" content={publishDate} />
+              <meta itemProp="dateModified" content={modifiedDate} />
               <link itemProp="mainEntityOfPage" href={url} />
               
               {/* Enhanced article header */}
@@ -297,7 +298,8 @@ export default async function BlogPostPage({
             
               {/* Author info for SEO */}
               <div itemProp="author" itemScope itemType="https://schema.org/Person" className="hidden">
-                <meta itemProp="name" content={post.author || 'MailMop Team'} />
+                <meta itemProp="name" content={AUTHOR.name} />
+                <meta itemProp="url" content={AUTHOR.url} />
               </div>
               
               <div itemProp="publisher" itemScope itemType="https://schema.org/Organization" className="hidden">
@@ -308,6 +310,8 @@ export default async function BlogPostPage({
                 </div>
               </div>
             </article>
+
+            <AuthorBio />
 
             {/* FAQ section — visible content backing the FAQPage schema */}
             {post.faqs && post.faqs.length > 0 && (

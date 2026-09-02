@@ -1,106 +1,147 @@
 ---
 title: "How to Mass Delete Emails in Gmail (2026): Delete Thousands at Once"
-description: "The fastest ways to mass delete emails in Gmail in 2026. Use search operators to bulk delete by sender, date, or category, and clear thousands of emails in minutes."
+description: "The fastest ways to mass delete emails in Gmail. Use one hidden link to delete thousands at once, target emails by sender, date, size, or category, and clear your whole inbox safely."
 date: "2026-06-22"
-updated: "2026-06-22"
-author: "MailMop"
+updated: "2026-09-02"
+author: "Neil Bhammar"
 tags: ["gmail-cleanup", "bulk-delete", "email-organization"]
 featured: false
 faqs:
   - question: "How do I delete thousands of emails in Gmail at once?"
-    answer: "Search for the emails you want gone (for example category:promotions or from:sender@example.com), click the select-all checkbox at the top left, then click the 'Select all conversations that match this search' link that appears. Press the trash icon and Gmail deletes every matching email, thousands at a time. Finish by emptying Trash to reclaim storage."
+    answer: "Search for the emails you want gone (for example category:promotions or from:sender@example.com), click the select-all checkbox at the top left, then click the 'Select all conversations that match this search' link that appears above the list. Press the trash icon and Gmail deletes every matching email, thousands at a time. Finish by emptying Trash to reclaim storage."
+  - question: "How do I delete 30,000 emails at once in Gmail?"
+    answer: "The same way as 300. Run a search that matches them (for example older_than:1y or category:promotions), tick the select-all checkbox, click 'Select all conversations that match this search', and press the trash icon. Gmail processes very large deletions in batches in the background, so leave the tab open for a few minutes and do not refresh. Then empty Trash."
   - question: "Can I bulk delete emails in the Gmail mobile app?"
-    answer: "Not easily. The Gmail mobile app only lets you select emails one screen at a time and has no 'select all matching' option, so mass deletion is really a desktop or browser task. On mobile, a tool like MailMop (which runs in your mobile browser) can group emails by sender so you can bulk delete without endless tapping."
+    answer: "Not really. The Gmail app lets you select emails one screen at a time and has no 'select all matching' option, so mass deletion is a desktop browser task. On a phone, a tool like MailMop runs in the mobile browser and groups your inbox by sender so you can bulk delete without tapping through hundreds of emails."
   - question: "Does mass deleting emails free up Gmail storage?"
-    answer: "Yes, but only after you empty Trash. Deleted emails stay in Trash for 30 days and keep counting against your 15GB Google storage quota until they're permanently removed. To reclaim space fastest, delete large attachments first (search has:attachment larger:10M), then empty Trash."
-  - question: "What's the fastest way to mass delete without losing important emails?"
-    answer: "Delete by sender rather than by keyword. Most clutter comes from a small number of newsletters and notification senders, so deleting those clears thousands of emails while leaving personal mail untouched. MailMop ranks every sender by volume so you can see exactly who to clear and keep the rest."
+    answer: "Yes, but only after you empty Trash. Deleted emails stay in Trash for 30 days and keep counting against your 15GB Google storage until they are permanently removed. To reclaim space fastest, delete large attachments first (search larger:10M), then empty Trash."
+  - question: "Can I undo a mass delete in Gmail?"
+    answer: "For 30 days, yes. Deleted emails sit in Trash, where you can select them and click Move to Inbox. Once you empty Trash, or 30 days pass, they are gone for good. If you are nervous, archive instead of delete, or export a backup with Google Takeout first."
+  - question: "How do I delete all emails in Gmail, including sent and archived?"
+    answer: "Search in:anywhere (or open All Mail), click the select-all checkbox, click 'Select all conversations that match this search', then delete. All Mail includes your inbox, archived mail, and sent mail. It does not include Drafts or Spam, which you clear separately. Back up first with Google Takeout because there is no recovery after Trash is emptied."
+  - question: "What is the fastest way to mass delete without losing important emails?"
+    answer: "Delete by sender rather than by keyword. Most clutter comes from a small number of newsletters and notification addresses, so deleting those clears thousands of emails while leaving personal mail untouched. MailMop lists every sender in your inbox ranked by email count so you can see exactly who to clear and keep the rest."
 ---
 
 # How to Mass Delete Emails in Gmail (2026)
 
-**Quick answer:** To mass delete emails in Gmail, run a search (like `category:promotions` or `from:sender@example.com`), click the **select-all checkbox** at the top, then click **"Select all conversations that match this search"**, and hit the trash icon. This deletes every matching email, thousands at once. Then **empty Trash** to actually free up storage. This only works on the desktop or browser version of Gmail.
+**Quick answer:** Run a search in Gmail (like `category:promotions` or `from:sender@example.com`), click the **select-all checkbox** at the top of the list, then click the **"Select all conversations that match this search"** link that appears, and hit the trash icon. That deletes every matching email, whether it is 200 or 20,000. Then **empty Trash** to actually free the storage. This only works in Gmail on a desktop browser, not the phone app.
 
-Below are the exact methods, plus a faster way to delete by sender across your whole inbox.
+Below: the exact steps, the searches that catch the most junk, how to delete by sender, how to wipe everything, what happens after you delete, and how to do it without losing anything you care about.
 
-## Method 1: Mass delete using Gmail search (free)
+## The one link that makes mass deletion work
 
-This is the core trick most people miss. The select-all checkbox at the top of Gmail only selects the ~50 emails on the current page, until you click one extra link.
+The select-all checkbox at the top of Gmail only selects the emails on the current page, which is 50 by default (100 at most). People click it, delete, and wonder why 40,000 emails are still there.
 
-1. In the Gmail search bar, enter a search that matches what you want to delete (examples below).
-2. Click the **checkbox** at the top-left to select everything on the page.
-3. A banner appears: **"Select all conversations that match this search."** Click it.
-4. Click the **trash icon**. Confirm if prompted.
+The trick is the banner that appears right after you tick that box:
 
-Gmail now deletes *every* email matching your search, not just the visible page.
+> Select all conversations that match this search
 
-### Useful searches for mass deletion
+Click it and Gmail selects everything matching your search, across every page. Now a single trash click deletes all of it.
 
-**All promotional email older than a month:**
+So the full sequence is:
+
+1. Type a search into the Gmail search bar (examples below) and press Enter.
+2. Click the **checkbox** at the top left of the message list.
+3. Click **"Select all conversations that match this search."**
+4. Click the **trash icon**. If Gmail asks you to confirm a bulk action, confirm.
+
+Gmail processes large deletions in the background. For very large sets (tens of thousands), the count may take a minute or two to catch up. Do not refresh mid-delete.
+
+## The searches that clear the most email
+
+Paste these into the search bar. Each one can remove thousands of emails in one pass.
+
+| Goal | Search |
+|---|---|
+| Promotions older than a month | `category:promotions older_than:1m` |
+| Social notifications | `category:social older_than:3m` |
+| App and service updates | `category:updates older_than:1y` |
+| Forum and mailing list mail | `category:forums older_than:6m` |
+| Everything from one sender | `from:newsletter@example.com` |
+| Everything from a whole domain | `from:@example.com` |
+| Anything you never opened, older than a year | `is:unread older_than:1y` |
+| Old email in general | `older_than:2y` |
+| Large emails eating storage | `larger:10M` |
+| A date range | `after:2019/01/01 before:2021/12/31` |
+
+Protect what matters by adding exclusions. `-is:starred` skips anything you starred. `-from:mybank.com` keeps one sender out of the sweep. `-label:keep` skips anything you labeled "keep." For example:
+
 ```
-category:promotions older_than:1m
+category:promotions older_than:1m -is:starred -label:keep
 ```
 
-**Everything from a specific sender:**
-```
-from:newsletter@example.com
-```
+A good habit before any big deletion: open the search, scroll the first page, and make sure nothing personal is in it. Gmail's category detection is good but not perfect.
 
-**Social notifications:**
-```
-category:social
-```
+## Delete by sender (the fast, safe way)
 
-**Old email you'll never reopen:**
-```
-older_than:2y
-```
+Category searches catch a lot, but the biggest single wins come from individual senders. A job board that emailed you daily since 2021, a store you bought from once, a notification address from an app you deleted years ago. In MailMop's usage data across 16 million analyzed emails, about 1 in 7 of the senders people delete has more than 1,000 emails on its own.
 
-**Large emails eating your storage:**
-```
-larger:10M
-```
+Deleting by sender is also the safest method, because you can see exactly who you are removing. A keyword search might catch a personal email that happens to mention "sale." A sender search cannot.
 
-> **Tip:** Always **archive important threads first** (or apply a "Keep" label), then run your deletion searches. Archived email leaves your inbox but stays searchable.
+**Manually:** search `from:` followed by the address (Gmail suggests addresses as you type), select all matching conversations, delete. Repeat for the next sender.
 
-## Method 2: Mass delete by sender (the fast way)
+The catch is that Gmail never tells you *which* senders are the problem. There is no "who emails me most" view anywhere in Gmail.
 
-Search-by-search deletion works, but you have to *know* what to search for, and you'll repeat it dozens of times. The real bottleneck is that Gmail never shows you a ranked list of **who is filling your inbox**.
+That is the part [MailMop](/) automates. It scans your inbox in your browser and returns one list of every sender, ranked by how many emails they have sent you. From there you can:
 
-That's what [MailMop](/) does. It analyzes your entire inbox in your browser and shows every sender ranked by how many emails they've sent and how much space they use. From there you can:
-
-- **Bulk delete** every email from a sender in one click
-- Select **multiple senders** and delete them together
-- **Unsubscribe** so they stop sending
+- **Delete** every email from a sender in one click, or select several senders and delete them together
+- **Delete with exceptions**, clearing a sender but keeping specific emails you pick
+- **Unsubscribe** so they stop sending, and **block** them with an auto-created Gmail filter
 - Keep the senders that matter and clear the rest
 
-Because most clutter comes from a few dozen senders, this turns an hour of search-and-delete into a couple of minutes, and your email never leaves your browser. (MailMop users have deleted [over 2 million emails](/blog/email-clutter-statistics-2026) this way.)
+Because most clutter comes from a few dozen addresses, an afternoon of search-and-delete turns into a few minutes, and your email never leaves your browser. There is a dedicated walkthrough in [how to delete all emails from one sender](/blog/delete-emails-from-one-sender-gmail).
 
-## Method 3: Delete everything and start fresh
+## Delete everything and start fresh
 
-If you want a truly empty inbox, see our dedicated guide on [how to delete all emails in Gmail](/blog/how-to-delete-all-emails-gmail-2025). The short version: search `in:inbox`, select all matching, and delete. Back up anything important with Google Takeout first.
+If you want a genuinely empty account:
 
-## Don't forget: empty Trash
+1. **Back up first.** Go to [Google Takeout](https://takeout.google.com), select Mail, and export. There is no recovery once Trash is emptied. Our [Google Takeout guide](/blog/google-takeout-inbox-analysis) walks through it.
+2. Search `in:anywhere` (or click **All Mail** in the sidebar).
+3. Checkbox, **Select all conversations that match this search**, trash.
+4. Open **Drafts** and **Spam** separately and clear those. All Mail does not include them.
+5. Empty **Trash**.
 
-Everything you "delete" goes to **Trash** and keeps counting against your 15GB storage for 30 days. To reclaim space now:
+A note on what All Mail covers: it includes your inbox, everything you archived, and everything you sent. Labels and filters survive a full deletion, so your setup for future mail stays intact.
 
-1. Open **Trash** (in the left sidebar, you may need to click "More")
-2. Click **"Empty Trash now"**
+## What actually happens when you delete
 
-If your goal was to free storage, also clear large attachments first. See [Gmail storage full? How to free up space](/blog/gmail-storage-full).
+- **Deleted email goes to Trash**, not away. It still counts against your 15GB of Google storage.
+- **You have 30 days** to change your mind. Open Trash, select the emails, click **Move to Inbox**.
+- **After 30 days Gmail empties Trash automatically** and the storage is reclaimed. To get it back immediately, open Trash and click **Empty Trash now**.
+- **The storage meter can lag** up to 24 hours after a big deletion. If it has not moved, check again tomorrow.
+
+If the whole point was storage, see [Gmail storage full? How to free up space](/blog/gmail-storage-full), which starts with large attachments, where most of the space actually is.
+
+## Archive instead, if you are not sure
+
+If you cannot decide whether to keep something, archive it. Same steps as deletion, but click the **archive icon** (a box with a down arrow) instead of the trash. Archived mail leaves the inbox, stays fully searchable, and still counts toward storage. It is the right choice for old receipts, account emails, and anything you might need once in the next few years. It is the wrong choice if the goal is freeing space.
 
 ## Mass deletion mistakes to avoid
 
-- **Deleting on mobile.** The app can't select all matching emails. Use a browser.
+- **Deleting in the phone app.** It has no "select all matching" option. Use a desktop browser, or a sender-based tool that works on mobile.
+- **Skipping the "Select all conversations that match" link.** You will delete one page and think you are done.
 - **Forgetting to empty Trash.** No storage is freed until you do.
-- **Keyword-deleting personal mail by accident.** Prefer deleting by *sender* so you can see exactly what goes.
-- **Deleting instead of unsubscribing.** The newsletter comes back tomorrow unless you unsubscribe.
+- **Keyword-deleting personal mail.** Prefer senders and categories, and always skim the first page of results.
+- **Deleting instead of unsubscribing.** The newsletter comes back tomorrow. Unsubscribe from the ones you never read. See [how to unsubscribe from emails in Gmail](/blog/how-to-unsubscribe-gmail-2026).
+- **Not backing up before a full wipe.** Takeout takes ten minutes and prevents a very bad week.
+
+## Troubleshooting
+
+**The "Select all conversations" link does not appear.** It only shows after you tick the top checkbox and only when the search has more results than fit on one page. If the search returned fewer than a page, everything is already selected.
+
+**Deletion seems stuck.** Gmail processes very large deletions in batches. Leave the tab open and give it a few minutes. Refreshing does not speed it up.
+
+**Storage number has not changed.** Empty Trash, then wait up to 24 hours for the meter to update.
+
+**I deleted something important.** Open Trash within 30 days and move it back to the inbox.
 
 ## Key takeaways
 
-- The magic step is **"Select all conversations that match this search."** Without it you only delete one page.
-- **Deleting by sender** is faster and safer than deleting by keyword.
-- Always **empty Trash** to reclaim storage.
-- A tool like [MailMop](/) does sender-based bulk deletion in minutes, in your browser.
+- The whole trick is **"Select all conversations that match this search."** Without it you only delete one page.
+- **Delete by sender** when you can. It is faster and you can see exactly what goes.
+- **Empty Trash** to reclaim storage, and expect the meter to lag a day.
+- **Back up with Takeout** before wiping everything.
+- A tool like [MailMop](/) does sender-based bulk deletion in minutes, in your browser, with the code [open source](https://github.com/neilbhammar/mailmop).
 
-Ready to clear it all out? [Try MailMop free](/) and see every sender in your inbox ranked by clutter.
+Ready to clear it out? [Try MailMop free](/) and see every sender in your inbox ranked by how much they have sent you.

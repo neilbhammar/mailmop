@@ -1,95 +1,116 @@
 ---
 title: "How to Delete All Emails From One Sender in Gmail (2026)"
-description: "Delete every email from a specific sender in Gmail in seconds. Step-by-step for desktop and mobile, plus how to delete from many senders at once and block them for good."
+description: "Delete every email from a specific sender in Gmail in two clicks. Exact steps for desktop and the phone app, the searches that keep the emails you want, how to clear 50 senders at once, and how to stop them coming back."
 date: "2026-06-22"
-updated: "2026-06-22"
-author: "MailMop"
+updated: "2026-09-02"
+author: "Neil Bhammar"
 tags: ["gmail-cleanup", "bulk-delete", "email-organization"]
 featured: false
 faqs:
   - question: "How do I delete all emails from one sender in Gmail?"
-    answer: "In the Gmail search bar, type from:sender@example.com (or from:name) and press Enter. Click the select-all checkbox, then click 'Select all conversations that match this search', and press the trash icon. Every email from that sender is deleted at once. Empty Trash afterward to free up storage."
-  - question: "How do I delete emails from a sender without opening each one?"
-    answer: "Use the from: search operator so you never open individual emails. Searching from:sender@example.com gathers every message from that address into one view, and the 'select all matching' link lets you delete them all in two clicks. You can also search by name, like from:amazon."
+    answer: "In the Gmail search bar, type from: followed by the address (for example from:newsletter@example.com) and press Enter. Click the select-all checkbox at the top of the list, then click 'Select all conversations that match this search' in the banner that appears, and press the trash icon. Every email from that sender is deleted at once. Empty Trash afterward to free the storage."
+  - question: "How do I select all emails from the same sender in Gmail?"
+    answer: "Search from: and the sender's address or name. Gmail shows only their emails. Tick the checkbox at the top left of the list to select the visible page, then click 'Select all conversations that match this search' to select every result across all pages. You can then delete, archive, label, or mark them all as read."
+  - question: "Can I delete all emails from one sender in the Gmail app?"
+    answer: "Only one screen at a time. The Gmail app on Android and iPhone has no 'select all matching' option, so for a sender with thousands of emails you would be tapping for a long while. Open Gmail in your phone's browser instead, or use a browser-based tool like MailMop, which deletes by sender in one action on mobile."
+  - question: "How do I delete emails from a sender but keep some of them?"
+    answer: "Narrow the search. from:sender older_than:1y keeps the last year. from:sender -is:starred keeps anything you starred. from:sender -subject:receipt keeps receipts. Or use MailMop's delete with exceptions, which clears a sender while letting you tick the specific emails to keep."
   - question: "How do I stop a sender from emailing me again after deleting?"
-    answer: "Deleting removes past emails but doesn't stop new ones. To stop them, unsubscribe (for newsletters) or block the sender. In Gmail you can open an email, click the three-dot menu, and choose 'Block [sender]', which sends their future email to spam. MailMop can also block senders and auto-create filters in bulk."
+    answer: "Deleting removes past emails but not future ones. For newsletters, unsubscribe using the link Gmail shows next to the sender name. For anything else, open one of their emails, click the three-dot menu, and choose Block. Their future mail goes to Spam. MailMop can unsubscribe and block from the same sender list it deletes from."
   - question: "Can I delete emails from multiple senders at once?"
-    answer: "Gmail only lets you search one sender at a time (or chain them with OR, like from:a@x.com OR from:b@y.com). To clear many senders quickly, MailMop shows every sender ranked by volume so you can select several and delete them all in one action."
+    answer: "In Gmail, chain them with OR: from:a@example.com OR from:b@example.com. That works for a handful. For dozens of senders, MailMop shows every sender in your inbox ranked by email count, so you can select many at once and delete them in a single action."
 ---
 
 # How to Delete All Emails From One Sender in Gmail
 
-**Quick answer:** To delete every email from a specific sender in Gmail, type `from:sender@example.com` in the search bar and press Enter. Click the **select-all checkbox**, click **"Select all conversations that match this search"**, then press the **trash icon**. All their emails are deleted at once. Empty Trash to reclaim storage. You can also search by name, like `from:amazon`.
+**Quick answer:** Type `from:` and the sender's address in Gmail's search bar, press Enter, click the **select-all checkbox**, click **"Select all conversations that match this search"**, then press the **trash icon**. Every email from that sender is gone in two clicks, whether it is 40 or 4,000. Empty Trash to get the storage back.
 
-## Step by step (desktop / browser)
+That is the whole method. The rest of this guide covers the details that trip people up: the phone app, keeping the emails you want, doing this for fifty senders instead of one, and making sure the sender does not come back.
 
-1. Open Gmail in a web browser.
-2. In the search bar, type the sender's address or name:
+## Step by step on desktop
+
+1. Open [Gmail](https://mail.google.com) in a web browser.
+2. Click the search bar and type the sender:
    ```
    from:newsletter@example.com
    ```
-   or simply:
-   ```
-   from:amazon
-   ```
-3. Press **Enter** to see every email from that sender.
-4. Click the **checkbox** at the top-left to select the visible emails.
-5. Click **"Select all conversations that match this search"** in the banner that appears.
-6. Click the **trash icon** to delete them all.
-7. Open **Trash** then **"Empty Trash now"** to actually free the storage.
+   You can also use a name or a partial address. `from:amazon` catches every Amazon address. `from:@example.com` catches everyone at a domain.
+3. Press **Enter**. Only that sender's emails are listed now.
+4. Click the **checkbox** at the top left of the list. This selects the emails on the current page (50 by default).
+5. A banner appears above the list: **"Select all conversations that match this search."** Click it. Now every result is selected, across every page. This is the step most people miss, and without it you delete 50 emails instead of 5,000.
+6. Click the **trash icon**. Gmail may ask you to confirm a bulk action.
+7. Open **Trash** in the left sidebar and click **Empty Trash now**. Until you do, the deleted mail still counts against your 15GB of Google storage.
 
-That's it. Thousands of emails from one sender, gone in seconds.
+For senders with tens of thousands of emails, Gmail processes the deletion in batches. Leave the tab open for a minute or two and do not refresh.
 
-### Helpful variations
+## Keep the emails you actually want
 
-**Only old emails from a sender (keep recent ones):**
+The `from:` search deletes everything from a sender. Usually that is the point, but not always. Add a second condition to keep part of the history:
+
+| You want to keep | Search |
+|---|---|
+| The last year | `from:sender@example.com older_than:1y` |
+| Anything you starred | `from:sender@example.com -is:starred` |
+| Receipts and orders | `from:sender@example.com -subject:(receipt OR order OR invoice)` |
+| Emails with attachments | `from:sender@example.com -has:attachment` |
+| Anything you labeled Keep | `from:sender@example.com -label:keep` |
+| Only unread mail (delete what you never opened) | `from:sender@example.com is:unread` |
+
+The minus sign excludes. Everything else in the search still gets deleted. Skim the first page of results before you click delete, especially with a name search like `from:amazon`, which can match personal mail from someone whose address contains that word.
+
+## On the phone app
+
+The Gmail app on Android and iPhone can search `from:` just fine, but it has no "select all conversations that match" option. You long-press one email, tap the rest, and delete a screen at a time. For a sender with 2,000 emails that is a long afternoon.
+
+Two ways around it:
+
+- **Open Gmail in your phone's browser** (Safari or Chrome) and request the desktop site. The full select-all workflow is there.
+- **Use a browser-based tool.** [MailMop](/) runs in the mobile browser and deletes an entire sender in one tap, no scrolling.
+
+## Delete from many senders at once
+
+One sender is rarely the whole problem. In MailMop's usage data across 16 million analyzed emails, about 1 in 7 of the senders people delete has more than 1,000 emails on its own, and most inboxes have a dozen or more of them: job boards, retailers, social notifications, app updates, a newsletter from 2019.
+
+In Gmail you can chain a few with OR:
+
 ```
-from:sender@example.com older_than:1y
+from:a@example.com OR from:b@example.com OR from:c@example.com
 ```
 
-**A sender's emails with large attachments:**
-```
-from:sender@example.com larger:5M
-```
+That works for three or four. It does not solve the real problem, which is that Gmail never shows you a list of who is filling your inbox. You have to already know the senders to search for them.
 
-**Two or more senders at once:**
-```
-from:a@example.com OR from:b@example.com
-```
+[MailMop](/) is built around that missing list. It scans your inbox in your browser and returns every sender ranked by email count, with the date of their last email. Then:
 
-## How to do it on mobile
+- **Delete** any sender in one click, or tick several and delete them together
+- **Delete with exceptions**: clear a sender but keep the individual emails you choose
+- **Unsubscribe** and **block** from the same row, so the sender does not return
+- **Mark as read** or **label** a whole sender at once
 
-The Gmail app makes this harder. There's no "select all matching" option, so you can only delete a screenful at a time. Two options:
+Your email is processed in your browser and never uploaded. The [code is open source](https://github.com/neilbhammar/mailmop) and the app passed Google's CASA security assessment. There is a free tier, and MailMop users have deleted [over 2 million emails](/blog/email-clutter-statistics-2026) this way.
 
-- Search `from:sender`, then select and delete in batches (tedious for big senders).
-- Open Gmail in your **phone's browser** (or use [MailMop](/) in your mobile browser) to get desktop-style bulk deletion.
+## Make sure the sender does not come back
 
-## Delete from many senders at once (the fast way)
+Deleting clears the past. It does nothing about tomorrow. Before you move on:
 
-If one sender is clogging your inbox, there are usually a dozen more behind it. Gmail makes you hunt them down one search at a time.
+- **Unsubscribe** if it is a newsletter or marketing list. Gmail shows an **Unsubscribe** link next to the sender name on most of them. For dozens of senders at once, see [how to unsubscribe from emails in Gmail](/blog/how-to-unsubscribe-gmail-2026).
+- **Block** anything else. Open one of their emails, click the **three-dot menu** at the top right of the message, choose **Block [sender]**. Future mail from that address goes to Spam.
+- **Filter** if you want future mail deleted or archived on arrival without blocking. Settings, **Filters and Blocked Addresses**, **Create a new filter**, put the address in **From**, choose **Delete it** or **Skip the Inbox**.
 
-[MailMop](/) takes a different approach. It analyzes your whole inbox in your browser and shows **every sender ranked by how many emails they've sent**. You can:
+## Other things you can do to a whole sender
 
-- See your **biggest senders** instantly (no guessing who to search for)
-- **Delete all email from a sender** in one click
-- Select **several senders** and clear them together
-- **Unsubscribe** or **block** senders so they stop emailing you
+The same select-all workflow works with every toolbar action, not just delete:
 
-It's the same result as the `from:` search, but across your entire inbox at once, and your email never leaves your browser. MailMop users have deleted [over 2 million emails](/blog/email-clutter-statistics-2026) this way.
-
-## Stop the sender from coming back
-
-Deleting clears the past. It doesn't stop the future. After deleting:
-
-- **Unsubscribe** if it's a newsletter. See [how to unsubscribe from Gmail emails](/blog/how-to-unsubscribe-gmail-2026).
-- **Block the sender**: open an email, then the three-dot menu, then **Block [sender]**. Their future email goes straight to spam.
-- **Create a filter** to auto-delete or archive future mail from that address (Settings then Filters then Create).
+- **Archive** them all (the box-with-arrow icon) if you want them out of the inbox but searchable.
+- **Mark as read** to clear the unread count without deleting.
+- **Apply a label** to file them.
+- **Move to Spam** to train Gmail on a sender that keeps slipping through.
 
 ## Key takeaways
 
-- The `from:` search operator plus **"Select all conversations that match this search"** deletes every email from a sender in two clicks.
-- This only works fully on **desktop or browser**, not the Gmail app.
-- **Empty Trash** afterward to reclaim storage.
-- To clear **many** senders fast, or to delete, unsubscribe, and block in one place, [MailMop](/) ranks every sender in your inbox so you can clean up in minutes.
+- `from:` plus **"Select all conversations that match this search"** deletes every email from a sender in two clicks.
+- Narrow the search with `-is:starred`, `older_than:`, or `-subject:` to keep what matters.
+- The **phone app** cannot do this in bulk. Use a browser.
+- **Empty Trash** to reclaim storage.
+- To clear many senders, and to delete, unsubscribe, and block from one list, [MailMop](/) ranks every sender in your inbox so the whole cleanup takes minutes.
 
-[Try MailMop free](/) and clear out your noisiest senders today.
+[Try MailMop free](/) and see which senders are quietly filling your inbox.

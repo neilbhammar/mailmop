@@ -2,19 +2,19 @@
 title: "Privacy-Focused Gmail Cleanup Tools: Local Processing vs Server-Based (2026)"
 description: "Compare privacy architectures of Gmail cleanup tools in 2026. Understand client-side vs server-side processing, and find which tools truly protect your email privacy as regulations tighten."
 date: "2025-12-21"
-updated: "2026-06-22"
-author: "MailMop"
+updated: "2026-09-02"
+author: "Neil Bhammar"
 tags: ["privacy", "gmail-cleanup", "email-security", "data-protection"]
 featured: false
 faqs:
   - question: "What's the difference between client-side and server-side Gmail cleanup tools?"
     answer: "Client-side tools run entirely in your browser, so your email is analyzed on your own device and never uploaded to a third party's servers. Server-side tools upload your emails to the company's remote servers for processing, where the data can be retained, breached, subpoenaed, or accessed by staff. Client-side processing offers stronger privacy because the tool's company never has a copy of your email."
   - question: "Which Gmail cleanup tool is the most private?"
-    answer: "A client-side tool like MailMop is the most private option for Gmail because it processes everything in your browser and never uploads your email content to its servers. It uses a metadata-only Gmail scope by default, is CASA 2 certified by Google, and only accesses email bodies locally when you use the unsubscribe feature. Server-side tools such as Clean Email are reasonable if you need multi-provider support, while Unroll.Me should be avoided because it sells user data."
+    answer: "A client-side tool like MailMop is the most private option for Gmail because it processes everything in your browser and never uploads your email content to its servers. Its analysis reads only email headers, it's open source, it passed Google's CASA security assessment, and it only reads an email body (locally, in your browser) when you use the unsubscribe feature. Server-side tools such as Clean Email are reasonable if you need multi-provider support, while Unroll.Me should be avoided because it sells user data."
   - question: "Do Gmail cleanup tools store or read my emails?"
-    answer: "It depends on the tool's architecture. Server-side tools upload and store your emails, with retention varying from a fixed window to indefinitely. A client-side tool like MailMop reads only email metadata such as sender, subject, date, and size by default, keeps any cache in your own browser, and stores no email content on its servers, only basic account and subscription data."
+    answer: "It depends on the tool's architecture. Server-side tools upload and store your emails, with retention varying from a fixed window to indefinitely. A client-side tool like MailMop reads only email headers such as sender, subject, and date by default, keeps any cache in your own browser, and stores no email content on its servers, only basic account and subscription data."
   - question: "Is it safe to give a third-party app access to my Gmail?"
-    answer: "It can be, if you choose carefully: prefer tools that process data client-side, request only the minimal scope (metadata-only is safest), are CASA-certified by Google, and have a clear no-data-selling policy. As a best practice, connect the tool for a cleanup session and then revoke its access in Gmail Settings under Accounts and connected apps. MailMop fits these criteria and works with Gmail only."
+    answer: "It can be, if you choose carefully: prefer tools that process data client-side, are open source so you can check what they do, have passed Google's CASA assessment, and have a clear no-data-selling policy. As a best practice, connect the tool for a cleanup session and then revoke its access in your Google Account under Security, then Third-party apps with account access. MailMop fits these criteria and works with Gmail only."
 ---
 
 # Privacy-Focused Gmail Cleanup Tools: Local Processing vs Server-Based (2026)
@@ -57,11 +57,9 @@ When you connect a typical Gmail cleanup tool in 2026, here's what usually happe
 
 Back in 2017, the reporting showed that Unroll.Me:
 - Actively scanned users' email purchase receipts
-- Sold anonymized purchase data to NielsenIQ for profit
-- Specifically sold Lyft customer receipt data to Uber (a direct competitor)
-- Did all this with no real user knowledge or meaningful consent
-
-**The CEO's response at the time:** "It surprised us that people didn't know that we were using data."
+- Passed that data to its parent company, Slice Intelligence, which sold anonymized purchase data for profit
+- Slice sold Lyft receipt data to Uber (a direct competitor), per the New York Times
+- Most users had no idea, which the FTC later called deceptive in a 2019 settlement
 
 **The 2026 reality:** if a tool is "free" and processes your emails on its servers, **your private data is almost certainly the product**. That hasn't changed. If anything, it's worse.
 
@@ -77,9 +75,9 @@ Back in 2017, the reporting showed that Unroll.Me:
 - **AI training data:** your emails could be fed into commercial AI models
 
 **Risks of server-side processing in 2026:**
-- **Data breaches:** the company gets hacked and your entire email history is exposed (incidents up 40% since 2024)
+- **Data breaches:** the company gets hacked and your entire email history is exposed
 - **Data selling:** the company sells your information to data brokers and advertisers
-- **Government requests:** servers can be subpoenaed (requests up 60% since 2023)
+- **Government requests:** servers can be subpoenaed
 - **Employee access:** staff, contractors, and third parties can potentially read your emails
 - **Third-party AI training:** data used to train language models without consent
 - **Indefinite retention:** no real guarantee your data is ever actually deleted
@@ -117,13 +115,12 @@ Your Gmail → Gmail API → Your Browser → Local Analysis → Results
 
 **Performance characteristics:**
 - Your browser does the processing work
-- Works fully offline after the initial metadata download
 - Faster for repeat analyses (cached locally)
 - No network latency on analysis operations
 - Progressive loading for large inboxes
 
 **2026 Examples:**
-- MailMop (metadata-only, complete client-side processing)
+- MailMop (complete client-side processing)
 - Some specialized browser extensions (varies by implementation)
 
 ---
@@ -186,17 +183,17 @@ Your Gmail → Upload → Tool's Servers → Analysis → Results to you
 **Processing location:** complete client-side (in your browser)
 
 **What they access:**
-- **Metadata only:** email headers (sender, subject, date, size, labels)
+- **Headers only for analysis:** sender, subject, date, labels
 - **Optional body access:** only when you explicitly use the unsubscribe feature
 - **Never uploads emails:** everything is processed in your browser
 - **Local storage only:** IndexedDB in your browser (you control it)
 
 **Privacy features:**
 - **Client-side processing:** runs entirely in your browser, nothing uploaded
-- **Metadata-only scope:** doesn't read email content by default
+- **Headers only by default:** the analysis doesn't read email bodies
 - **No data storage:** doesn't keep your emails on any servers
 - **Source-available code:** you can audit exactly what it does on GitHub
-- **CASA 2 certified:** Google independently verified their security practices
+- **CASA assessed:** passed Google's CASA security assessment
 - **Zero third-party access:** no employees, contractors, or partners can read your emails
 
 **How the technical side works:**
@@ -230,7 +227,7 @@ Your Gmail → Upload → Tool's Servers → Analysis → Results to you
 - Users in regulated industries
 - Anyone worried about data breaches
 
-**Pricing:** Free tier (full unsubscribe functionality), Pro at $1.89/month
+**Pricing:** Free tier (full unsubscribe functionality), Pro at $1.89/month, billed annually as $22.68/year
 
 ---
 
@@ -241,25 +238,20 @@ Your Gmail → Upload → Tool's Servers → Analysis → Results to you
 **Processing location:** server-side (their remote servers)
 
 **What they access:**
-- Full email access for the full feature set
-- Mostly metadata, content when specifically needed
-- Attachments for storage analysis features
+- Envelope and header information (sender, subject, dates, size)
+- Its privacy policy says email bodies are never downloaded
 
 **Privacy features:**
-- **No data selling:** explicit policy against any monetization
-- **45-day retention:** automatically deletes data after 45 days
-- **GDPR compliant:** fully meets European privacy standards
-- **Encryption:** data encrypted in transit (TLS) and at rest (AES-256)
+- **No data selling:** its policy says it will never sell or rent your data, even aggregated
+- **45-day retention:** indexed data is deleted 45 days after your last login if you have no active subscription
 - **No third-party sharing:** data not shared with partners or advertisers
-- **Regular audits:** security audits and compliance reviews
 
 **Privacy concerns:**
-- Emails get uploaded to their servers for processing
-- Server-side storage (though capped at 45 days)
-- Needs broad Gmail permissions for full functionality
-- Vulnerable to data breaches (though encrypted)
-- Can be legally subpoenaed
-- Cross-border data transfers (though GDPR compliant)
+- Email headers and metadata are processed and indexed on its servers
+- Server-side storage (though deleted 45 days after your last login without a subscription)
+- Needs broad mailbox permissions for full functionality
+- Server-side data can be breached or subpoenaed
+- Closed-source, so the policy is a promise you can't verify in code
 
 **Best for:**
 - Users who need multi-provider support (Gmail + Yahoo + Outlook + iCloud)
@@ -268,7 +260,7 @@ Your Gmail → Upload → Tool's Servers → Analysis → Results to you
 - People who put features ahead of absolute maximum privacy
 - Business users managing across platforms
 
-**Pricing:** $7-15/month depending on features
+**Pricing:** $29.99/year for one mailbox, $49.99/year for five
 
 ---
 
@@ -281,20 +273,19 @@ Your Gmail → Upload → Tool's Servers → Analysis → Results to you
 - Full email content and metadata
 
 **Privacy features:**
-- No data selling policy
-- Reasonable, transparent privacy policy
-- Server-side encryption practices
+- Stores only subject lines and metadata on its servers, per its FAQ
+- Encrypts stored IMAP passwords (256-bit AES) and uses OAuth where the provider supports it
 
 **Privacy concerns:**
 - Server-side processing required for functionality
-- Email data stored on their servers
+- Its FAQ says it has access to the contents of emails, which it uses when displaying them
 - IMAP requires broad access permissions
 
 **Best for:**
 - Users who want powerful organization tools
 - People fine with the server-side trade-off
 
-**Pricing:** $7-10/month
+**Pricing:** $9/month or $59.95/year (Basic), up to $199.95/year (Pro)
 
 ---
 
@@ -314,32 +305,27 @@ Your Gmail → Upload → Tool's Servers → Analysis → Results to you
 **Active privacy violations:**
 - **Actively sells your data:** the whole business runs on data monetization
 - **Scans purchase receipts:** pulls detailed transaction information
-- **Sells to NielsenIQ:** and other data brokers and market researchers
-- **2017 scandal:** sold Lyft customer data to Uber (a direct competitor)
-- **Still not available in the EU:** remains GDPR non-compliant in 2026
-- **No meaningful improvements:** business model unchanged since the scandal
+- **Owned by NielsenIQ:** its privacy notice says it provides deidentified, aggregated reports to brands, e-commerce companies, and data brokers
+- **2017 scandal:** its then-parent Slice Intelligence sold Lyft receipt data to Uber (a direct competitor)
+- **Still not available in the EU or EEA:** it withdrew in 2018 and hasn't returned
+- **Same business model:** the FTC's 2019 settlement forced clearer disclosure, but the model is unchanged
 
-**What they actively collect and sell:**
-- Purchase receipts (what you bought, where, when, how much you spent)
-- Travel bookings (where you travel, with whom, when, how often)
-- Subscription patterns (what services you use and how often)
-- Shopping behavior (how often you shop, which categories, price sensitivity)
-- Financial patterns (spending habits, income indicators)
+**What its privacy notice says it collects:**
+- Commercial and transactional emails, including purchase receipts, sales receipts, and delivery confirmations
+- Data derived from those emails, which feeds deidentified and aggregated reports on marketing, retail sales measurement, and product advertising
 
-**The ongoing deception:**
-- Doesn't actually unsubscribe you (just creates filters to hide emails)
-- Free because your private data is the real product
-- Privacy policy deliberately buried in lengthy terms
-- No transparency about who buys your data
+**The catch:**
+- Its unsubscribe mostly hides mail in a Rollup rather than stopping it at the source
+- Free because your private data is the product
+- The privacy notice names customer categories (brands, data brokers) but not the customers
 
 **Recommendation:** **Avoid entirely in 2026**
 
 **Why it's fundamentally a problem:**
 - Active, ongoing data monetization
-- Betrayed user trust in 2017 and never truly fixed it
-- No meaningful privacy protections added
-- Fake unsubscribe (it doesn't actually work)
-- Business model that can't coexist with privacy
+- The FTC charged it with deceiving users in 2019
+- Its unsubscribe hides mail rather than stopping it
+- A business model that depends on reading your inbox
 
 ---
 
@@ -367,7 +353,7 @@ Your Gmail → Upload → Tool's Servers → Analysis → Results to you
 
 **Severe limitations:**
 - Very limited cleanup features
-- No bulk operations (limit of 10)
+- No bulk operations (one sender at a time)
 - No storage analysis or insights
 - Limited unsubscribe effectiveness (header-only)
 - No advanced filtering or exception handling
@@ -388,16 +374,15 @@ Your Gmail → Upload → Tool's Servers → Analysis → Results to you
 | **Processing Location** | Client-side (browser) | Server-side | Google servers | Server-side | Server-side |
 | **Emails Uploaded** | ❌ Never | ✅ Yes | N/A (already there) | ✅ Yes | ✅ Yes |
 | **Active Data Selling** | ❌ Never | ❌ No | ❌ No | ✅ Yes (core business) | ❌ No |
-| **Content Access** | Metadata only (optional body) | Full (when needed) | Full | Full | Full |
-| **Data Retention** | None (local only) | 45 days maximum | Google policy | Indefinite | Varies |
-| **GDPR Compliant** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No (EU banned) | ✅ Yes |
+| **Content Access** | Headers for analysis; body only for unsubscribe, in your browser | Headers only (per its policy) | Full | Full | Has access to contents (per its FAQ) |
+| **Data Retention** | None (local only) | 45 days after last login (no subscription) | Google policy | Not stated | Not stated |
+| **Available in the EU** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No (withdrew in 2018) | ✅ Yes |
 | **Source Auditable** | ✅ Yes (GitHub) | ❌ No | ❌ No | ❌ No | ❌ No |
-| **CASA Certified** | ✅ CASA 2 | ✅ CASA 2 | N/A | ❌ No | ⚠️ Unknown |
-| **Third-Party Access** | ❌ Never | ⚠️ Encrypted server | ❌ No | ✅ Yes (data brokers) | ⚠️ Server staff |
-| **Breach Risk** | Very Low (local only) | Medium (encrypted) | Low (Google) | High (monetized data) | Medium |
+| **Google CASA assessment** | ✅ Passed | Not published | N/A | Not published | Not published |
+| **Third-Party Access** | ❌ Never | ⚠️ Server-side | ❌ No | ✅ Yes (data brokers) | ⚠️ Server staff |
+| **Breach Risk** | Very Low (local only) | Medium (server-side) | Low (Google) | High (full email on servers) | Medium |
 | **Subpoena Risk** | None (no data stored) | Yes (server data) | Yes (Google) | Yes (server data) | Yes (server data) |
-| **AI Training Risk** | ❌ None | ⚠️ Policy dependent | ⚠️ Google policy | ✅ High risk | ⚠️ Unknown |
-| **Employee Access** | ❌ Impossible | ⚠️ Possible | ⚠️ Google staff | ✅ Yes | ⚠️ Possible |
+| **Employee Access** | ❌ Impossible | ⚠️ Possible | ⚠️ Google staff | ⚠️ Possible | ⚠️ Possible |
 
 ---
 
@@ -426,10 +411,10 @@ Your Browser → Direct Gmail API Connection → Metadata Download → Browser M
 ```
 
 - Your browser connects directly to the Gmail API (no middleman)
-- Requests the metadata scope: `gmail.metadata` (most restrictive)
-- Downloads only headers: sender, subject, date, size, labels
-- **Email body is never downloaded** (unless you explicitly use the unsubscribe feature)
-- All communication encrypted with TLS 1.3
+- Requests Gmail access with modify permission, because deleting, labeling, and blocking need it (the exact scopes are in the open-source code)
+- The analysis reads only headers: sender, subject, date, labels
+- **Email bodies aren't read during analysis** (only when you use the unsubscribe feature, to find the link)
+- All communication with Gmail is encrypted in transit
 
 #### Step 3: Local Analysis
 ```
@@ -438,10 +423,9 @@ Browser Memory → JavaScript Analysis Engine → IndexedDB Storage → Display
 ```
 
 - Analysis runs in your browser's JavaScript engine (V8, SpiderMonkey, and so on)
-- Progressive analysis (100 emails at a time for performance)
+- Progressive analysis in batches (about 10 minutes for a 25,000-email inbox)
 - Results cached in your browser's IndexedDB (local database)
 - No network calls to MailMop servers for analysis
-- Fully offline-capable after the initial metadata download
 
 #### Step 4: Results Display
 ```
@@ -481,20 +465,10 @@ Your Browser → Direct Gmail API Call → Gmail Servers
 **What happens:**
 If a company storing your email data gets hacked, the attackers get years of your private emails.
 
-**Recent examples (2024-2026):**
-- 2024: a major email marketing provider breach exposed 15 million emails
-- 2025: an email service provider hack leaked customer credentials and email metadata
-- 2026: an email tool compromise exposed user emails used for AI training
-
-**Statistics:**
-- Email-related breaches up 40% since 2024
-- The average breach exposes 3.2 years of email history
-- 68% of breached companies never fully notified users
-
 **Protection strategies:**
 - Use client-side tools (nothing stored means nothing to breach)
 - Pick companies with strong, proven security practices
-- Verify CASA 2 or equivalent certification
+- Check for Google's CASA assessment or an equivalent review
 - Check the company's breach history and response
 - Understand their encryption practices (at-rest and in-transit)
 
@@ -512,10 +486,9 @@ If a company storing your email data gets hacked, the attackers get years of you
 "Free" tools make money by selling your data to advertisers, market researchers, AI training companies, and sometimes competitors.
 
 **Unroll.Me example (still relevant in 2026):**
-- Sold Lyft receipt data to Uber (a direct competitor)
+- Its parent company sold Lyft receipt data to Uber (a direct competitor)
 - Users had no knowledge and gave no meaningful consent
-- The data included ride frequency, costs, routes, timing, and patterns
-- Business model unchanged in 2026
+- Its owner still describes the same model in its privacy notice
 
 **New in 2026: AI Training**
 - Your emails may be used to train commercial language models
@@ -531,7 +504,7 @@ If a company storing your email data gets hacked, the attackers get years of you
 - Confirm there are no AI training clauses in the terms
 
 **MailMop's protection:**
-- Transparent subscription pricing ($1.89/month pro)
+- Transparent subscription pricing ($1.89/month, billed annually as $22.68/year)
 - The free tier is funded by pro subscriptions, not by your data
 - An explicit "no data selling" policy in plain language
 - Can't sell or AI-train on what they never collect
@@ -548,7 +521,6 @@ Government agencies can subpoena email data from companies that hold it on serve
 - Companies have to comply with valid legal subpoenas
 - Your emails on their servers can be requested
 - You may never find out it happened
-- Requests up 60% since 2023
 - International jurisdiction adds complications
 
 **Protection strategies:**
@@ -577,7 +549,6 @@ Company employees, contractors, and third parties can potentially read emails st
 - Database administrators with system access
 - Security teams watching for threats
 - Third-party contractors and vendors
-- AI training teams (new in 2025-2026)
 - Offshore support teams
 
 **Protection strategies:**
@@ -626,7 +597,7 @@ Some companies keep your data forever, even years after you stop using the servi
 
 ## Privacy Regulations and Compliance in 2026
 
-### GDPR (Europe) - Strengthened
+### GDPR (Europe)
 
 **What it requires:**
 - Right to access all data
@@ -637,62 +608,51 @@ Some companies keep your data forever, even years after you stop using the servi
 - Data minimization principles
 - Privacy by design
 
-**2026 Updates:**
-- Higher penalties (up to 4% of global revenue or €20M)
-- Stricter rules on AI training data
-- Tighter cross-border transfer restrictions
+**Penalties:** up to 4% of global revenue or €20 million, whichever is higher.
 
-**Why Unroll.Me stays banned:**
-- Couldn't meet data minimization requirements
-- Unclear and inadequate consent for data selling
-- No meaningful deletion option
-- Cross-border data transfers broke the rules
-- Business model fundamentally incompatible
+**Why Unroll.Me isn't available:**
+- It withdrew from the EU and EEA in May 2018, as GDPR enforcement began
+- It hasn't returned, and its data-monetization model would be hard to square with GDPR's consent and data-minimization rules
 
-**GDPR-compliant tools:**
+**Available in the EU:**
 - MailMop (client-side processing, minimal data)
-- Clean Email (explicit GDPR compliance, EU servers)
-- Mailstrom (GDPR compliant operations)
-- Gmail Native (Google fully compliant)
+- Clean Email
+- Mailstrom
+- Gmail Native
 
-**Not GDPR-compliant:**
-- Unroll.Me (still banned across the EU)
+**Not available in the EU:**
+- Unroll.Me
 
 ---
 
-### CCPA/CPRA (California) - Expanded
+### CCPA/CPRA (California)
 
 **What it requires:**
 - Right to know what data is collected
 - Right to delete personal data
 - Right to opt out of data selling
 - No discrimination for exercising privacy rights
-- **New in 2026:** stronger AI training opt-out rights
 
 **How tools comply:**
 - MailMop: minimal data collection, no selling, no AI training
 - Clean Email: clear policies, no selling, opt-out available
-- Unroll.Me: technically discloses selling (but ethically questionable)
+- Unroll.Me: discloses the data sharing in its privacy notice, with a "Your Privacy Rights" opt-out portal
 
 ---
 
-### CASA 2/3 Certification (Google)
+### CASA (Google's Cloud Application Security Assessment)
 
 **What it means:**
-- Google's Third-Party Security Verification program
-- Annual comprehensive security audits
-- Strict data handling requirements and verification
-- OAuth implementation security review
-- Ongoing compliance monitoring
+- The security assessment Google requires for apps that use sensitive or restricted Gmail scopes
+- Reviews the app's security practices and OAuth implementation
+- Has to be renewed periodically to keep API access
 
-**CASA 2 certified in 2026:**
-- MailMop ✅ (annually verified)
-- Clean Email ✅ (annually verified)
+**Passed Google's CASA assessment:**
+- MailMop ✅
 - Gmail Native (N/A, it's Google's own product)
 
-**Not certified:**
-- Unroll.Me ❌ (failed certification)
-- Mailstrom ⚠️ (status unknown)
+**Status not published:**
+- Clean Email, Mailstrom, and Unroll.Me (any app using restricted Gmail scopes goes through Google's verification, but none of them publish a CASA result we could find)
 
 ---
 
@@ -725,9 +685,9 @@ Some companies keep your data forever, even years after you stop using the servi
 - Source-available = good (key functions reviewable)
 - Closed source = you have to trust them completely (risky)
 
-**6. Are you CASA certified by Google?**
-- Yes = independently verified by Google
-- No = not independently verified (higher risk)
+**6. Have you passed Google's CASA assessment?**
+- Yes = independently assessed
+- Not stated = you're taking their word for it
 
 **7. What happens if I delete my account?**
 - Immediate complete deletion = good
@@ -754,8 +714,8 @@ Some companies keep your data forever, even years after you stop using the servi
 - An explicit no-data-selling policy (in plain language)
 - A clear, specific data retention timeline
 - GDPR/CCPA/CPRA compliance
-- CASA 2 or equivalent certification
-- Strong encryption (TLS 1.3, AES-256)
+- Google's CASA assessment or an equivalent review
+- Strong encryption in transit and at rest
 - No AI training clauses
 - Regular third-party security audits
 
@@ -772,7 +732,7 @@ Some companies keep your data forever, even years after you stop using the servi
 - Closed source = you have to trust them completely (risky)
 
 **5. Start with minimal permissions**
-- Use a metadata-only scope if at all possible
+- Prefer tools that ask for the narrowest scope their features allow, and that explain why they need what they ask for
 - Only grant full access if a feature genuinely needs it
 - Understand exactly what each permission allows
 
@@ -781,7 +741,7 @@ Some companies keep your data forever, even years after you stop using the servi
 ### After Connecting a Tool
 
 **1. Review connected apps regularly**
-- Gmail Settings → See all settings → Accounts → check connected apps
+- Google Account → Security → Third-party apps with account access
 - Revoke apps you no longer use
 - Verify the permissions each one has
 
@@ -820,11 +780,10 @@ Based on privacy architecture, data handling, and security verification:
 - No employee or contractor access possible
 - Zero cross-border data transfers
 
-**2. Metadata-only scope**
-- Doesn't read email content by default
-- Minimal Gmail permissions
-- Optional body access only for the unsubscribe feature
-- You control what gets accessed
+**2. Headers-only analysis**
+- Doesn't read email bodies during analysis
+- Reads a body only when you click unsubscribe, to find the link, and only in your browser
+- The exact Gmail scopes are visible in the source code
 
 **3. Source-available code**
 - You can audit exactly what it does (GitHub)
@@ -832,11 +791,9 @@ Based on privacy architecture, data handling, and security verification:
 - The community can review the security
 - No hidden data collection
 
-**4. CASA 2 certified**
-- Google independently verified the security
-- Annual comprehensive audits required
-- Strict data handling standards
-- Ongoing compliance monitoring
+**4. Passed Google's CASA assessment**
+- Google's required security review for apps with sensitive Gmail access
+- Renewed periodically to keep API access
 
 **5. Zero data selling or AI training**
 - An explicit policy against any monetization
@@ -876,9 +833,7 @@ Based on privacy architecture, data handling, and security verification:
 - Server-side processing (emails uploaded to servers)
 - But: an explicit no-data-selling policy
 - But: a clear 45-day retention policy
-- But: GDPR compliant with EU servers
-- But: CASA 2 certified by Google
-- But: no AI training on user data
+- But: its policy says email bodies are never downloaded
 
 ---
 
@@ -887,12 +842,10 @@ Based on privacy architecture, data handling, and security verification:
 **Why to skip it entirely in 2026:**
 - Actively sells your email data for profit
 - A business model built entirely on data monetization
-- Scans purchase receipts and transactions
-- The 2017 scandal was never properly addressed
-- Not GDPR compliant (banned across the EU)
-- Fake unsubscribe (it doesn't actually work)
-- No meaningful privacy improvements since the scandal
-- Potential AI training on your data
+- Collects purchase receipts and transactional email, per its own privacy notice
+- The FTC charged it with deceiving users in 2019
+- Not available in the EU or EEA (withdrew in 2018)
+- Its unsubscribe hides mail rather than stopping it
 
 ---
 
@@ -907,7 +860,7 @@ In 2026 you don't have to trade away privacy to clean your inbox. Client-side to
 - ✅ Read the full privacy policy
 - ✅ Check if data is sold, shared, or used for AI training
 - ✅ Verify specific data retention policies and timelines
-- ✅ Look for CASA 2 or equivalent certification
+- ✅ Look for Google's CASA assessment or an equivalent review
 - ✅ Check GDPR/CCPA/CPRA compliance
 - ✅ Review the source code if it's available
 - ✅ Start with minimal permissions
@@ -925,7 +878,7 @@ In 2026 you don't have to trade away privacy to clean your inbox. Client-side to
 
 **[Try MailMop Free →](https://mailmop.com/dashboard)**
 
-Complete client-side processing. Metadata-only access. CASA 2 certified. Your emails never leave your browser.
+Complete client-side processing. Headers-only analysis. Passed Google's CASA assessment. Your emails never leave your browser.
 
 ---
 
@@ -937,36 +890,36 @@ Client-side processing means all the analysis happens in your browser on your ow
 
 ### Is MailMop really more private than Clean Email?
 
-Yes, fundamentally and architecturally. MailMop processes everything locally in your browser, so your emails never leave your device or get uploaded anywhere. Clean Email uploads your emails to its servers for processing (though it doesn't sell data and has good policies). Both are far more private than Unroll.Me, which actively sells your data. Your call comes down to whether you need multi-provider support (Clean Email) or maximum privacy (MailMop).
+Yes, fundamentally and architecturally. MailMop processes everything locally in your browser, so your emails never leave your device or get uploaded anywhere. Clean Email processes your email headers on its servers (its policy says it never downloads bodies, and it doesn't sell data). Both are far more private than Unroll.Me, which actively sells your data. Your call comes down to whether you need multi-provider support (Clean Email) or maximum privacy (MailMop).
 
 ### Can MailMop access my email content?
 
-MailMop mostly uses a metadata-only scope (sender, subject, date, size, labels) and doesn't touch your email body by default. When you explicitly use the unsubscribe feature, it can optionally read the email body to find unsubscribe links, but even that happens entirely locally in your browser. Content is never uploaded to MailMop servers or read by anyone else.
+MailMop's analysis reads only headers (sender, subject, date, labels) and doesn't touch your email body by default. When you explicitly use the unsubscribe feature, it can optionally read the email body to find unsubscribe links, but even that happens entirely locally in your browser. Content is never uploaded to MailMop servers or read by anyone else.
 
 ### How can I verify a tool's privacy claims?
 
-Check: 1) CASA 2 certification from Google (independent verification), 2) source code availability (MailMop is source-available on GitHub for audit), 3) privacy policy specifics (data retention, selling, sharing, AI training), 4) GDPR compliance (EU availability and certification), 5) independent user reviews and privacy audits, 6) how transparent the company is about its architecture, 7) third-party security assessments.
+Check: 1) whether it passed Google's CASA assessment (independent review), 2) source code availability (MailMop is source-available on GitHub for audit), 3) privacy policy specifics (data retention, selling, sharing, AI training), 4) GDPR compliance (EU availability and certification), 5) independent user reviews and privacy audits, 6) how transparent the company is about its architecture, 7) third-party security assessments.
 
-### What does CASA 2 certification mean?
+### What does Google's CASA assessment mean?
 
-CASA (Cloud Application Security Assessment) is Google's rigorous Third-Party Security Verification program. CASA 2 certification means Google has thoroughly audited the tool's security practices, OAuth implementation, data handling, and overall architecture. It requires annual audits to keep. MailMop and Clean Email are CASA 2 certified; Unroll.Me failed certification.
+CASA (Cloud Application Security Assessment) is the security review Google requires for apps that use sensitive or restricted Gmail scopes. Passing it means an authorized lab reviewed the app's security practices and OAuth implementation. It has to be renewed periodically. MailMop passed it; the other tools here don't publish a result.
 
 ### Does using MailMop mean Google can't access my emails?
 
 No. Google already has full access to your emails because you use Gmail. MailMop's real advantage is that it adds zero additional privacy risk beyond Gmail itself, while server-side tools create new places where your emails exist and can be breached, subpoenaed, read by employees, or used for AI training.
 
-### Why is Unroll.Me still banned in the EU in 2026?
+### Why isn't Unroll.Me available in the EU?
 
-Unroll.Me still doesn't comply with GDPR because: 1) it sells user data without proper consent mechanisms, 2) it doesn't offer meaningful deletion, 3) its consent mechanisms are inadequate, 4) it violates data minimization principles, 5) its cross-border transfers break EU law, 6) the business model is fundamentally incompatible with GDPR, and 7) nothing meaningful has changed since the 2017 scandal.
+Unroll.Me withdrew from the EU and EEA in May 2018, right as GDPR enforcement began, rather than adapt its data-monetization model to GDPR's consent and data-minimization rules. It hasn't returned.
 
 ### Can I use a privacy-focused tool and then revoke access?
 
-Yes, and you should. The recommended routine: 1) connect MailMop (or another tool), 2) finish your cleanup session, 3) immediately revoke access in Gmail Settings → Accounts → Connected apps, 4) reconnect only when you need to clean up again. That keeps your exposure window short. With MailMop's client-side architecture, your emails aren't at risk even while it's connected.
+Yes, and you should. The recommended routine: 1) connect MailMop (or another tool), 2) finish your cleanup session, 3) immediately revoke access in your Google Account → Security → Third-party apps with account access, 4) reconnect only when you need to clean up again. That keeps your exposure window short. With MailMop's client-side architecture, your emails aren't at risk even while it's connected.
 
 ### What permissions does MailMop actually need?
 
-MailMop requests the Gmail metadata scope (gmail.metadata), which covers email headers: sender, subject, date, size, labels. That's much narrower than full Gmail access. When you explicitly use unsubscribe features, it can optionally read the email body to find unsubscribe links, but that's processed entirely locally in your browser and never uploaded.
+MailMop requests Gmail access with modify permission, because deleting, labeling, and blocking need it (the exact scopes are in the open-source code). What matters is how it's used: the analysis reads only headers (sender, subject, date, labels), everything runs in your browser, and it only reads an email body when you click unsubscribe, to find the link. Nothing is uploaded to MailMop's servers.
 
 ### How do I delete my data from a Gmail cleanup tool?
 
-For MailMop: clear your browser cache and IndexedDB (all data is stored locally only). For server-side tools: contact support and request full account and data deletion under your GDPR/CCPA/CPRA rights, then verify it and ask for confirmation. Either way, revoke Gmail access in Gmail Settings → Accounts → Connected apps right away, and get your deletion confirmation in writing.
+For MailMop: clear your browser cache and IndexedDB (all data is stored locally only). For server-side tools: contact support and request full account and data deletion under your GDPR/CCPA/CPRA rights, then verify it and ask for confirmation. Either way, revoke access in your Google Account → Security → Third-party apps with account access right away, and get your deletion confirmation in writing.
