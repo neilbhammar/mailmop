@@ -37,7 +37,6 @@ export function SwitchInboxDialog({ open, onOpenChange }: SwitchInboxDialogProps
     setIsSwitching(true)
     try {
       await switchInbox()
-      onOpenChange(false)
     } catch (error) {
       // Closing the Google popup rejects — an ordinary "changed my mind", not a
       // failure worth shouting about. The user is disconnected but keeps their
@@ -46,14 +45,19 @@ export function SwitchInboxDialog({ open, onOpenChange }: SwitchInboxDialogProps
         component: 'SwitchInboxDialog',
         error: error instanceof Error ? error.message : String(error),
       })
-      onOpenChange(false)
     } finally {
       setIsSwitching(false)
+      onOpenChange(false)
     }
   }
 
+  // Always closable, including mid-flight. Gating this on `isSwitching` assumed
+  // the Google flow always reports back; when it did not, the dialog disabled
+  // the only controls that could have dismissed it and the user was stuck with
+  // a modal over the whole app. A dialog should never be able to trap someone
+  // because a third-party popup went quiet.
   return (
-    <Dialog open={open} onOpenChange={(next) => !isSwitching && onOpenChange(next)}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-white dark:bg-slate-800 p-6 gap-6 max-w-sm">
         <DialogHeader className="gap-3">
           <DialogTitle className="text-xl dark:text-slate-100">Connect a different inbox</DialogTitle>
@@ -65,10 +69,9 @@ export function SwitchInboxDialog({ open, onOpenChange }: SwitchInboxDialogProps
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={isSwitching}
             className="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-300 border-0"
           >
-            Cancel
+            {isSwitching ? 'Close' : 'Cancel'}
           </Button>
           <Button
             onClick={handleSwitch}

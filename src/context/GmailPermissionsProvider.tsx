@@ -419,6 +419,17 @@ export function GmailPermissionsProvider({
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
         scope: GMAIL_SCOPES,
         ux_mode: 'popup',
+        // Google calls `callback` only when consent succeeds. Closing the popup,
+        // or a browser blocking it, fires this instead — and without it the
+        // promise below never settles, which left the switch dialog spinning on
+        // "Waiting for Google..." with its own close button disabled.
+        error_callback: (err) => {
+          logger.debug('OAuth flow did not complete', {
+            component: 'GmailPermissionsProvider',
+            type: err?.type,
+          });
+          reject(new Error(err?.type === 'popup_closed' ? 'popup_closed' : 'oauth_failed'));
+        },
         callback: async ({ code, error }) => {
           if (error || !code) {
             logger.error('OAuth error', { component: 'GmailPermissionsProvider', error });
