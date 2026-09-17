@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { checkRateLimit, createRateLimitResponse, RATE_LIMITS } from '@/lib/utils/rateLimiter';
+import { resolveRefreshToken, REFRESH_COOKIE } from '@/lib/gmail/refreshTokenPolicy';
 
 // This tells Next.js this is an Edge API Route - it runs on Vercel's edge network (super fast servers close to users)
 export const runtime = 'edge';
@@ -58,6 +59,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Google does not always send a refresh token back — an account that has
+    // already granted these scopes sometimes re-consents without one. Writing
+    // that absence into the cookie is what used to produce a cookie containing
+    // the text "undefined", so refuse instead and clear the cookie, which turns
+    // an invisible broken connection into a visible "connect again".
+    //
+    // Keeping whatever cookie is already there is NOT an option: with inbox
+    // switching, that token may belong to the mailbox the user is leaving.
+    const refresh = resolveRefreshToken(tokens.refresh_token);
+    if (refresh.kind === 'reject') {
+      const failed = NextResponse.json(
+        { error: 'no_refresh_token', message: refresh.reason },
+        { status: 400 }
+      );
+      failed.cookies.set(REFRESH_COOKIE, '', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 0,
+        expires: new Date(0),
+      });
+      return failed;
+    }
+
     // Create a response object with the access token
     const response = NextResponse.json({
       access_token: tokens.access_token,
@@ -66,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // Add the refresh token as a secure cookie
     // This is like storing the renewal pass in a super secure vault
-    response.cookies.set('mm_refresh', tokens.refresh_token, {
+    response.cookies.set(REFRESH_COOKIE, refresh.refreshToken, {
       httpOnly: true,          // Makes it so JavaScript can't read the cookie (more secure)
       secure: true,            // Only sends cookie over HTTPS
       sameSite: 'lax',        // Provides some protection against cross-site request forgery

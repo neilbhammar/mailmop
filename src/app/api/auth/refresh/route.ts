@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { checkRateLimit, createRateLimitResponse, RATE_LIMITS } from '@/lib/utils/rateLimiter';
+import { REFRESH_COOKIE } from '@/lib/gmail/refreshTokenPolicy';
 
 // This tells Next.js this is an Edge API Route - it runs on Vercel's edge network (super fast servers close to users)
 export const runtime = 'edge';
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get our refresh token from the secure cookie
-    const refreshToken = request.cookies.get('mm_refresh')?.value;
+    const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
 
     // If we don't have a refresh token, we can't get a new access token
     if (!refreshToken) {
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
           { error: tokens.error, message: tokens.error_description || 'Failed to refresh token' },
           { status: 400 }
         );
-        response.cookies.delete('mm_refresh');
+        response.cookies.delete(REFRESH_COOKIE);
         return response;
       }
       

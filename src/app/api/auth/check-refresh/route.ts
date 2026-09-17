@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, createRateLimitResponse, RATE_LIMITS } from '@/lib/utils/rateLimiter';
+import { REFRESH_COOKIE } from '@/lib/gmail/refreshTokenPolicy';
 
 export async function GET(request: Request) {
   // SECURITY: Apply rate limiting to prevent abuse
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
 
   // Simply check if the refresh token cookie exists
   const cookieStore = await cookies();
-  const refreshToken = cookieStore.get('mm_refresh');
+  const refreshToken = cookieStore.get(REFRESH_COOKIE);
   
   const responseBody = { hasRefreshToken: !!refreshToken };
   

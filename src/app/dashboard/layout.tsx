@@ -2,22 +2,15 @@
 
 import { useAuth } from '@/context/AuthProvider'
 import { useWhitelist } from '@/hooks/useWhitelist'
-import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
 import { useBeforeUnloadWarning } from '@/hooks/useBeforeUnloadWarning'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { BetaWaitlistModal } from '@/components/modals/BetaWaitlistModal'
-import { EmailMismatchModal } from '@/components/modals/EmailMismatchModal'
 import { TopBar } from '@/components/TopBar/TopBar'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading: authLoading } = useAuth()
   const { checkWhitelist, isWhitelisted, isLoading: whitelistLoading } = useWhitelist()
-  const { 
-    shouldShowMismatchModal, 
-    gmailEmail,
-    hideMismatchModal
-  } = useGmailPermissions()
   const router = useRouter()
 
   // Warn users before closing tab if there are active queue operations
@@ -71,23 +64,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {mainContent}
         </div>
         <BetaWaitlistModal />
-      </>
-    )
-  }
-
-  // If there's an email mismatch, show blurred content + modal
-  if (shouldShowMismatchModal && user.email && gmailEmail) {
-    return (
-      <>
-        <div className="filter blur-sm pointer-events-none">
-          {mainContent}
-        </div>
-        <EmailMismatchModal 
-          isOpen={shouldShowMismatchModal}
-          onClose={hideMismatchModal}
-          supabaseEmail={user.email} 
-          gmailEmail={gmailEmail} 
-        />
       </>
     )
   }
