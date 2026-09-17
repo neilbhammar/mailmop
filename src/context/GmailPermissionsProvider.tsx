@@ -4,7 +4,6 @@ import { createContext, useContext, useCallback, useEffect, useState, ReactNode 
 import { GmailPermissionState, GoogleTokenResponse, GoogleTokenClient, GoogleTokenClientConfig, TokenStatus, TokenStatusOptions, TokenRunStatus } from '@/types/gmail';
 import { fetchGmailProfile } from '@/lib/gmail/fetchProfile';
 import { fetchGmailStats } from '@/lib/gmail/fetchGmailStats';
-import { useAuth } from './AuthProvider';
 import { ANALYSIS_CHANGE_EVENT, hasSenderAnalysis } from '@/lib/storage/senderAnalysis';
 import { 
   primeAccessToken, 
@@ -17,8 +16,14 @@ import {
   forceRefreshAccessToken as libForceRefreshAccessToken,
   clearAccessTokenOnlyInStorage,
   expireAccessTokenInStorage,
-  getRefreshTokenState
+  getRefreshTokenState,
+  dropRefreshToken
 } from '@/lib/gmail/token';
+import {
+  getConnectedInbox,
+  reconcileConnectedInbox,
+} from '@/lib/storage/userStorage';
+import { normalizeInboxAddress } from '@/lib/connectedInbox';
 import { logger } from '@/lib/utils/logger';
 
 
@@ -39,8 +44,10 @@ interface GmailPermissionsContextType extends GmailPermissionState {
   isLoading: boolean;
   isClientLoaded: boolean;
   requestPermissions: () => Promise<boolean>;
-  shouldShowMismatchModal: boolean;
-  gmailEmail: string | null;
+  /** The Gmail address MailMop currently holds a token for, or null. */
+  connectedInbox: string | null;
+  /** Disconnects the current inbox and opens Google's account chooser. */
+  switchInbox: () => Promise<boolean>;
   clearToken: () => Promise<void>;
   tokenStatus: TokenStatus;
   canTokenSurvive: (durationMs: number) => boolean;
@@ -53,7 +60,6 @@ interface GmailPermissionsContextType extends GmailPermissionState {
   clearAccessTokenOnly: () => Promise<void>;
   expireAccessToken: () => Promise<void>;
   refreshTokenState: 'unknown' | 'present' | 'absent';
-  hideMismatchModal: () => void;
 }
 
 const GmailPermissionsContext = createContext<GmailPermissionsContextType | null>(null);
@@ -68,7 +74,6 @@ export function GmailPermissionsProvider({
   children: ReactNode;
   expiringSoonThresholdMs?: number;
 }) {
-  const { user } = useAuth();
   const [permissionState, setPermissionState] = useState<GmailPermissionState>({
     hasToken: false,
     hasEmailData: false,
@@ -98,12 +103,13 @@ export function GmailPermissionsProvider({
   const [isGsiLoaded, setIsGsiLoaded] = useState(false);
   const [isApiClientLoaded, setIsApiClientLoaded] = useState(false);
   const [isGmailClientInitialized, setIsGmailClientInitialized] = useState(false);
-  const [shouldShowMismatchModal, setShouldShowMismatchModal] = useState(false);
-  const [gmailEmail, setGmailEmail] = useState<string | null>(null);
+  // Which mailbox we are attached to. Hydrated from localStorage rather than
+  // waiting on a Gmail profile call, so a reload does not briefly render as if
+  // no inbox were connected.
+  const [connectedInbox, setConnectedInboxState] = useState<string | null>(null);
 
-  // Function to hide the mismatch modal
-  const hideMismatchModal = useCallback(() => {
-    setShouldShowMismatchModal(false);
+  useEffect(() => {
+    setConnectedInboxState(getConnectedInbox());
   }, []);
 
   // Combined client loaded state
@@ -257,34 +263,42 @@ export function GmailPermissionsProvider({
     };
   }, [checkPermissionState]);
 
-  // Verify Gmail profile matches Supabase user
-  const verifyEmailMatch = useCallback(async (accessToken: string): Promise<boolean> => {
+  /**
+   * Records which mailbox the freshly granted token belongs to.
+   *
+   * This replaces the old `verifyEmailMatch`, which compared the Gmail address
+   * against the Supabase login address and revoked the token when they differed
+   * — the single thing that made MailMop one-inbox-per-account. The address is
+   * now recorded rather than policed, and the only remaining decision is whether
+   * the analysis already on this device belongs to a different mailbox.
+   */
+  const registerConnectedInbox = useCallback(async (accessToken: string): Promise<boolean> => {
     try {
       const profile = await fetchGmailProfile(accessToken);
-      setGmailEmail(profile.emailAddress);
-      
-      const emailsMatch = profile.emailAddress.toLowerCase() === user?.email?.toLowerCase();
-      if (!emailsMatch) {
-        logger.debug('[Gmail] Email mismatch detected:', {
-          gmail: profile.emailAddress,
-          supabase: user?.email
+
+      // Clears the previous inbox's analysis if this is a different mailbox,
+      // keeps it if the user simply reconnected the same one.
+      const cleared = await reconcileConnectedInbox(profile.emailAddress);
+      setConnectedInboxState(normalizeInboxAddress(profile.emailAddress));
+
+      if (cleared) {
+        logger.debug('[Gmail] Connected a different inbox, previous analysis cleared', {
+          component: 'GmailPermissionsProvider',
         });
-        setShouldShowMismatchModal(true);
-        await revokeAndClearToken();
-        return false;
       }
-      
-      setShouldShowMismatchModal(false);
+
       return true;
     } catch (error) {
-      logger.error('Failed to verify email match', { 
-        component: 'GmailPermissionsProvider', 
+      logger.error('Failed to identify the connected inbox', {
+        component: 'GmailPermissionsProvider',
         error: error instanceof Error ? error.message : String(error)
       });
+      // Without knowing which mailbox this token opens we cannot safely act on
+      // it — every later operation would be aimed at an unknown inbox.
       await revokeAndClearToken();
       return false;
     }
-  }, [user?.email]);
+  }, []);
 
   // Function to update token status
   const updateTokenStatus = useCallback(() => {
@@ -391,6 +405,12 @@ export function GmailPermissionsProvider({
   }, [updateTokenStatus]);
 
   // Request Gmail permissions
+  //
+  // No `login_hint`. It used to pre-select the Supabase login address, which was
+  // the right nudge when that was the only mailbox you were allowed to connect;
+  // now it would hide the account chooser that makes picking a second inbox
+  // possible. Google still defaults to the signed-in account, so the common case
+  // is unchanged — it is just no longer forced.
   const requestPermissions = useCallback(async () => {
     if (!isClientLoaded) return false;
 
@@ -398,7 +418,6 @@ export function GmailPermissionsProvider({
       const codeClient = window.google.accounts.oauth2.initCodeClient({
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
         scope: GMAIL_SCOPES,
-        login_hint: user?.email ?? '',
         ux_mode: 'popup',
         callback: async ({ code, error }) => {
           if (error || !code) {
@@ -429,9 +448,10 @@ export function GmailPermissionsProvider({
           // 1) Put it in memory for immediate use
           primeAccessToken(access_token, expires_in);
 
-          // Verify the Gmail ↔ Supabase email match
-          const ok = await verifyEmailMatch(access_token);
-          if (!ok) return reject('email_mismatch');
+          // Record which mailbox this token opens, clearing another inbox's
+          // analysis if that is what just got replaced.
+          const ok = await registerConnectedInbox(access_token);
+          if (!ok) return reject('inbox_unidentified');
 
           // Kick off stats fetch, update UI, etc.
           updateTokenStatus();
@@ -449,19 +469,43 @@ export function GmailPermissionsProvider({
       // Opens the popup
       codeClient.requestCode();
     });
-  }, [isClientLoaded, user?.email, verifyEmailMatch, updateTokenStatus]);
+  }, [isClientLoaded, registerConnectedInbox, updateTokenStatus]);
 
-  // Log any changes to the modal visibility
+  /**
+   * Hands MailMop over to a different inbox.
+   *
+   * Drops our token first so Google offers the account chooser, then runs the
+   * normal connect flow. Nothing local is cleared here: if the user closes the
+   * popup without choosing, they keep the analysis they already had and can
+   * reconnect the same mailbox to pick up exactly where they left off. The
+   * clearing decision belongs to `registerConnectedInbox`, once we actually know
+   * which mailbox was chosen.
+   */
+  const switchInbox = useCallback(async () => {
+    logger.debug('Switching inbox', { component: 'GmailPermissionsProvider' });
+    await dropRefreshToken();
+    // The connected-inbox marker deliberately stays put. It records who the
+    // analysis on this device belongs to, and that is still the previous inbox
+    // until Google hands us a different one — `registerConnectedInbox` needs it
+    // to tell a switch from a reconnect. Clearing it here is precisely the bug
+    // that left one inbox's senders on screen under another inbox's token.
+    updateTokenStatus();
+    return requestPermissions();
+  }, [requestPermissions, updateTokenStatus]);
+
   useEffect(() => {
-    logger.debug('Modal visibility changed', { 
+    logger.debug('Connected inbox changed', {
       component: 'GmailPermissionsProvider',
-      shouldShow: shouldShowMismatchModal,
-      state: permissionState 
+      connectedInbox,
+      state: permissionState
     });
-  }, [shouldShowMismatchModal, permissionState]);
+  }, [connectedInbox, permissionState]);
 
   const clearToken = useCallback(async () => {
     await revokeAndClearToken();
+    // Revoking access does not delete the analysis, so the marker stays too —
+    // those senders still belong to that mailbox, and connecting a different one
+    // later has to be able to notice.
     updateTokenStatus();
     window.dispatchEvent(new CustomEvent(TOKEN_CHANGE_EVENT, { detail: { key: 'token' } }));
   }, [updateTokenStatus]);
@@ -532,8 +576,8 @@ export function GmailPermissionsProvider({
     isLoading,
     isClientLoaded,
     requestPermissions,
-    shouldShowMismatchModal,
-    gmailEmail,
+    connectedInbox,
+    switchInbox,
     clearToken,
     tokenStatus,
     canTokenSurvive,
@@ -546,7 +590,6 @@ export function GmailPermissionsProvider({
     clearAccessTokenOnly,
     expireAccessToken,
     refreshTokenState: getRefreshTokenState(),
-    hideMismatchModal,
   };
 
   return (

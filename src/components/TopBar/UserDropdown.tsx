@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
-import { ChevronDown, MessageSquare, Settings, CreditCard, HelpCircle, LogOut, RefreshCwOff, RefreshCcw, Sun, Moon, Monitor, CheckIcon, Loader2 } from 'lucide-react'
+import { ChevronDown, MessageSquare, Settings, CreditCard, HelpCircle, LogOut, RefreshCwOff, RefreshCcw, Sun, Moon, Monitor, CheckIcon, Loader2, Inbox } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthProvider'
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
 import { useTheme } from 'next-themes'
 import { RevokeAccessDialog } from '../modals/RevokeAccessDialog'
+import { SwitchInboxDialog } from '../modals/SwitchInboxDialog'
 import { SignOutDialog } from '../modals/SignOutDialog'
 import { FeedbackModal } from '../modals/FeedbackModal'
 import { ManageSubscriptionModal } from '../modals/ManageSubscriptionModal'
@@ -13,6 +14,7 @@ import Image from 'next/image'
 import { toast } from 'sonner'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useStripeCheckout } from '@/hooks/useStripeCheckout'
+import { useQueue } from '@/hooks/useQueue'
 
 interface UserDropdownProps {
   user: User
@@ -21,14 +23,16 @@ interface UserDropdownProps {
 export function UserDropdown({ user }: UserDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [showRevokeDialog, setShowRevokeDialog] = useState(false)
+  const [showSwitchInboxDialog, setShowSwitchInboxDialog] = useState(false)
   const [showSignOutDialog, setShowSignOutDialog] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [showManageSubscriptionModal, setShowManageSubscriptionModal] = useState(false)
   const [showSubscriptionConfetti, setShowSubscriptionConfetti] = useState(false)
   const { plan } = useAuth()
-  const { tokenStatus, requestPermissions, hasRefreshToken } = useGmailPermissions()
+  const { tokenStatus, requestPermissions, hasRefreshToken, connectedInbox } = useGmailPermissions()
   const { theme, setTheme, resolvedTheme } = useTheme()
   const { redirectToCheckout, isLoading: isCheckoutLoading } = useStripeCheckout()
+  const { hasActiveJobs } = useQueue()
   const avatarUrl = user.user_metadata?.avatar_url
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -129,7 +133,13 @@ export function UserDropdown({ user }: UserDropdownProps) {
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {user.user_metadata?.full_name || 'User'}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">{user.email}</div>
+            {/* The inbox being cleaned, not the account signed in. Those can now
+                differ, and this is the most prominent address on the screen —
+                showing the login address here reads as "MailMop is pointed at
+                the wrong mailbox" every time they are not the same. */}
+            <div className="text-xs text-gray-500 dark:text-gray-400 max-w-[220px] truncate">
+              {connectedInbox ?? user.email}
+            </div>
           </div>
         </div>
         
@@ -149,9 +159,22 @@ export function UserDropdown({ user }: UserDropdownProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 w-64 sm:w-auto sm:left-[-1rem] sm:right-[-1rem] mt-2 bg-white border border-gray-100 rounded-lg sm:border-t-0 sm:rounded-t-none shadow-md z-50 dark:bg-slate-800 dark:border-slate-700"
+            className="absolute right-0 w-64 sm:w-auto sm:min-w-[17rem] sm:left-[-1rem] sm:right-[-1rem] mt-2 bg-white border border-gray-100 rounded-lg sm:border-t-0 sm:rounded-t-none shadow-md z-50 dark:bg-slate-800 dark:border-slate-700"
           >
             <div className="py-1">
+              {/* Which account is signed in, as opposed to which inbox is being
+                  cleaned. Only shown when they differ — otherwise it is the same
+                  address printed twice — and placed as a header so it reads as
+                  context for the whole menu rather than a label on one row. */}
+              {connectedInbox && user.email && connectedInbox !== user.email.toLowerCase() && (
+                <>
+                  <div className="px-4 py-2 text-xs text-gray-400 dark:text-slate-500 truncate">
+                    MailMop account: {user.email}
+                  </div>
+                  <div className="h-px mb-1 bg-gray-100 dark:bg-slate-700" />
+                </>
+              )}
+
               {/* Manage Plan / Upgrade to Pro */}
               <button
                 onClick={handleSubscription}
@@ -178,6 +201,34 @@ export function UserDropdown({ user }: UserDropdownProps) {
                   {plan === 'pro' ? 'Pro' : 'Free'}
                 </span>
               </button>
+
+
+              {/* Which mailbox this session is pointed at, and how to change it.
+                  Sits above the destructive revoke so the reversible action is
+                  the one closest to hand. */}
+              {hasRefreshToken && (
+                <button
+                  onClick={() => {
+                    setShowSwitchInboxDialog(true)
+                    setIsOpen(false)
+                  }}
+                  // Same guard as the connection pill's version. Two entry
+                  // points to one action, so the condition that makes it unsafe
+                  // — a delete or analysis still running against this mailbox —
+                  // has to disable both.
+                  disabled={hasActiveJobs}
+                  title={hasActiveJobs ? 'Available once your current operations finish' : undefined}
+                  className={cn(
+                    "flex items-center w-full px-4 py-2 text-sm",
+                    hasActiveJobs
+                      ? "text-gray-400 dark:text-slate-600 cursor-not-allowed"
+                      : "text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-slate-700"
+                  )}
+                >
+                  <Inbox className="w-4 h-4 mr-3 shrink-0" />
+                  <span className="truncate">Switch inbox</span>
+                </button>
+              )}
 
               {/* Gmail Access Button - Show either Revoke or Reconnect */}
               <button
@@ -237,6 +288,12 @@ export function UserDropdown({ user }: UserDropdownProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Switch Inbox Dialog */}
+      <SwitchInboxDialog
+        open={showSwitchInboxDialog}
+        onOpenChange={setShowSwitchInboxDialog}
+      />
 
       {/* Revoke Access Dialog */}
       <RevokeAccessDialog

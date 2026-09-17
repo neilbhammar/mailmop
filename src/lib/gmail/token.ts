@@ -118,6 +118,24 @@ export async function revokeAndClearToken() {
 }
 
 /**
+ * Forget the Gmail token on MailMop's side, leaving the grant with Google.
+ *
+ * The difference from `revokeAndClearToken` matters when switching inboxes: the
+ * user is very likely to come back to this mailbox, and a kept grant makes that
+ * an account-chooser click instead of the whole consent screen again.
+ */
+export async function dropRefreshToken() {
+  await fetch('/api/auth/disconnect', {
+    method: 'POST',
+    credentials: 'include',
+  }).catch(() => {}); // ignore network errors – memory is cleared either way
+
+  clearAccessToken();
+  refreshTokenState = 'absent';
+  emitTokenChange();
+}
+
+/**
  * Forces a refresh of the access token, bypassing any cached token.
  * Useful when a proactive refresh is needed, e.g., before a long operation
  * if the current token is nearing expiry.

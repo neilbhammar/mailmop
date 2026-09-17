@@ -6,7 +6,7 @@ import { supabase } from '@/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { SessionContextProvider } from '@supabase/auth-helpers-react'
-import { checkUserMismatch, clearAllUserData } from '@/lib/storage/userStorage'
+import { claimLocalDataForUser } from '@/lib/storage/userStorage'
 import type { Profile } from '@/types/user'
 
 type AuthContextType = {
@@ -63,10 +63,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       if (session?.user) {
         try {
-          // Check for user mismatch and clear data if different user
-          if (session.user.email) {
-            await checkUserMismatch(session.user.email);
-          }
+          // Local analysis belongs to a MailMop account, not to a mailbox — a
+          // single account can connect several inboxes, so the signed-in email
+          // says nothing about whose data is on this device.
+          await claimLocalDataForUser(session.user.id);
           
           const fetchedProfile = await fetchProfile(session.user.id)
           if (fetchedProfile) {

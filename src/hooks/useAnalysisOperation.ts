@@ -7,7 +7,7 @@ import {
   getDB 
 } from '@/lib/storage/senderAnalysis';
 import { buildQuery } from '@/lib/gmail/buildQuery';
-import { SenderResult, GmailPermissionState, TokenStatus as TypesTokenStatus, TokenRunStatus } from '@/types/gmail';
+import { SenderResult } from '@/types/gmail';
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
 import { useGmailStats } from '@/hooks/useGmailStats';
 import { estimateRuntimeMs, formatDuration, OperationType, OperationMode, getEffectiveEmailCount } from '@/lib/utils/estimateRuntime';
@@ -66,20 +66,6 @@ interface ReauthModalState {
   isOpen: boolean;
   type: 'expired' | 'will_expire_during_operation';
   eta?: string;
-}
-
-interface GmailPermissionsContextType extends GmailPermissionState {
-  isLoading: boolean;
-  isClientLoaded: boolean;
-  requestPermissions: () => Promise<boolean>;
-  shouldShowPermissionsModal: boolean;
-  shouldShowMismatchModal: boolean;
-  gmailEmail: string | null;
-  clearToken: () => void;
-  tokenStatus: TypesTokenStatus;
-  canTokenSurvive: (durationMs: number) => boolean;
-  getTokenRunStatus: (durationMs: number) => TokenRunStatus;
-  getAccessToken: () => Promise<string>;
 }
 
 // Update the filters type to include effectiveEmailCount

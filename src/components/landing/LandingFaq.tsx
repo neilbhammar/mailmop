@@ -30,6 +30,11 @@ const faqs = [
     answer: "There's no limit! Everything happens in your browser, so the more emails you're processing, the more time processing will take. An inbox with 25,000 emails would take about 10 minutes to analyze, but you'll start to see results immediately."
   },
   {
+    id: 'multiple-inboxes',
+    question: "Can I use MailMop with more than one Gmail account?",
+    answer: "Yes. Sign in once, then connect whichever inbox you want to clean — it doesn't have to be the account you signed in with. MailMop works on one inbox at a time, so switching to another one clears the first inbox's analysis from your device (nothing in Gmail is touched), and you can switch back and re-analyze whenever you like. One Pro subscription covers all of your inboxes."
+  },
+  {
     id: 'data-storage',
     question: "Does MailMop store any information?",
     answer: "Just the fact that you are a user (so that you can login successfully) and basic analytics logging (like whether you performed a certain action) to help improve the product."

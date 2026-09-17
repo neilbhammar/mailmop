@@ -1,6 +1,7 @@
 // src/app/api/auth/revoke/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, createRateLimitResponse, RATE_LIMITS } from '@/lib/utils/rateLimiter';
+import { REFRESH_COOKIE } from '@/lib/gmail/refreshTokenPolicy';
 
 export const runtime = 'edge';
 
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
     return createRateLimitResponse(rateLimit.resetTime);
   }
 
-  const refresh = req.cookies.get('mm_refresh')?.value;
+  const refresh = req.cookies.get(REFRESH_COOKIE)?.value;
 
   // Best‑effort revoke with Google (optional)
   if (refresh) {
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
   const res = NextResponse.json({ ok: true });
   
   // Clear cookie by setting maxAge 0 and using root path
-  res.cookies.set('mm_refresh', '', {
+  res.cookies.set(REFRESH_COOKIE, '', {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',

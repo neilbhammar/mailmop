@@ -1,5 +1,7 @@
 import { cn } from '@/lib/utils'
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider'
+import { useQueue } from '@/hooks/useQueue'
+import { SwitchInboxDialog } from '@/components/modals/SwitchInboxDialog'
 import { useState, useEffect, useRef } from 'react'
 
 // Helper to format time remaining
@@ -10,13 +12,26 @@ function formatTimeRemaining(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
-// For now, we'll just create a visual representation without the actual functionality
+/**
+ * The connection pill, which doubles as the inbox switcher.
+ *
+ * The pill itself stays a short status ("Gmail Connected"); the address lives in
+ * the hover panel, which is already where the details of the connection are.
+ */
 export function GmailConnectionStatus() {
-  const { tokenStatus, requestPermissions, hasRefreshToken, refreshTokenState } = useGmailPermissions()
+  const {
+    tokenStatus,
+    requestPermissions,
+    hasRefreshToken,
+    refreshTokenState,
+    connectedInbox,
+  } = useGmailPermissions()
+  const { hasActiveJobs } = useQueue()
   const [isHovered, setIsHovered] = useState(false)
+  const [showSwitchDialog, setShowSwitchDialog] = useState(false)
   const [localTimeRemaining, setLocalTimeRemaining] = useState(tokenStatus.timeRemaining)
   const lastUpdateTimeRef = useRef(Date.now())
-  
+
   // Update local time when token status changes
   useEffect(() => {
     setLocalTimeRemaining(tokenStatus.timeRemaining)
@@ -47,10 +62,10 @@ export function GmailConnectionStatus() {
   const getStatusStyles = () => {
     if (refreshTokenState === 'unknown') {
       // Neutral style for initializing
-      return "border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 cursor-default"; 
+      return "border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 cursor-default";
     }
     if (hasRefreshToken) { // refreshTokenState === 'present'
-      return "border-gray-100 dark:border-slate-700 text-gray-600 dark:text-slate-300 cursor-default"; 
+      return "border-gray-100 dark:border-slate-700 text-gray-600 dark:text-slate-300 cursor-default";
     }
     // refreshTokenState === 'absent'
     return "border-red-200 dark:border-red-500/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer";
@@ -77,13 +92,17 @@ export function GmailConnectionStatus() {
     // refreshTokenState === 'absent'
     return "Reconnect Gmail";
   }
-  
+
   return (
-    <div className="relative">
+    // Hover lives on the wrapper, not the button: the tooltip holds the switch
+    // control, so it has to survive the pointer travelling into it.
+    <div
+      className="relative"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <button
         onClick={handleClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
         className={cn(
           "flex items-center px-2.5 py-1.5 space-x-2 text-xs border rounded-md transition-colors",
           getStatusStyles()
@@ -117,8 +136,8 @@ export function GmailConnectionStatus() {
             <div className="font-medium mb-1 text-gray-700 dark:text-slate-100">
               {refreshTokenState === 'unknown'
                 ? "Checking Gmail Connection..."
-                : hasRefreshToken 
-                  ? "Gmail Connection Status" 
+                : hasRefreshToken
+                  ? "Gmail Connection Status"
                   : "Gmail Connection Required"}
             </div>
             <div className="text-gray-500 dark:text-slate-400 text-xs">
@@ -127,16 +146,52 @@ export function GmailConnectionStatus() {
                 : !hasRefreshToken // refreshTokenState === 'absent'
                   ? "MailMop needs to connect to your Gmail account. Click to grant access."
                   // refreshTokenState === 'present'
-                  : (tokenStatus.state === 'valid' || tokenStatus.state === 'expiring_soon') 
-                    ? localTimeRemaining > 0 
+                  : (tokenStatus.state === 'valid' || tokenStatus.state === 'expiring_soon')
+                    ? localTimeRemaining > 0
                       ? `MailMop has the access it needs to help you declutter your inbox. Access token will automatically refresh in ${formatTimeRemaining(localTimeRemaining)}.`
-                      : `MailMop has the access it needs to help you declutter your inbox. Access token will automatically refresh upon action.` 
+                      : `MailMop has the access it needs to help you declutter your inbox. Access token will automatically refresh upon action.`
                     : `MailMop has the access it needs to help you declutter your inbox. Access token will automatically refresh upon action.` // Covers 'expired' state (when refresh token is present)
               }
             </div>
+
+            {hasRefreshToken && connectedInbox && (
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
+                <div className="text-xs text-gray-400 dark:text-slate-500">Connected inbox</div>
+                <div className="text-xs font-medium text-gray-700 dark:text-slate-200 truncate">
+                  {connectedInbox}
+                </div>
+              </div>
+            )}
+
+            {hasRefreshToken && (
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
+                <button
+                  onClick={() => setShowSwitchDialog(true)}
+                  disabled={hasActiveJobs}
+                  className={cn(
+                    "text-xs font-medium transition-colors",
+                    hasActiveJobs
+                      ? "text-gray-400 dark:text-slate-600 cursor-not-allowed"
+                      : "text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                  )}
+                >
+                  Connect a different inbox
+                </button>
+                {/* Switching mid-operation would point a running delete at a
+                    mailbox nobody asked for, so the door stays shut until the
+                    queue is empty. */}
+                {hasActiveJobs && (
+                  <div className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+                    Available once your current operations finish.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
+
+      <SwitchInboxDialog open={showSwitchDialog} onOpenChange={setShowSwitchDialog} />
     </div>
   )
-} 
+}

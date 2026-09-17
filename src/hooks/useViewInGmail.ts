@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useGmailPermissions } from '@/context/GmailPermissionsProvider';
 import { useAuth } from '@/context/AuthProvider';
+import { resolveGmailLinkAddress } from '@/lib/connectedInbox';
 import { toast } from 'sonner';
 import { createActionLog } from '@/supabase/actions/logAction';
 import { ActionType } from '@/types/actions';
@@ -11,26 +12,31 @@ import { buildGmailSearchUrl, senderQuery, multiSenderQuery } from '@/lib/gmailU
  * 
  * This hook provides functions to open Gmail search results for specific senders
  * or complex filter queries in a new browser tab and logs these actions to Supabase.
- * It will use the Supabase authenticated user's email to construct Gmail links.
+ * Links are addressed to the *connected inbox* — the mailbox MailMop currently
+ * holds a token for — which is not necessarily the address you signed in with.
  * 
  * @returns Object containing functions to open Gmail searches and previews
  */
 export function useViewInGmail() {
   const { user } = useAuth();
+  const { connectedInbox } = useGmailPermissions();
   
   /**
-   * Helper function to determine the user email for constructing Gmail links.
-   * Uses the Supabase authenticated user's email.
+   * The mailbox these links should open.
+   *
+   * This used to be the Supabase login address unconditionally, which was
+   * indistinguishable from correct back when the two were forced to match. With
+   * several inboxes per account it sends you to whichever mailbox you happen to
+   * be signed into MailMop with, not the one you are cleaning.
    */
   const determineUserEmailForGmailLink = useCallback(() => {
-    if (user?.email) {
-      return user.email;
-    }
-    console.error("[ViewInGmail] Critical: User email is not available. Cannot construct Gmail link.");
+    const address = resolveGmailLinkAddress(connectedInbox, user?.email);
+    if (address) return address;
+    console.error("[ViewInGmail] Critical: No inbox address available. Cannot construct Gmail link.");
     // Empty string is never used to build a link — every caller below bails out
     // on a falsy value rather than opening an unscoped Gmail tab.
     return '';
-  }, [user?.email]); // Dependency is the user's email
+  }, [connectedInbox, user?.email]);
   
   /**
    * Log a view or preview action to Supabase
