@@ -28,6 +28,7 @@ export function GmailConnectionStatus() {
   } = useGmailPermissions()
   const { hasActiveJobs } = useQueue()
   const [isHovered, setIsHovered] = useState(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showSwitchDialog, setShowSwitchDialog] = useState(false)
   const [localTimeRemaining, setLocalTimeRemaining] = useState(tokenStatus.timeRemaining)
   const lastUpdateTimeRef = useRef(Date.now())
@@ -51,6 +52,28 @@ export function GmailConnectionStatus() {
 
     return () => clearInterval(interval)
   }, [tokenStatus.state, tokenStatus.timeRemaining])
+
+  // The panel holds a real control, so it has to survive the trip from the pill
+  // down to it. Closing on a timer rather than immediately covers the pointer
+  // clipping a corner on the way; the transparent padding below covers the gap.
+  const showTooltip = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+    setIsHovered(true)
+  }
+
+  const scheduleHideTooltip = () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    closeTimerRef.current = setTimeout(() => setIsHovered(false), 200)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    }
+  }, [])
 
   const handleClick = () => {
     if (tokenStatus.state !== 'valid') {
@@ -98,8 +121,8 @@ export function GmailConnectionStatus() {
     // control, so it has to survive the pointer travelling into it.
     <div
       className="relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={showTooltip}
+      onMouseLeave={scheduleHideTooltip}
     >
       <button
         onClick={handleClick}
@@ -131,7 +154,8 @@ export function GmailConnectionStatus() {
 
       {/* Custom hover tooltip */}
       {isHovered && (
-        <div className="absolute left-0 top-full mt-1 z-50 w-64 p-4 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-sm rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-slate-900/50 border border-transparent dark:border-slate-700">
+        <div className="absolute left-0 top-full pt-1 z-50 w-64">
+        <div className="p-4 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-sm rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-slate-900/50 border border-transparent dark:border-slate-700">
           <div className="relative">
             <div className="font-medium mb-1 text-gray-700 dark:text-slate-100">
               {refreshTokenState === 'unknown'
@@ -188,6 +212,7 @@ export function GmailConnectionStatus() {
               </div>
             )}
           </div>
+        </div>
         </div>
       )}
 
