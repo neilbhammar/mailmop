@@ -178,16 +178,18 @@ export function GmailConnectionStatus() {
               }
             </div>
 
-            {hasRefreshToken && connectedInbox && (
+            {connectedInbox && (
               <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
-                <div className="text-xs text-gray-400 dark:text-slate-500">Connected inbox</div>
+                <div className="text-xs text-gray-400 dark:text-slate-500">
+                  {hasRefreshToken ? 'Connected inbox' : 'Last connected inbox'}
+                </div>
                 <div className="text-xs font-medium text-gray-700 dark:text-slate-200 truncate">
                   {connectedInbox}
                 </div>
               </div>
             )}
 
-            {hasRefreshToken && (
+            {connectedInbox && (
               <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
                 <button
                   onClick={() => setShowSwitchDialog(true)}

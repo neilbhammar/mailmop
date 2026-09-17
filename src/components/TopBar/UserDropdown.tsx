@@ -205,8 +205,14 @@ export function UserDropdown({ user }: UserDropdownProps) {
 
               {/* Which mailbox this session is pointed at, and how to change it.
                   Sits above the destructive revoke so the reversible action is
-                  the one closest to hand. */}
-              {hasRefreshToken && (
+                  the one closest to hand.
+                  
+                  Shown whenever an inbox owns the data on this device — not only
+                  while connected. After a revoke you can still reach a different
+                  account through "Reconnect Gmail", but that route picks an
+                  account with no warning that doing so wipes the analysis. This
+                  is the entry point that explains the cost first. */}
+              {connectedInbox && (
                 <button
                   onClick={() => {
                     setShowSwitchInboxDialog(true)
