@@ -71,7 +71,7 @@ Deno.serve(async (req: Request) => {
     
     // For canceled subscriptions, use our custom renewal flow instead of portal
     const renewalUrl = cancel_at_period_end 
-      ? `${appUrl}/dashboard?renew=true`  // Custom renewal page
+      ? `${appUrl}/dashboard?renewal=true`  // Opens RenewalModal (dashboard/page.tsx)
       : portalUrl;  // Regular portal for active subscriptions
 
     // Calculate days until expiration using plan_expires_at from database
