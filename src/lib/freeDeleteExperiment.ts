@@ -86,6 +86,17 @@ export function __resetLocalConsumption(): void {
 /** Salt is part of the experiment's identity. Changing it reshuffles every user. */
 const EXPERIMENT_SALT = 'free-delete-2026-08'
 
+/**
+ * Share of free users (0-100) who get the one free delete.
+ *
+ * Ran at 50 as an A/B test from 2026-08-30. Shipped to 100 on 2026-09-27: 9.8% vs
+ * 5.7% conversion (5/51 vs 3/53), ~77% likely better but nowhere near significant,
+ * and waiting for significance would take about a year of traffic. The giveaway
+ * costs nothing, so we shipped on direction. Lowering this brings back a control arm;
+ * the salt is unchanged, so users who got the freebie at 50 keep it at any value >= 50.
+ */
+export const FREE_DELETE_ROLLOUT_PCT = 100
+
 export type FreeDeleteDenialReason =
   /** No user id / profile not loaded yet. */
   | 'missing_profile'
@@ -116,6 +127,8 @@ export interface FreeDeleteInput {
   targetSenders: string[] | null | undefined
   /** Total emails across those senders, as displayed to the user. */
   emailCount: number | null | undefined
+  /** Overrides FREE_DELETE_ROLLOUT_PCT. Tests only, so the control path stays covered. */
+  rolloutPct?: number
 }
 
 function fnv1a(input: string): number {
@@ -127,9 +140,12 @@ function fnv1a(input: string): number {
   return hash >>> 0
 }
 
-/** Deterministic 50/50 assignment. Stable per user, across devices, forever. */
-export function assignFreeDeleteVariant(userId: string): FreeDeleteVariant {
-  return fnv1a(`${EXPERIMENT_SALT}:${userId}`) % 100 < 50 ? 'free_delete' : 'control'
+/** Deterministic assignment. Stable per user, across devices, forever. */
+export function assignFreeDeleteVariant(
+  userId: string,
+  rolloutPct: number = FREE_DELETE_ROLLOUT_PCT,
+): FreeDeleteVariant {
+  return fnv1a(`${EXPERIMENT_SALT}:${userId}`) % 100 < rolloutPct ? 'free_delete' : 'control'
 }
 
 /**
@@ -143,14 +159,14 @@ export function assignFreeDeleteVariant(userId: string): FreeDeleteVariant {
  * about the target so a spent user gets a stable reason regardless of selection.
  */
 export function evaluateFreeDelete(input: FreeDeleteInput): FreeDeleteDecision {
-  const { userId, plan, freeDeleteUsedAt, targetSenders, emailCount } = input
+  const { userId, plan, freeDeleteUsedAt, targetSenders, emailCount, rolloutPct } = input
 
   if (!userId) return { allowed: false, variant: null, reason: 'missing_profile' }
 
   // Pro users are outside the experiment entirely.
   if (plan === 'pro') return { allowed: false, variant: null, reason: 'already_pro' }
 
-  const variant = assignFreeDeleteVariant(userId)
+  const variant = assignFreeDeleteVariant(userId, rolloutPct)
   if (variant !== 'free_delete') return { allowed: false, variant, reason: 'not_in_experiment' }
 
   // Any non-null value means spent. Never parse it into a date and compare:

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
+  FREE_DELETE_ROLLOUT_PCT,
   assignFreeDeleteVariant,
   evaluateFreeDelete,
   shouldRecordDenial,
@@ -16,12 +17,16 @@ import {
  * but "denies everything else". Any new input shape must default to denied.
  */
 
+// The gate is exercised at the original 50/50 split so the control path, which
+// still exists if the rollout is ever dialled back, stays covered.
+const AB = 50
+
 // A user id known to land in the free_delete arm, found by search so the tests
 // do not depend on a hardcoded guess staying valid.
 const TREATMENT_ID = (() => {
   for (let i = 0; i < 10_000; i++) {
     const id = `user-${i}`
-    if (assignFreeDeleteVariant(id) === 'free_delete') return id
+    if (assignFreeDeleteVariant(id, AB) === 'free_delete') return id
   }
   throw new Error('no treatment id found')
 })()
@@ -29,7 +34,7 @@ const TREATMENT_ID = (() => {
 const CONTROL_ID = (() => {
   for (let i = 0; i < 10_000; i++) {
     const id = `user-${i}`
-    if (assignFreeDeleteVariant(id) === 'control') return id
+    if (assignFreeDeleteVariant(id, AB) === 'control') return id
   }
   throw new Error('no control id found')
 })()
@@ -40,6 +45,7 @@ const input = (over: Partial<FreeDeleteInput> = {}): FreeDeleteInput => ({
   freeDeleteUsedAt: null,
   targetSenders: ['news@grailed.com'],
   emailCount: 58,
+  rolloutPct: AB,
   ...over,
 })
 
@@ -52,8 +58,21 @@ describe('assignFreeDeleteVariant', () => {
     }
   })
 
-  it('splits close to 50/50', () => {
-    const treat = ids.filter((id) => assignFreeDeleteVariant(id) === 'free_delete').length
+  it('gives everyone the freebie at the shipped rollout', () => {
+    expect(FREE_DELETE_ROLLOUT_PCT).toBe(100)
+    expect(ids.every((id) => assignFreeDeleteVariant(id) === 'free_delete')).toBe(true)
+  })
+
+  it('keeps every original treatment user in treatment when rolled out', () => {
+    for (const id of ids.slice(0, 2000)) {
+      if (assignFreeDeleteVariant(id, AB) === 'free_delete') {
+        expect(assignFreeDeleteVariant(id)).toBe('free_delete')
+      }
+    }
+  })
+
+  it('splits close to 50/50 at AB', () => {
+    const treat = ids.filter((id) => assignFreeDeleteVariant(id, AB) === 'free_delete').length
     const pct = (treat / ids.length) * 100
     expect(pct).toBeGreaterThan(48)
     expect(pct).toBeLessThan(52)
@@ -64,7 +83,7 @@ describe('assignFreeDeleteVariant', () => {
     const { assignVariant } = await import('./discountExperiment')
     let agree = 0
     for (const id of ids) {
-      const a = assignFreeDeleteVariant(id) === 'free_delete'
+      const a = assignFreeDeleteVariant(id, AB) === 'free_delete'
       const b = assignVariant(id) === 'control'
       if (a === b) agree++
     }

@@ -19,6 +19,9 @@ const fs = require('fs')
 const path = require('path')
 
 const FREE_DELETE_START = '2026-08-30'
+// Shipped to 100% on this date; after it every free user gets the freebie, so the 50/50
+// hash no longer describes who was treated. Set to the actual deploy date.
+const FREE_DELETE_END = '2026-09-28'
 const DISCOUNT_START = '2026-08-30'
 /* Before this date the control arm was not logged. See §6 of the free-delete doc. */
 const CONTROL_LOGGING_FIXED = '2026-09-01'
@@ -147,11 +150,11 @@ function table(rows) {
    *                             gate runs and so never logs one
    */
   const exposures = await get(
-    `actions?select=user_id,notes,created_at&type=eq.free_delete_exposure&created_at=gte.${FREE_DELETE_START}`
+    `actions?select=user_id,notes,created_at&type=eq.free_delete_exposure&created_at=gte.${FREE_DELETE_START}&created_at=lt.${FREE_DELETE_END}`
   )
   const attempts = (
     await get(
-      `actions?select=user_id,notes,created_at&type=eq.premium_attempt&created_at=gte.${FREE_DELETE_START}`
+      `actions?select=user_id,notes,created_at&type=eq.premium_attempt&created_at=gte.${FREE_DELETE_START}&created_at=lt.${FREE_DELETE_END}`
     )
   ).filter((a) => a.notes === 'delete')
 
