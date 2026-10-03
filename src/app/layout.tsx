@@ -2,6 +2,7 @@
 import './globals.css'
 import { Nunito } from 'next/font/google'
 import { ClientProviders } from './client-providers'
+import { AcquisitionCapture } from '@/components/growth/AcquisitionCapture'
 import type { Metadata, Viewport } from 'next'
 
 // Initialize Nunito font
@@ -128,6 +129,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <AcquisitionCapture />
         <ClientProviders>
           {children}
         </ClientProviders>
