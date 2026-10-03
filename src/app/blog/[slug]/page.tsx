@@ -10,6 +10,8 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeSlug from 'rehype-slug'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import { ReadingProgress } from '@/components/blog/ReadingProgress'
+import { InboxNextStep } from '@/components/blog/InboxNextStep'
+import { StartInboxAnalysis } from '@/components/blog/StartInboxAnalysis'
 import { RelatedPosts, type RelatedPostLink } from '@/components/blog/RelatedPosts'
 import { AuthorBio, AUTHOR } from '@/components/blog/AuthorBio'
 import { ArrowLeft, Clock, Calendar } from 'lucide-react'
@@ -63,6 +65,7 @@ export async function generateMetadata({
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
+    timeZone: 'UTC',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -115,7 +118,7 @@ export default async function BlogPostPage({
   const headings = extractHeadings(post.content)
   const publishDate = formatISODate(post.date)
   const modifiedDate = formatISODate(post.updated || post.date)
-  const formattedDate = formatDate(post.date)
+  const formattedDate = formatDate(post.updated || post.date)
   const url = `https://mailmop.com/blog/${post.slug}`
 
   // Related posts for internal linking: prefer posts that share a tag, fall back
@@ -256,8 +259,8 @@ export default async function BlogPostPage({
                   <div className="flex items-center gap-6 text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-primary" />
-                      <time itemProp="datePublished" dateTime={publishDate} className="font-medium">
-                        {formattedDate}
+                      <time dateTime={modifiedDate} className="font-medium">
+                        {post.updated && post.updated !== post.date ? 'Updated ' : ''}{formattedDate}
                       </time>
                     </div>
                     <div className="flex items-center gap-2">
@@ -266,15 +269,7 @@ export default async function BlogPostPage({
                     </div>
                   </div>
                   <div className="sm:ml-auto">
-                    <Link 
-                      href="/"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg text-sm font-semibold hover:bg-primary/20 transition-colors border border-primary/30"
-                    >
-                      Try MailMop Free
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
+                    <StartInboxAnalysis />
                   </div>
                 </div>
               </header>
@@ -283,6 +278,7 @@ export default async function BlogPostPage({
               <div itemProp="articleBody" className="prose prose-slate prose-lg max-w-none dark:prose-invert prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-foreground prose-p:leading-relaxed prose-p:text-foreground/90 prose-strong:text-foreground prose-strong:font-semibold prose-code:text-primary prose-code:bg-muted/50 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:border prose-code:border-border/50 prose-pre:bg-card prose-pre:border prose-pre:border-border prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:not-italic prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
                 <MDXRemote
                   source={post.content}
+                  components={{ InboxNextStep: () => <InboxNextStep slug={post.slug} /> }}
                   options={{
                     mdxOptions: {
                       remarkPlugins: [remarkGfm],
@@ -354,15 +350,7 @@ export default async function BlogPostPage({
                     </p>
                     
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                      <Link
-                        href="/"
-                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold text-lg shadow-sm"
-                      >
-                        Try MailMop Free
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
+                      <StartInboxAnalysis />
                       <Link
                         href="/blog"
                         className="inline-flex items-center justify-center px-6 py-3 bg-background/90 backdrop-blur-sm border border-border/80 rounded-lg hover:bg-muted/50 transition-colors font-semibold text-lg"
@@ -372,7 +360,7 @@ export default async function BlogPostPage({
                     </div>
                     
                     <p className="text-xs text-muted-foreground mt-4">
-                      Free forever • No credit card required • 2 minutes to get started
+                      Free inbox analysis • No credit card required • You choose each action
                     </p>
                   </div>
                 </div>
@@ -397,4 +385,4 @@ export default async function BlogPostPage({
       </div>
     </>
   )
-} 
+}

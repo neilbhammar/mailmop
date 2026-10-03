@@ -1,4 +1,5 @@
 import { supabase } from '../client';
+import { currentAcquisition } from '@/lib/growth/acquisition';
 import { 
   SupabaseActionLog, 
   CreateActionLogParams, 
@@ -12,8 +13,10 @@ import {
  * @returns The created action log with its Supabase ID
  */
 export async function createActionLog(params: CreateActionLogParams): Promise<SupabaseActionLog> {
+  const acquisition = currentAcquisition();
   const actionLog: Omit<SupabaseActionLog, 'id'> = {
     ...params,
+    ...(acquisition && { filters: { ...params.filters, acquisition } }),
     created_at: new Date().toISOString(),
     completed_at: null,
     end_type: null
@@ -79,4 +82,4 @@ export async function completeActionLog(
     ...(count !== undefined && { count }),
     ...(notes !== undefined && { notes })
   });
-} 
+}
