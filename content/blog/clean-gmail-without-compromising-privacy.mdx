@@ -1,0 +1,107 @@
+---
+title: "How to Clean Up Gmail Without Giving Up Your Privacy (2026)"
+description: "A practical guide to clearing out Gmail without handing your inbox to a data broker: the free built-in methods, the 5 questions to ask any cleanup app, and how to check and revoke app access."
+date: "2026-10-22"
+updated: "2026-10-22"
+author: "Neil Bhammar"
+tags: ["privacy", "gmail-cleanup", "email-security", "how-to"]
+featured: false
+faqs:
+  - question: "Is it safe to use a Gmail cleanup app?"
+    answer: "It can be, if you pick one carefully. The safest apps process your inbox in your browser instead of uploading it to their servers, explain why they need each Gmail permission, have passed Google's CASA security assessment, make money from subscriptions rather than your data, and are open source so their code can be checked. MailMop meets all five."
+  - question: "Can I clean up Gmail without any third-party app?"
+    answer: "Yes. Gmail's search operators (like larger:10M or older_than:2y), filters, and the built-in Manage subscriptions page are all free and private. They work well for small cleanups but get slow when you have thousands of emails from hundreds of senders."
+  - question: "How do I see which apps have access to my Gmail?"
+    answer: "Go to myaccount.google.com, open Security, then Your connections to third-party apps and services. Every app with access to your Google account is listed there, along with what it can see, and you can remove any of them in one click."
+  - question: "Do free email cleaners sell your data?"
+    answer: "Some have. In 2017 Unroll.Me's parent company was found to have used e-receipts from users' inboxes in market research it sold, including Lyft ride data that reached Uber. Before connecting a free tool, read how it makes money. If the answer isn't a subscription, your data may be the product."
+  - question: "What is the most private way to clean up Gmail?"
+    answer: "Use Gmail's own tools for quick jobs, and for large cleanups use a client-side app that runs in your browser, like MailMop, so your email is never copied to another company's servers. Disconnect any app you no longer use."
+---
+
+# How to Clean Up Gmail Without Giving Up Your Privacy
+
+Your inbox is probably the most sensitive place you have online. It holds bank statements, medical appointments, password resets, receipts, and years of personal conversations.
+
+So it's worth pausing before you click "Allow" on the first inbox cleaner you find. Some of the most popular ones have paid for themselves by mining exactly that data.
+
+The good news: you don't have to choose between a clean inbox and a private one. Here's how to get both.
+
+## Option 1: Use Gmail's built-in tools (free and fully private)
+
+If you only need a light cleanup, Gmail already has everything you need, and nothing leaves Google.
+
+**Find the biggest emails.** Search `larger:10M` to find messages over 10 MB, then delete the ones you don't need. Try `larger:5M` next. This is the fastest way to free up storage.
+
+**Clear out old mail.** Search `older_than:2y category:promotions` to see promotional emails more than two years old. Select all, then click "Select all conversations that match this search" and delete.
+
+**Unsubscribe in bulk.** Open **Manage subscriptions** from the left sidebar (click **More** if you don't see it). Gmail lists the senders that email you most and lets you unsubscribe from each one. If it's missing, see our guide to [Manage subscriptions not showing](/blog/gmail-manage-subscriptions-not-showing).
+
+**Stop it coming back.** Open an email from a sender you never want to see again, click the three dots, and choose **Filter messages like this**, then **Delete it**.
+
+These tools are great for a quick sweep. Where they struggle is scale: if you have 30,000 emails from 800 senders, working through them one search at a time can take an entire weekend.
+
+## Option 2: Use a cleanup app, but vet it first
+
+Cleanup apps exist because they can show your whole inbox ranked by sender and clear thousands of emails in a few clicks. The question is what happens to your email along the way.
+
+Before you connect any app to Gmail, ask these five questions.
+
+### 1. Where does it process my email?
+
+This is the most important question.
+
+- **Server-side apps** copy your email (or data pulled from it) onto their own servers. That copy can be kept, breached, subpoenaed, or sold.
+- **Client-side apps** run in your browser. Your device talks directly to Gmail, and the company never holds a copy of your inbox.
+
+If an app's site doesn't clearly say where processing happens, assume it's on their servers.
+
+### 2. What Gmail permission does it ask for, and why?
+
+Google shows you exactly what an app is asking for on the consent screen. Read it. Deleting mail permanently, blocking senders, and creating filters require full Gmail access, so a capable cleanup tool will usually ask for it. A trustworthy one will tell you why, and pair that power with client-side processing so the access is used from your own device.
+
+### 3. Has it passed Google's security assessment?
+
+Since 2019, apps that use restricted Gmail permissions have had to pass an independent security assessment, now called **CASA (Cloud Application Security Assessment)**, before Google lets them out of testing. Look for it on the app's site or in its documentation.
+
+### 4. How does it make money?
+
+If an inbox tool is free and has no paid plan, ask what it's selling. In 2017, *The New York Times* reported that Unroll.Me's parent company had used e-receipts from users' inboxes in market research it sold, including Lyft ride data that reached Uber. The FTC later took action against the company over how it described its access to users' email.
+
+An app that charges a subscription has a much simpler business: you pay, it works.
+
+### 5. Can anyone check what it actually does?
+
+Privacy promises are easy to write. Code is harder to fake. Open source apps let you, or anyone you trust, verify how they handle your data instead of taking their word for it.
+
+## How MailMop answers those five questions
+
+We built MailMop because we wanted a cleanup tool we'd trust with our own inboxes.
+
+| Question | MailMop |
+|---|---|
+| Where is email processed? | **In your browser.** Your device talks straight to Gmail. Email contents never touch MailMop's servers. |
+| What permission, and why? | **Full Gmail access**, because permanent delete, block, and filters require it. It's used from your browser, only for actions you choose. |
+| Security assessment? | **Passed Google's CASA assessment.** |
+| Business model? | **Pro subscriptions.** No ads, no selling data. Analyzing your inbox is free. |
+| Can you check the code? | **Yes.** MailMop is open source on [GitHub](https://github.com/neilbhammar/mailmop). |
+
+You can read more about how it works on our [security page](/security).
+
+## After you clean up: lock it down
+
+Whatever you use, finish with a quick access review.
+
+1. Go to [myaccount.google.com/connections](https://myaccount.google.com/connections).
+2. Look through every app with access to your Google account.
+3. Remove anything you don't recognize or no longer use, including old cleanup tools.
+
+It takes two minutes, and it's the single best privacy habit for your Google account.
+
+## The short version
+
+- For a quick tidy-up, Gmail's own search, filters, and Manage subscriptions are free and private.
+- For a big cleanup, use an app that runs in your browser, explains its permissions, has passed CASA, charges a subscription instead of selling data, and is open source.
+- Review your connected apps when you're done.
+
+A clean inbox shouldn't cost you your privacy. [Try MailMop free](/) and see your whole inbox ranked by sender in minutes, without your email ever leaving your browser.

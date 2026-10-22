@@ -35,11 +35,12 @@ People with cluttered Gmail inboxes who want to clean up fast without manually d
 - Pro: $22.68/year (about $1.89/month) for unlimited cleanup
 
 ## Privacy
-MailMop processes email metadata in your browser. It does not sell data and does not retain the contents of your emails. See https://mailmop.com/privacy
+MailMop processes email metadata in your browser. It does not sell data and does not retain the contents of your emails. See https://mailmop.com/security and https://mailmop.com/privacy
 
 ## Key pages
 - Home: https://mailmop.com
 - Blog (Gmail cleanup guides): https://mailmop.com/blog
+- Security & privacy (how MailMop protects your inbox): https://mailmop.com/security
 - Privacy policy: https://mailmop.com/privacy
 - Terms: https://mailmop.com/terms
 
