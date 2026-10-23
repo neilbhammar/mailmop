@@ -57,8 +57,8 @@ export const metadata: Metadata = {
     title: 'MailMop: Gmail Cleaner. Bulk Delete and Unsubscribe by Sender',
     description: 'MailMop is a privacy-first Gmail cleanup tool. It analyzes your inbox in your browser, ranks every sender by email count, and lets you bulk delete, unsubscribe, and block in one click. Open source, CASA verified, free to start.',
     images: ['/social-share.png?v=2'],
-    creator: '@mailmop',
-    site: '@mailmop',
+    creator: '@mailmopapp',
+    site: '@mailmopapp',
   },
   robots: {
     index: true,
@@ -85,7 +85,7 @@ const structuredData = {
       url: 'https://mailmop.com',
       logo: 'https://mailmop.com/logo10.png',
       description: 'MailMop is a privacy-first Gmail cleanup tool that analyzes your inbox by sender so you can bulk delete, unsubscribe, and reclaim storage in minutes.',
-      sameAs: ['https://twitter.com/mailmop'],
+      sameAs: ['https://x.com/mailmopapp'],
     },
     {
       '@type': 'WebSite',
