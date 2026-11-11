@@ -25,6 +25,7 @@ interface AnalysisHeaderProps {
   onMarkAllAsRead?: () => void
   onDeleteWithExceptions?: () => void
   onApplyLabel?: () => void
+  onArchive?: () => void
   onBlockSenders?: () => void
   onSearchChange?: (search: string) => void
   onToggleUnreadOnly?: (enabled: boolean) => void
@@ -45,6 +46,7 @@ export function AnalysisHeader({
   onMarkAllAsRead = () => console.log('Mark all as read bulk action'),
   onDeleteWithExceptions = () => console.log('Delete with exceptions bulk action'),
   onApplyLabel = () => console.log('Apply label bulk action'),
+  onArchive,
   onBlockSenders = () => console.log('Block senders bulk action'),
   onSearchChange = () => console.log('Search changed'),
   onToggleUnreadOnly = () => console.log('Toggle unread only'),
@@ -215,6 +217,7 @@ export function AnalysisHeader({
               onMarkAllAsRead={onMarkAllAsRead}
               onDeleteWithExceptions={onDeleteWithExceptions}
               onApplyLabel={onApplyLabel}
+              onArchive={onArchive}
               onBlockSenders={onBlockSenders}
             />
           )}

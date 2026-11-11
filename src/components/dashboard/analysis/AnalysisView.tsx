@@ -21,6 +21,8 @@ import { useSenderData, TableSender } from '@/hooks/useSenderData'
 import { RuleGroup } from '@/lib/gmail/buildQuery'
 import { useMarkAsRead } from '@/hooks/useMarkAsRead'
 import { MarkAsReadConfirmModal } from '@/components/modals/MarkAsReadConfirmModal'
+import { ArchiveConfirmModal } from '@/components/modals/ArchiveConfirmModal'
+import { useArchive } from '@/hooks/useArchive'
 import { BlockSenderModal } from '@/components/modals/BlockSenderModal'
 import { useUnsubscribe, UnsubscribeMethodDetails } from '@/hooks/useUnsubscribe'
 import { getUnsubscribeMethod } from '@/lib/gmail/getUnsubscribeMethod'
@@ -184,6 +186,12 @@ export default function AnalysisView() {
     reauthModal: markAsReadReauthModal,
     closeReauthModal: closeMarkAsReadReauthModal,
   } = useMarkAsRead()
+
+  // Archive: state for the confirm modal, plus the hook that registers the
+  // queue executor and owns the reauth prompt
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
+  const [emailsToArchive, setEmailsToArchive] = useState<string[]>([])
+  const { reauthModal: archiveReauthModal, closeReauthModal: closeArchiveReauthModal } = useArchive()
 
   // Add state for unread count map
   const [unreadCountMap, setUnreadCountMap] = useState<Record<string, number>>({});
@@ -928,6 +936,29 @@ export default function AnalysisView() {
     }
   }, [checkFeatureAccess, setIsApplyLabelModalOpen, setEmailsToApplyLabelTo, setActiveSingleSender]);
 
+  // Handler for BULK Archive (More Actions menu)
+  const handleArchiveBulk = useCallback(() => {
+    if (selectedEmails.size === 0) {
+      toast.warning('No senders selected');
+      return;
+    }
+    handleOverlappingActions();
+    if (checkFeatureAccess('archive', selectedEmails.size)) {
+      setEmailsToArchive(Array.from(selectedEmails));
+      setIsArchiveModalOpen(true);
+    }
+  }, [selectedEmails, checkFeatureAccess, handleOverlappingActions]);
+
+  // Handler for SINGLE sender Archive (row ... menu)
+  const handleArchiveSingle = useCallback((email: string) => {
+    if (checkFeatureAccess('archive', 1)) {
+      setEmailsToArchive([email]);
+      setIsArchiveModalOpen(true);
+    } else {
+      setActiveSingleSender(email); // For PremiumFeatureModal's "View in Gmail"
+    }
+  }, [checkFeatureAccess]);
+
   // Placeholder handler for Unsubscribe
   const handleUnsubscribeSingleSender = useCallback(async (email: string, isReUnsubscribe: boolean = false) => {
     // First try to find sender in current allSenders array
@@ -1148,6 +1179,7 @@ export default function AnalysisView() {
         onMarkAllAsRead={handleMarkAllRead}
         onDeleteWithExceptions={handleDeleteWithExceptions}
         onApplyLabel={handleApplyLabelBulk}
+        onArchive={handleArchiveBulk}
         onBlockSenders={handleBlockSenders}
         onSearchChange={setSearchTerm}
         onToggleUnreadOnly={setShowUnreadOnly}
@@ -1175,6 +1207,7 @@ export default function AnalysisView() {
             isAnalyzing={progress.status === 'analyzing'}
             onBlockSingleSender={handleBlockSingleSender}
             onApplyLabelSingle={handleApplyLabelSingle}
+            onArchiveSingleSender={handleArchiveSingle}
             onDeleteSingleSender={handleDeleteSingleSender}
             onDeleteWithExceptions={handleDeleteSingleSenderWithExceptions}
             onUnsubscribeSingleSender={handleUnsubscribeSingleSender}
@@ -1199,6 +1232,7 @@ export default function AnalysisView() {
             onBlockSingleSender={handleBlockSingleSender}
             onUnsubscribeSingleSender={handleUnsubscribeSingleSender}
             onApplyLabelSingle={handleApplyLabelSingle}
+            onArchiveSingleSender={handleArchiveSingle}
           />
         )}
       </div>
@@ -1319,6 +1353,24 @@ export default function AnalysisView() {
         onOpenChange={closeMarkAsReadReauthModal}
         type={markAsReadReauthModal.type}
         eta={markAsReadReauthModal.eta}
+      />
+
+      {/* Archive Confirm Modal */}
+      <ArchiveConfirmModal
+        open={isArchiveModalOpen}
+        onOpenChange={setIsArchiveModalOpen}
+        senders={emailsToArchive}
+        onSuccess={() => {
+          // 🎯 SMART AUTO-CLEAR: Schedule clear unless another action on same senders within 3s
+          scheduleSmartAutoClear();
+        }}
+      />
+
+      <ReauthDialog
+        open={archiveReauthModal.isOpen}
+        onOpenChange={closeArchiveReauthModal}
+        type={archiveReauthModal.type}
+        eta={archiveReauthModal.eta}
       />
 
       {/* Add Confirm Unsubscribe Modal */}

@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ExternalLink, Trash2, MailOpen, MoreHorizontal, PenSquare, Tag, Ban, PencilOff, BellOff } from "lucide-react"
+import { Archive, ExternalLink, Trash2, MailOpen, MoreHorizontal, PenSquare, Tag, Ban, PencilOff, BellOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Portal } from "@radix-ui/react-portal"
 import { useSenderActionMeta } from '@/hooks/useSenderActionMeta'
@@ -24,6 +24,7 @@ interface RowActionsProps {
   onMarkUnread: (email: string, unreadCount?: number) => void
   onDeleteWithExceptions: (email: string, count?: number) => void
   onApplyLabel: (email: string) => void
+  onArchive?: (email: string) => void
   onBlock: (email: string) => void
   onDropdownOpen: (email: string) => void
 }
@@ -37,6 +38,7 @@ export function RowActions({
   onMarkUnread,
   onDeleteWithExceptions,
   onApplyLabel,
+  onArchive,
   onBlock,
   onDropdownOpen
 }: RowActionsProps) {
@@ -45,6 +47,7 @@ export function RowActions({
   const applyLabelMeta = useSenderActionMeta(sender.email, 'modify_label')
   const unsubscribeMeta = useSenderActionMeta(sender.email, 'unsubscribe')
   const blockMeta = useSenderActionMeta(sender.email, 'block')
+  const archiveMeta = useSenderActionMeta(sender.email, 'archive')
   
   // Check if sender has been moved to trash specifically
   const isMovedToTrash = applyLabelMeta.lastAction?.labelIds?.includes('TRASH') && 
@@ -294,6 +297,36 @@ export function RowActions({
             <MailOpen className="h-4 w-4 mr-2 shrink-0" />
             <span>{sender.unread_count === 0 ? 'No Unread Emails' : `Mark ${sender.unread_count} as Read`}</span>
           </DropdownMenuItem>
+          {onArchive && (
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      onArchive(sender.email);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer"
+                  >
+                    <Archive className="h-4 w-4 mr-2 shrink-0" />
+                    <span>
+                      Archive
+                      {archiveMeta.queued && ' (queued)'}
+                    </span>
+                  </DropdownMenuItem>
+                </TooltipTrigger>
+                <Portal container={document.getElementById('tooltip-root')}>
+                  <TooltipContent side="left" sideOffset={8} className={tooltipClass}>
+                    <p>
+                      {archiveMeta.queued && 'Archive queued'}
+                      {!archiveMeta.queued && archiveMeta.completed && `Archived ${formatRelativeTime(new Date(archiveMeta.completedAt || 0))}`}
+                      {!archiveMeta.queued && !archiveMeta.completed && 'Move every email from this sender out of your inbox. Nothing is deleted.'}
+                    </p>
+                  </TooltipContent>
+                </Portal>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           <TooltipProvider delayDuration={100}>
             <Tooltip>
               <TooltipTrigger asChild>

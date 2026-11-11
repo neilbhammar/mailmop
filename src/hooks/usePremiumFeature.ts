@@ -21,6 +21,7 @@ const featureToActionType: Record<string, ActionType> = {
   apply_label: 'modify_label', // Map to closest existing action type
   delete_with_exceptions: 'delete',
   block_sender: 'modify_label',
+  archive: 'modify_label',
 }
 
 // Premium features in the app

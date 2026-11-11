@@ -118,6 +118,8 @@ const getActionDisplayTitle = (job: Job): string => {
         return `Unsubscribe from ${senderText}`;
       case 'applyLabel':
         return `Apply label to ${senderText}`;
+      case 'archive':
+        return `Archive ${senderText}`;
       default:
         return `${capitalize(baseTypeName)} for ${senderText}`;
     }
@@ -142,6 +144,7 @@ const getActionStatus = (job: Job): ActionType => {
       case 'createFilter':
         return 'create_filter';
       case 'applyLabel':
+      case 'archive':
         return 'modify_label';
       default:
         return 'other';

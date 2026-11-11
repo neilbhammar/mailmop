@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ExternalLink, Trash2, MailOpen, ChevronDown, PenSquare, Tag, Ban, PenOff, PencilOff } from "lucide-react"
+import { Archive, ExternalLink, Trash2, MailOpen, ChevronDown, PenSquare, Tag, Ban, PenOff, PencilOff } from "lucide-react"
 import { useViewInGmail } from "@/hooks/useViewInGmail"
 import { cn } from "@/lib/utils"
 
@@ -21,6 +21,7 @@ interface BulkActionsBarProps {
   onMarkAllAsRead: () => void
   onDeleteWithExceptions: () => void
   onApplyLabel: () => void
+  onArchive?: () => void
   onBlockSenders: () => void
 }
 
@@ -32,6 +33,7 @@ export function BulkActionsBar({
   onMarkAllAsRead,
   onDeleteWithExceptions,
   onApplyLabel,
+  onArchive,
   onBlockSenders
 }: BulkActionsBarProps) {
   // Add block handler
@@ -110,6 +112,18 @@ export function BulkActionsBar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-slate-800 rounded-lg border border-gray-100 dark:border-slate-700 shadow-md dark:shadow-lg dark:shadow-slate-900/50 z-50 py-1">
+              {onArchive && (
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    onArchive();
+                  }}
+                  className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer"
+                >
+                  <Archive className="h-4 w-4 mr-2" />
+                  <span>Archive</span>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onSelect={(e) => {
                   e.preventDefault();
@@ -200,6 +214,18 @@ export function BulkActionsBar({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56 bg-white dark:bg-slate-800 rounded-lg border border-gray-100 dark:border-slate-700 shadow-md dark:shadow-lg dark:shadow-slate-900/50 z-50 py-1">
+          {onArchive && (
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                onArchive();
+              }}
+              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-slate-700/70 cursor-pointer"
+            >
+              <Archive className="h-4 w-4 mr-2" />
+              <span>Archive</span>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem 
             onSelect={(e) => {
               e.preventDefault();

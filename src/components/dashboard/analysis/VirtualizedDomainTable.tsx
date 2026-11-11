@@ -57,6 +57,7 @@ interface VirtualizedDomainTableProps {
   // Action handlers
   onBlockSingleSender: (email: string) => void
   onApplyLabelSingle?: (email: string) => void
+  onArchiveSingleSender?: (email: string) => void
   onDeleteSingleSender?: (email: string, count?: number) => void
   onDeleteWithExceptions?: (email: string, count?: number) => void
   onUnsubscribeSingleSender?: (email: string, isReUnsubscribe?: boolean) => void
@@ -91,6 +92,7 @@ export function VirtualizedDomainTable({
   isAnalyzing,
   onBlockSingleSender,
   onApplyLabelSingle,
+  onArchiveSingleSender,
   onDeleteSingleSender,
   onDeleteWithExceptions,
   onUnsubscribeSingleSender,
@@ -354,6 +356,7 @@ export function VirtualizedDomainTable({
                         showUnreadOnly={showUnreadOnly}
                         onBlockSingleSender={onBlockSingleSender}
                         onApplyLabelSingle={onApplyLabelSingle}
+                        onArchiveSingleSender={onArchiveSingleSender}
                         onDeleteSingleSender={onDeleteSingleSender}
                         onDeleteWithExceptions={onDeleteWithExceptions}
                         onUnsubscribeSingleSender={onUnsubscribeSingleSender}
@@ -474,6 +477,7 @@ function SenderRow({
   showUnreadOnly,
   onBlockSingleSender,
   onApplyLabelSingle,
+  onArchiveSingleSender,
   onDeleteSingleSender,
   onDeleteWithExceptions,
   onUnsubscribeSingleSender,
@@ -487,6 +491,7 @@ function SenderRow({
   showUnreadOnly: boolean
   onBlockSingleSender: (email: string) => void
   onApplyLabelSingle?: (email: string) => void
+  onArchiveSingleSender?: (email: string) => void
   onDeleteSingleSender?: (email: string, count?: number) => void
   onDeleteWithExceptions?: (email: string, count?: number) => void
   onUnsubscribeSingleSender?: (email: string, isReUnsubscribe?: boolean) => void
@@ -558,6 +563,7 @@ function SenderRow({
         <RowActions
           onBlock={onBlockSingleSender}
           onApplyLabel={onApplyLabelSingle || (() => {})}
+          onArchive={onArchiveSingleSender}
           onDelete={onDeleteSingleSender || (() => {})}
           onDeleteWithExceptions={onDeleteWithExceptions || (() => {})}
           onUnsubscribe={onUnsubscribeSingleSender || (() => {})}
