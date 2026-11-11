@@ -7,7 +7,7 @@ export const ACTION_CHANGE_EVENT = 'mailmop:action-change';
 export interface SenderAction {
   senderEmail: string;
   timestamp: number;
-  type: 'delete' | 'delete_with_exceptions' | 'unsubscribe' | 'mark_as_read' | 'apply_label' | 'modify_label' | 'create_filter' | 'block';
+  type: 'delete' | 'delete_with_exceptions' | 'unsubscribe' | 'mark_as_read' | 'apply_label' | 'modify_label' | 'create_filter' | 'block' | 'archive';
   status: 'pending' | 'completed' | 'failed';
   error?: string;
   // Additional metadata for label actions

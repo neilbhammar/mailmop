@@ -17,7 +17,8 @@ export type JobType =
   | 'applyLabel'
   | 'createFilter'
   | 'unsubscribe'
-  | 'modifyLabel';
+  | 'modifyLabel'
+  | 'archive';
 
 // Status of a job in the queue
 export type JobStatus = 'queued' | 'running' | 'success' | 'error' | 'cancelled';
@@ -99,6 +100,11 @@ export interface ModifyLabelJobPayload {
   labelIds: string[];
   actionType: 'add' | 'remove';
   initialEtaMs?: number;
+}
+
+export interface ArchiveJobPayload {
+  // Inbox counts per sender aren't stored, so only the addresses are needed.
+  senders: { email: string }[];
 }
 
 // Type guard functions

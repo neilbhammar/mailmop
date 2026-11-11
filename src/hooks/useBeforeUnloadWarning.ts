@@ -77,6 +77,8 @@ function getJobDisplayName(jobType: JobType): string {
       return 'label application';
     case 'modifyLabel':
       return 'label modification';
+    case 'archive':
+      return 'archiving';
     default:
       // This should never happen since we handle all JobType cases above
       const exhaustiveCheck: never = jobType;

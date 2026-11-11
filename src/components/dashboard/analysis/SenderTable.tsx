@@ -168,6 +168,8 @@ interface SenderTableProps {
   onMarkSingleSenderRead?: (email: string, unreadCount?: number) => void
   /** Callback for single sender apply label */
   onApplyLabelSingle?: (email: string) => void
+  /** Callback for archiving a single sender's inbox emails */
+  onArchiveSingleSender?: (email: string) => void
   /** Callback for bulk apply label */
   onApplyLabelBulk?: (emails: string[]) => void
   /** Callback for blocking a single sender */
@@ -442,6 +444,7 @@ const ActionWrapper = memo(({
   onDeleteWithExceptions,
   onMarkSingleSenderRead,
   onApplyLabelSingle,
+  onArchiveSingleSender,
   onBlockSingleSender,
   onUnsubscribeSingleSender
 }: { 
@@ -451,6 +454,7 @@ const ActionWrapper = memo(({
   onDeleteWithExceptions?: (email: string, count?: number) => void,
   onMarkSingleSenderRead?: (email: string, unreadCount?: number) => void,
   onApplyLabelSingle?: (email: string) => void,
+  onArchiveSingleSender?: (email: string) => void,
   onBlockSingleSender: (email: string) => void,
   onUnsubscribeSingleSender?: (email: string, isReUnsubscribe?: boolean) => void
 }) => {
@@ -476,6 +480,7 @@ const ActionWrapper = memo(({
         onMarkUnread={(email) => onMarkSingleSenderRead ? onMarkSingleSenderRead(email, sender.unread_count) : console.log('Mark Unread:', email)}
         onDeleteWithExceptions={(email) => onDeleteWithExceptions ? onDeleteWithExceptions(email, sender.count) : console.log('Delete with Exceptions:', email)}
         onApplyLabel={(email) => onApplyLabelSingle ? onApplyLabelSingle(email) : console.log('Apply Label Single:', email)}
+        onArchive={onArchiveSingleSender}
         onBlock={(email) => onBlockSingleSender(email)}
       />
     </div>
@@ -501,6 +506,7 @@ export function SenderTable({
   onDeleteWithExceptions,
   onMarkSingleSenderRead,
   onApplyLabelSingle,
+  onArchiveSingleSender,
   onBlockSingleSender,
   onUnsubscribeSingleSender
 }: SenderTableProps) {
@@ -809,6 +815,7 @@ export function SenderTable({
         <RowActions
           onBlock={onBlockSingleSender}
           onApplyLabel={onApplyLabelSingle || (() => console.warn('onApplyLabelSingle not provided to SenderTable'))}
+          onArchive={onArchiveSingleSender}
           onDelete={onDeleteSingleSender || (() => console.warn('onDeleteSingleSender not provided'))}
           onDeleteWithExceptions={onDeleteWithExceptions || (() => console.warn('onDeleteWithExceptions not provided'))}
           onUnsubscribe={onUnsubscribeSingleSender || (() => console.warn('onUnsubscribeSingleSender not provided'))}
@@ -838,6 +845,7 @@ export function SenderTable({
     onBlockSingleSender, 
     onUnsubscribeSingleSender, 
     onApplyLabelSingle, 
+    onArchiveSingleSender,
     viewSenderInGmail,
     handleDropdownOpen,
     showUnreadOnly

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ArrowRightIcon } from "@radix-ui/react-icons"
-import { ExternalLink, X, Trash2, BellOff, MailOpen, Ban, Tag, FilterIcon, Sparkles, Rocket, PencilOff, Loader2 } from "lucide-react"
+import { Archive, ExternalLink, X, Trash2, BellOff, MailOpen, Ban, Tag, FilterIcon, Sparkles, Rocket, PencilOff, Loader2 } from "lucide-react"
 import { useStripeCheckout } from "@/hooks/useStripeCheckout"
 import { useState, useEffect } from "react"
 import { ManageSubscriptionModal } from "@/components/modals/ManageSubscriptionModal"
@@ -176,7 +176,8 @@ export function PremiumFeatureModal({
                 { featureName.toLowerCase() === "mark_read" && <MailOpen className="w-10 h-10 md:w-12 md:h-12 text-blue-500 dark:text-blue-400 mb-2"/> }
                 { featureName.toLowerCase() === "apply_label" && <Tag className="w-10 h-10 md:w-12 md:h-12 text-blue-500 dark:text-blue-400 mb-2"/> }
                 { featureName.toLowerCase() === "delete_with_exceptions" && <PencilOff className="w-10 h-10 md:w-12 md:h-12 text-blue-500 dark:text-blue-400 mb-2"/> }
-                { !["delete", "block_sender", "unsubscribe", "mark_read", "apply_label", "delete_with_exceptions"].includes(featureName.toLowerCase()) && <Sparkles className="w-10 h-10 md:w-12 md:h-12 text-blue-500 dark:text-blue-400 mb-2"/> }
+                { featureName.toLowerCase() === "archive" && <Archive className="w-10 h-10 md:w-12 md:h-12 text-blue-500 dark:text-blue-400 mb-2"/> }
+                { !["delete", "block_sender", "unsubscribe", "mark_read", "apply_label", "delete_with_exceptions", "archive"].includes(featureName.toLowerCase()) && <Sparkles className="w-10 h-10 md:w-12 md:h-12 text-blue-500 dark:text-blue-400 mb-2"/> }
                 <p className="text-xs md:text-sm font-medium text-blue-700 dark:text-blue-300">{formattedFeatureName}</p>
               </div>
             </div>

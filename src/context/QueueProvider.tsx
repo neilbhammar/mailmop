@@ -177,6 +177,8 @@ export function QueueProvider({ children }: { children: ReactNode }) {
           return 'create_filter';
         case 'unsubscribe':
           return 'unsubscribe';
+        case 'archive':
+          return 'archive';
         default:
           return 'delete';
       }
@@ -393,16 +395,26 @@ export function QueueProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       logger.error('Job threw exception', { 
         component: 'QueueProvider', 
-        jobId: nextJob.id, 
-        error 
+        jobId: nextJob.id,
+        error
       });
-      dispatch({ 
-        type: 'COMPLETE_JOB', 
-        payload: { 
-          id: nextJob.id, 
-          status: 'error', 
-          error: error.message || 'Unknown error occurred' 
-        } 
+      // Same cleanup as a reported failure. Without it, a crashed job leaves
+      // each sender's action marked pending, and its row says "(queued)" forever.
+      if ((nextJob as any).actionTimestamps) {
+        nextJob.targetSenders?.forEach(email => {
+          const ts = (nextJob as any).actionTimestamps[email];
+          if (ts) {
+            updateActionStatus(email, ts, 'failed', error?.message);
+          }
+        });
+      }
+      dispatch({
+        type: 'COMPLETE_JOB',
+        payload: {
+          id: nextJob.id,
+          status: 'error',
+          error: error.message || 'Unknown error occurred'
+        }
       });
     } finally {
       processingRef.current = false;
