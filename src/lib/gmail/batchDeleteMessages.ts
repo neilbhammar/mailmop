@@ -65,37 +65,6 @@ export async function batchDeleteMessages(
     logger.debug('Setting access token for gapi client', { component: 'batchDeleteMessages' });
     gapi.client.setToken({ access_token: accessToken });
 
-    // Check token scopes for debugging (WITHOUT logging the actual token)
-    try {
-      // SECURITY: Use a separate fetch to check token info without logging the token URL
-      const tokenInfo = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${accessToken}`);
-      const tokenData = await tokenInfo.json();
-      
-      logger.debug('Token scope validation', {
-        component: 'batchDeleteMessages',
-        hasScope: tokenData.scope?.includes('mail.google.com'),
-        expiresIn: tokenData.expires_in,
-        audience: tokenData.audience?.substring(0, 20) + '...' // Truncate for safety
-      });
-      
-      // Check if we have the modify scope (we use the broad mail.google.com scope)
-      const hasModifyScope = tokenData.scope?.includes('mail.google.com');
-      if (!hasModifyScope) {
-        logger.error('Token missing mail.google.com scope', {
-          component: 'batchDeleteMessages',
-          currentScopes: tokenData.scope,
-          requiredScope: 'https://mail.google.com/'
-        });
-      } else {
-        logger.debug('Token has required mail.google.com scope', { component: 'batchDeleteMessages' });
-      }
-    } catch (tokenDebugError) {
-      logger.warn('Could not validate token scopes', { 
-        component: 'batchDeleteMessages',
-        error: tokenDebugError instanceof Error ? tokenDebugError.message : 'Unknown error'
-      });
-    }
-
     // Make the API call to batch delete the messages.
     // We use 'me' to refer to the authenticated user.
     logger.debug('Making API call to batch delete', { component: 'batchDeleteMessages' });
@@ -169,4 +138,4 @@ This happens when Gmail was connected before MailMop had deletion features.`
     // However, if a central provider manages the token, this might not be necessary.
     // gapi.client.setToken(null); // Uncomment if per-request token setting is used.
   }
-} 
+}
